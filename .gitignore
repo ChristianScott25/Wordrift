@@ -1,0 +1,60 @@
+# ==============================================================================
+# Unity .gitignore for Word-Crush
+# Keeps source + assets; excludes Unity's regenerated caches and IDE project files.
+# (Library/ alone is multiple GB of derived cache — never commit it.)
+# ==============================================================================
+
+# --- Unity generated / derived folders ---
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+
+# Asset meta files must stay tracked alongside their assets (Unity breaks without them),
+# so re-include any .meta even if a parent rule above would have caught it.
+!/[Aa]ssets/**/*.meta
+
+# --- Auto-generated IDE / build project files (Unity rewrites these) ---
+# Note: Word-Crush.slnx is the canonical solution and is intentionally kept.
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Rider / Visual Studio
+.idea/
+.vs/
+
+# --- Build outputs / packages ---
+ExportedObj/
+*.apk
+*.aab
+*.app
+*.unitypackage
+*.unitypackage.meta
+crashlytics-build.properties
+
+# --- Crash reports ---
+sysinfo.txt
+mono_crash.*
+
+# --- OS cruft ---
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+CLAUDE.md
