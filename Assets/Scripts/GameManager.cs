@@ -120,15 +120,23 @@ public class GameManager : MonoBehaviour
 }
 
 /// <summary>
-/// Spawns the GameManager automatically when entering Play mode, so the
-/// scene needs no manual setup.
+/// Spawns the GameManager automatically whenever the Timed Mode scene is
+/// entered (at startup or via the main menu), so the scene needs no manual setup.
 /// </summary>
 public static class Bootstrap
 {
+    private const string GameSceneName = "Timed Mode";
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Init()
     {
-        if (Object.FindFirstObjectByType<GameManager>() == null)
+        TrySpawn(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += (scene, _) => TrySpawn(scene);
+    }
+
+    private static void TrySpawn(UnityEngine.SceneManagement.Scene scene)
+    {
+        if (scene.name == GameSceneName && Object.FindFirstObjectByType<GameManager>() == null)
             new GameObject("GameManager").AddComponent<GameManager>();
     }
 }
