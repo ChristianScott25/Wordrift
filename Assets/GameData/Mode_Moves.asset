@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0378811a62df4f1cbececf2fd88fe70, type: 3}
+  m_Name: Mode_Moves
+  m_EditorClassIdentifier: Assembly-CSharp::MovesModeConfig
+  displayName: Moves Mode
+  boardShape: {fileID: 11400000, guid: 6e341966805774ebab975c05bfb0cacd, type: 2}
+  letterSet: {fileID: 11400000, guid: 6d97dafb14cc54f7a8ae45fe2c470957, type: 2}
+  minWordLength: 3
+  lengthBonusPerExtraLetter: 0
+  scoreMultiplier: 1
+  tileModifiers:
+  - {fileID: 11400000, guid: 4feeb697aa4bc4d6a8a5e0b449256678, type: 2}
+  - {fileID: 11400000, guid: 728ccfa980b654c07a56408590f52235, type: 2}
+  moves: 20
+  rejectedWordsCostMoves: 0
+  urgentMoves: 3

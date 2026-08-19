@@ -1,0 +1,119 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9ff48ffbfbe644759b8dc7e08909dd9, type: 3}
+  m_Name: LetterSet_Scrabble
+  m_EditorClassIdentifier: Assembly-CSharp::LetterSet
+  entries:
+  - letter: a
+    points: 1
+    weight: 9
+    sprite: {fileID: -4910088520043721169, guid: 73969d9915af04ac7aab37b87dd723b3, type: 3}
+  - letter: b
+    points: 3
+    weight: 2
+    sprite: {fileID: -4983721108374671077, guid: 999398ade5bdc41eaa1ceaa0143d6a46, type: 3}
+  - letter: c
+    points: 3
+    weight: 2
+    sprite: {fileID: 8579111415464493206, guid: 734da2ade9a284da3b1c0b22d2418c89, type: 3}
+  - letter: d
+    points: 2
+    weight: 4
+    sprite: {fileID: 2957404852419100943, guid: 2b03020c7d05c4ac89d943a13b945b90, type: 3}
+  - letter: e
+    points: 1
+    weight: 12
+    sprite: {fileID: 6626051464634953487, guid: 38a0a2032b701431db9de9a1d686f475, type: 3}
+  - letter: f
+    points: 4
+    weight: 2
+    sprite: {fileID: 4051853549349518899, guid: 055a5736b515043949faa482249de1ed, type: 3}
+  - letter: g
+    points: 2
+    weight: 3
+    sprite: {fileID: -2158441306721915952, guid: 98a9af4358e38482b88fe7b797dc2cb6, type: 3}
+  - letter: h
+    points: 4
+    weight: 2
+    sprite: {fileID: 6916580865650861735, guid: 46296ddb596d54050a23c704b067a851, type: 3}
+  - letter: i
+    points: 1
+    weight: 9
+    sprite: {fileID: 7809157847302988670, guid: 7f0726046595341e2af7f4b176d2290c, type: 3}
+  - letter: j
+    points: 8
+    weight: 1
+    sprite: {fileID: 1913865618546671544, guid: 02b35385539c34949aa64da4797830ac, type: 3}
+  - letter: k
+    points: 5
+    weight: 1
+    sprite: {fileID: 2845491494293411322, guid: 10710f021431d4cc0987b4d0e7126fa9, type: 3}
+  - letter: l
+    points: 1
+    weight: 4
+    sprite: {fileID: -6653168405816587825, guid: 437be18dc8a0e4f9aac45743971ac315, type: 3}
+  - letter: m
+    points: 3
+    weight: 2
+    sprite: {fileID: -7590032424596528948, guid: eff18064f183945909ae69d0de9da74d, type: 3}
+  - letter: n
+    points: 1
+    weight: 6
+    sprite: {fileID: -8217714832183615459, guid: 6eea789c9703e436c8ab4fc8c808e4f1, type: 3}
+  - letter: o
+    points: 1
+    weight: 8
+    sprite: {fileID: -5098722796299924958, guid: eb93d88a6a8d44a6eaa057f1715ea6b8, type: 3}
+  - letter: p
+    points: 3
+    weight: 2
+    sprite: {fileID: -2799025756769327729, guid: 4d1e5e0b3b878418ebc95831fdc5a8d4, type: 3}
+  - letter: q
+    points: 10
+    weight: 1
+    sprite: {fileID: 4359327472603921858, guid: 353d84a1affba413389018bbc977b6d7, type: 3}
+  - letter: r
+    points: 1
+    weight: 6
+    sprite: {fileID: 7714416478726866884, guid: 7fbad6b3919314c84b09ead8f3592bd8, type: 3}
+  - letter: s
+    points: 1
+    weight: 4
+    sprite: {fileID: 1532440346177022758, guid: 57e29eeb680344e95bbbc46853d4ae8e, type: 3}
+  - letter: t
+    points: 1
+    weight: 6
+    sprite: {fileID: -5860470177254374992, guid: 65660af3cb0dc4586a82c7ade7c5eb1d, type: 3}
+  - letter: u
+    points: 1
+    weight: 4
+    sprite: {fileID: -2270382132492453729, guid: 4fbc8c216419e4f19bf82eabd65bad2f, type: 3}
+  - letter: v
+    points: 4
+    weight: 2
+    sprite: {fileID: -4534634967793127557, guid: db788cb49e4a24d72a69a5470a4305fd, type: 3}
+  - letter: w
+    points: 4
+    weight: 2
+    sprite: {fileID: -7097860344766265739, guid: 0eb8827fa46f24701961e75697832a55, type: 3}
+  - letter: x
+    points: 8
+    weight: 1
+    sprite: {fileID: 5251744956290624300, guid: f46a339a2e8574a37a888603bbc72fdb, type: 3}
+  - letter: y
+    points: 4
+    weight: 2
+    sprite: {fileID: -8559468162881350516, guid: 5a991e637c88945e3927a831bb66748b, type: 3}
+  - letter: z
+    points: 10
+    weight: 1
+    sprite: {fileID: -2256291859449093197, guid: bca0db9aeaba642b3877f19bc37afd3e, type: 3}
