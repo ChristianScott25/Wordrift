@@ -52,6 +52,12 @@ session doesn't need to know it exists.
 **A new board shape** — subclass `BoardShapeAsset` and return any set of cells.
 The board and gravity work over arbitrary cell sets; nothing assumes rectangles.
 
+**A mode that manages the board itself** — override `GameMode.Attach` to swap
+`Board.Refill` (`IRefillPolicy`) or `Board.Gravity`, then drive the board from
+`Tick`. `Attach` runs before `Board.Build`, which is the only window in which
+those policies still matter for the opening fill. `OverflowMode` is the worked
+example: `NeverRefill` plus its own drop clock.
+
 **A different word list** — swap the TextAsset on `GameSession`. Plain text, one
 lowercase word per line.
 
@@ -65,6 +71,10 @@ lowercase word per line.
   HUD prefabs drop-in with no wiring. Would need revisiting for split-screen or
   simultaneous boards.
 - **One modifier per tile.** `Board.RollModifiers` stops at the first hit.
+- **Overflow gets easier as it gets more dangerous.** A fuller board means more
+  letters and more adjacency, so words are *easier* to find right when you're
+  closest to losing. Whether that self-correcting equilibrium is fun or just
+  makes the mode hard to lose is a playtest question, not a code one.
 
 ## Regenerating
 

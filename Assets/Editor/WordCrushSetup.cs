@@ -46,6 +46,7 @@ public static class WordCrushSetup
         var shape = BuildBoardShape();
         BuildTimedMode(shape, letterSet, modifiers);
         BuildMovesMode(shape, letterSet, modifiers);
+        OverflowModeSetup.Build(shape, letterSet, modifiers);
         BuildTilePrefab();
         BuildHudPrefabs();
 

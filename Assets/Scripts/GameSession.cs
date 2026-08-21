@@ -54,6 +54,9 @@ public class GameSession : MonoBehaviour
         scorer = new ScoreCalculator(Config.letterSet, Config);
         mode = Config.CreateMode();
 
+        // Attach first: the mode may swap the board's refill or gravity policy,
+        // and Build performs the opening fill through whatever is installed.
+        mode.Attach(board);
         board.Build(Config.boardShape, Config.letterSet, Config.tileModifiers);
         FrameBoard();
 

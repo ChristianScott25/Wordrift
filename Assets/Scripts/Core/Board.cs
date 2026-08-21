@@ -7,6 +7,10 @@ using UnityEngine;
 /// Owns the set of cells (from an IBoardShape) and the tiles sitting on them.
 /// Handles spawning, demolition, gravity, and refilling. Never assumes the
 /// board is rectangular — it only ever works with the cells it was given.
+///
+/// It doesn't assume every cell is occupied either. What happens to a hole
+/// after a clear is Refill's decision (see IRefillPolicy), so a mode can leave
+/// the board partly empty and feed tiles in on its own schedule.
 /// </summary>
 public class Board : MonoBehaviour
 {
@@ -29,16 +33,51 @@ public class Board : MonoBehaviour
     /// <summary>True while tiles are being demolished / falling; input is blocked.</summary>
     public bool Busy { get; private set; }
 
+    /// <summary>
+    /// Whether clearing a word blocks input until the stack has settled.
+    ///
+    /// A mode where tiles are always in the air (OverflowMode) must turn this
+    /// off — otherwise there is always something falling, Busy never clears,
+    /// and input dies for the rest of the round.
+    /// </summary>
+    public bool GateInputWhileResolving { get; set; } = true;
+
+    /// <summary>
+    /// True from the moment a word's tiles are removed until the stack has been
+    /// re-compacted. In that window the columns still contain the holes the word
+    /// left behind, so anything asking "where would a tile land here?" gets a
+    /// misleading answer — a cell in the middle of the stack.
+    /// </summary>
+    public bool Resolving => resolving > 0;
+
     public IReadOnlyDictionary<Vector2Int, Tile> Tiles => tiles;
     public Vector2 BoardCenter { get; private set; }
     public Vector2 BoardSize { get; private set; }
 
+    /// <summary>Tiles on the board right now, counting ones still falling in.</summary>
+    public int TileCount => tiles.Count;
+
+    /// <summary>How many tiles the board holds when completely full.</summary>
+    public int CellCount => cells.Count;
+
+    /// <summary>Every column that exists, left to right.</summary>
+    public IEnumerable<int> Columns => columnCells.Keys.OrderBy(x => x);
+
     /// <summary>Swap this to change how tiles fall (see IGravityRule).</summary>
     public IGravityRule Gravity { get; set; } = new ColumnGravity();
 
+    /// <summary>Swap this to change what happens to cleared cells (see IRefillPolicy).</summary>
+    public IRefillPolicy Refill { get; set; } = new FillEveryCell();
+
     private readonly Dictionary<Vector2Int, Tile> tiles = new();
-    private readonly Dictionary<int, float> columnTopY = new();
+
+    /// <summary>Every cell of each column, ordered bottom to top.</summary>
+    private readonly Dictionary<int, List<Vector2Int>> columnCells = new();
+
     private HashSet<Vector2Int> cells = new();
+
+    /// <summary>Outstanding resolve passes. A count, since clears can overlap.</summary>
+    private int resolving;
     private LetterSet letterSet;
     private IReadOnlyList<TileModifier> modifiers;
 
@@ -59,20 +98,21 @@ public class Board : MonoBehaviour
         BoardSize = new Vector2((max.x - min.x + 1) * cellSize, (max.y - min.y + 1) * cellSize);
         BoardCenter = (CellToWorld(min) + CellToWorld(max)) / 2f;
 
-        columnTopY.Clear();
+        columnCells.Clear();
         foreach (var column in cells.GroupBy(c => c.x))
-            columnTopY[column.Key] = CellToWorld(new Vector2Int(column.Key, column.Max(c => c.y))).y;
+            columnCells[column.Key] = column.OrderBy(c => c.y).ToList();
 
         ClearTiles();
-        FillEmptyCells(animate: false);
+        FillEmptyCells();
     }
 
     public void ResetBoard()
     {
         StopAllCoroutines();
         Busy = false;
+        resolving = 0;   // the routines that would have decremented it are gone
         ClearTiles();
-        FillEmptyCells(animate: false);
+        FillEmptyCells();
     }
 
     private void ClearTiles()
@@ -85,13 +125,17 @@ public class Board : MonoBehaviour
     public Vector3 CellToWorld(Vector2Int cell) =>
         transform.position + new Vector3(cell.x * cellSize, cell.y * cellSize, 0f);
 
-    /// <summary>The tile whose center is within grab distance of a world point, or null.</summary>
+    /// <summary>
+    /// The tile whose center is within grab distance of a world point, or null.
+    /// Tiles still in the air are skipped — one would otherwise slide out from
+    /// under the finger mid-chain and break adjacency.
+    /// </summary>
     public Tile TileAt(Vector3 worldPos)
     {
         float grabRadius = cellSize * grabRadiusFraction;
         foreach (var tile in tiles.Values)
         {
-            if (tile == null) continue;
+            if (tile == null || !tile.IsSettled) continue;
             if (Vector2.Distance(worldPos, tile.transform.position) <= grabRadius)
                 return tile;
         }
@@ -106,6 +150,74 @@ public class Board : MonoBehaviour
         return dx <= 1 && dy <= 1 && (dx + dy) > 0;
     }
 
+    // ---- Column queries, for modes that manage the board's population ----
+
+    /// <summary>Tiles in this column, counting ones still falling into it.</summary>
+    public int ColumnHeight(int column) =>
+        columnCells.TryGetValue(column, out var list) ? list.Count(tiles.ContainsKey) : 0;
+
+    /// <summary>How many tiles this column holds when full.</summary>
+    public int ColumnCapacity(int column) =>
+        columnCells.TryGetValue(column, out var list) ? list.Count : 0;
+
+    public bool ColumnFull(int column) => ColumnHeight(column) >= ColumnCapacity(column);
+
+    /// <summary>
+    /// Drops one new tile into a column from above the board, landing on top of
+    /// whatever is already there. Returns false if the column has no room —
+    /// that's how OverflowMode detects a loss.
+    /// </summary>
+    public bool TryDropInto(int column)
+    {
+        if (!columnCells.TryGetValue(column, out var list)) return false;
+
+        // Sit on top of what's already there, rather than in the lowest gap.
+        // Gravity normally leaves no gaps, but during a resolve it does, and a
+        // tile aimed into one falls straight past everything above it.
+        int highest = -1;
+        for (int i = 0; i < list.Count; i++)
+            if (tiles.ContainsKey(list[i])) highest = i;
+
+        int landingIndex = highest + 1;
+        if (landingIndex >= list.Count) return false;
+        Vector2Int landing = list[landingIndex];
+
+        // Stack the entry point above anything still falling in this column,
+        // or fast drops would spawn on top of each other in mid-air.
+        int inFlight = list.Count(c =>
+            tiles.TryGetValue(c, out var t) && t != null && !t.IsSettled);
+
+        Vector3 target = CellToWorld(landing);
+        var start = new Vector3(
+            target.x, ColumnTopY(column) + cellSize * (1.5f + inFlight), target.z);
+        SpawnTile(landing, start, target);
+        return true;
+    }
+
+    /// <summary>
+    /// Fills the lowest cells of every column, ignoring the refill policy.
+    /// For a mode that opens on a partly-filled board.
+    /// </summary>
+    public void FillLowestRows(int rows)
+    {
+        foreach (var list in columnCells.Values)
+        {
+            for (int i = 0; i < rows && i < list.Count; i++)
+            {
+                if (tiles.ContainsKey(list[i])) continue;
+                Vector3 target = CellToWorld(list[i]);
+                SpawnTile(list[i], target, target);
+            }
+        }
+    }
+
+    private float ColumnTopY(int column) =>
+        columnCells.TryGetValue(column, out var list) && list.Count > 0
+            ? CellToWorld(list[list.Count - 1]).y
+            : transform.position.y;
+
+    // ---- Clearing and settling ----
+
     public void RemoveTiles(IEnumerable<Tile> toRemove)
     {
         foreach (var tile in toRemove)
@@ -114,31 +226,39 @@ public class Board : MonoBehaviour
             tiles.Remove(tile.Cell);
             tile.Demolish();
         }
+        resolving++;
         StartCoroutine(ResolveRoutine());
     }
 
     private IEnumerator ResolveRoutine()
     {
-        Busy = true;
+        if (GateInputWhileResolving) Busy = true;
         yield return new WaitForSeconds(settleDelay);
-        ApplyGravityAndRefill();
-        yield return new WaitUntil(() => tiles.Values.All(t => t == null || t.IsSettled));
-        Busy = false;
+
+        // Wait only on the tiles this clear actually set in motion. Waiting on
+        // every tile would never finish in a mode that drips new ones in.
+        var moved = ApplyGravityAndRefill();
+        resolving--;
+        yield return new WaitUntil(() => moved.TrueForAll(t => t == null || t.IsSettled));
+
+        if (GateInputWhileResolving) Busy = false;
     }
 
-    private void FillEmptyCells(bool animate)
+    private void FillEmptyCells()
     {
-        foreach (var cell in cells)
+        var empties = cells.Where(c => !tiles.ContainsKey(c)).ToList();
+        foreach (var cell in Refill.CellsToFill(empties))
         {
             if (tiles.ContainsKey(cell)) continue;
             Vector3 target = CellToWorld(cell);
-            Vector3 start = animate ? target + Vector3.up * BoardSize.y : target;
-            SpawnTile(cell, start, target);
+            SpawnTile(cell, target, target);
         }
     }
 
-    private void ApplyGravityAndRefill()
+    /// <summary>Returns every tile this pass set moving, for the settle wait.</summary>
+    private List<Tile> ApplyGravityAndRefill()
     {
+        var moved = new List<Tile>();
         var occupied = new HashSet<Vector2Int>(tiles.Keys);
         var plan = Gravity.Plan(cells, occupied);
 
@@ -152,20 +272,23 @@ public class Board : MonoBehaviour
             if (move.From == move.To) continue;
             tile.Cell = move.To;
             tile.MoveTo(CellToWorld(move.To));
+            moved.Add(tile);
         }
 
         // New tiles enter stacked above their column so they visibly fall in.
-        foreach (var column in plan.Spawns.GroupBy(c => c.x))
+        foreach (var column in Refill.CellsToFill(plan.Empties).GroupBy(c => c.x))
         {
             var ordered = column.OrderBy(c => c.y).ToList();
-            float topY = columnTopY.TryGetValue(column.Key, out float y) ? y : 0f;
+            float topY = ColumnTopY(column.Key);
             for (int i = 0; i < ordered.Count; i++)
             {
                 Vector3 target = CellToWorld(ordered[i]);
                 var start = new Vector3(target.x, topY + cellSize * (i + 1.5f), target.z);
-                SpawnTile(ordered[i], start, target);
+                moved.Add(SpawnTile(ordered[i], start, target));
             }
         }
+
+        return moved;
     }
 
     private Tile SpawnTile(Vector2Int cell, Vector3 startPos, Vector3 targetPos)

@@ -15,8 +15,11 @@ public struct GravityPlan
     /// <summary>One entry for EVERY surviving tile, even the ones that don't move.</summary>
     public List<TileMove> Moves;
 
-    /// <summary>Cells left empty afterwards, which need fresh tiles.</summary>
-    public List<Vector2Int> Spawns;
+    /// <summary>
+    /// Cells with no tile once everything has fallen. Whether these actually
+    /// get new tiles is not gravity's call — see IRefillPolicy.
+    /// </summary>
+    public List<Vector2Int> Empties;
 }
 
 /// <summary>
@@ -41,7 +44,7 @@ public class ColumnGravity : IGravityRule
         var plan = new GravityPlan
         {
             Moves = new List<TileMove>(),
-            Spawns = new List<Vector2Int>(),
+            Empties = new List<Vector2Int>(),
         };
 
         foreach (var column in cells.GroupBy(c => c.x))
@@ -53,7 +56,7 @@ public class ColumnGravity : IGravityRule
                 plan.Moves.Add(new TileMove { From = survivors[i], To = columnCells[i] });
 
             for (int i = survivors.Count; i < columnCells.Count; i++)
-                plan.Spawns.Add(columnCells[i]);
+                plan.Empties.Add(columnCells[i]);
         }
 
         return plan;

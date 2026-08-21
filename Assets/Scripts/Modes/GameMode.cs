@@ -8,6 +8,20 @@
 /// </summary>
 public abstract class GameMode
 {
+    /// <summary>
+    /// The board this round is played on. GameSession hands it over in Attach.
+    /// Most modes never touch it — they only decide rules — but a mode that
+    /// owns the board's population (see OverflowMode) needs it.
+    /// </summary>
+    protected Board board;
+
+    /// <summary>
+    /// Called once, BEFORE the board is built. Install board policies here
+    /// (gravity, refill): the opening fill happens inside Board.Build, so
+    /// changing them in Begin would already be too late.
+    /// </summary>
+    public virtual void Attach(Board board) => this.board = board;
+
     /// <summary>Called once when the round starts. Reset your resource here.</summary>
     public abstract void Begin();
 
