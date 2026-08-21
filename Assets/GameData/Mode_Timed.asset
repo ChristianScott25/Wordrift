@@ -23,5 +23,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 728ccfa980b654c07a56408590f52235, type: 2}
   roundSeconds: 60
   secondsPerWord: 0
-  secondsPerExtraLetter: 0
+  secondsPerExtraLetter: 1
+  extraLettersStartAt: 4
   urgentSeconds: 10

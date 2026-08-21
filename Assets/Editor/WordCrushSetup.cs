@@ -201,7 +201,8 @@ public static class WordCrushSetup
         mode.minWordLength = 3;
         mode.roundSeconds = 60f;
         mode.secondsPerWord = 0f;
-        mode.secondsPerExtraLetter = 0f;
+        mode.secondsPerExtraLetter = 1f;
+        mode.extraLettersStartAt = 4;
         mode.tileModifiers = new List<TileModifier>(modifiers);
         EditorUtility.SetDirty(mode);
         return mode;

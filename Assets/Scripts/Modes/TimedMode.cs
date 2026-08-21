@@ -25,7 +25,7 @@ public class TimedMode : GameMode
 
     public override void OnWordAccepted(WordResult result)
     {
-        int extraLetters = Mathf.Max(0, result.TileCount - config.minWordLength);
+        int extraLetters = Mathf.Max(0, result.TileCount - config.extraLettersStartAt);
         float bonus = config.secondsPerWord + extraLetters * config.secondsPerExtraLetter;
         if (bonus <= 0f) return;
 
