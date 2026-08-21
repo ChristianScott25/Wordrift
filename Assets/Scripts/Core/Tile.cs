@@ -2,17 +2,30 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
-/// One letter tile. Everything visual is a serialized field so it can be
-/// tuned on the Tile prefab without touching code — colors, speeds, scale.
-/// Swapping the art is a matter of changing the sprite in the LetterSet.
+/// One letter tile. Behaviour and timing are serialized fields tuned on the
+/// Tile prefab; the *look* comes in per-tile as a TileLook, so several skins can
+/// share one prefab and be mixed on the same board.
+///
+/// The letter is text on top of a shared tile body — not one sprite per letter —
+/// which is what lets a new look be a single asset.
 /// </summary>
 public class Tile : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private SpriteRenderer letterRenderer;
+    [Tooltip("The tile body. Its sprite comes from the TileSkin, and it's the " +
+             "renderer that gets tinted for selection and modifiers.")]
+    [FormerlySerializedAs("letterRenderer")]
+    [SerializeField] private SpriteRenderer tileRenderer;
+
     [SerializeField] private SpriteRenderer badgeRenderer;
+
+    [Tooltip("Draws the letter itself. Position and scale are set from the tile " +
+             "art at runtime, so don't hand-place it — style it and leave the " +
+             "transform alone. Its font can be overridden per mode.")]
+    [SerializeField] private TMP_Text letterLabel;
 
     [Tooltip("Prints what this letter is worth. Its position and scale are set from " +
              "the art every time the tile is initialised, so don't hand-place it — " +
@@ -27,8 +40,9 @@ public class Tile : MonoBehaviour
     [Tooltip("How far in from the art's bottom-right corner, as a fraction of the tile.")]
     [Range(0f, 0.4f)][SerializeField] private float scoreInset = 0.06f;
 
-    [Tooltip("Nudge toward the camera so the number never sorts behind the letter art.")]
-    [SerializeField] private float scoreDepthOffset = 0.05f;
+    [Tooltip("Nudge the labels toward the camera so they never sort behind the tile art.")]
+    [FormerlySerializedAs("scoreDepthOffset")]
+    [SerializeField] private float labelDepthOffset = 0.05f;
 
     [Header("Movement")]
     [SerializeField] private float fallSpeed = 14f;
@@ -62,15 +76,18 @@ public class Tile : MonoBehaviour
     private bool selected;
     private Coroutine flashRoutine;
 
-    public void Init(char letter, int points, Sprite sprite, Vector2Int cell, Vector3 startPos, float cellSize)
+    public void Init(char letter, int points, TileLook look, Vector2Int cell, Vector3 startPos, float cellSize)
     {
         Letter = letter;
         LetterPoints = points;
         Cell = cell;
         Modifiers.Clear();
 
-        if (letterRenderer == null) letterRenderer = GetComponent<SpriteRenderer>();
-        letterRenderer.sprite = sprite;
+        if (tileRenderer == null) tileRenderer = GetComponent<SpriteRenderer>();
+        ApplyLook(look);
+
+        // Measure the tile body we actually ended up with, whatever supplied it.
+        Sprite sprite = tileRenderer.sprite;
 
         // Scale so the art fits its cell regardless of the source sprite's size.
         if (sprite != null)
@@ -83,8 +100,29 @@ public class Tile : MonoBehaviour
         targetPosition = startPos;
 
         if (badgeRenderer != null) badgeRenderer.enabled = false;
-        LayOutScoreLabel(sprite);
+        LayOutLabels(sprite);
         ApplyModifierVisuals();
+    }
+
+    /// <summary>
+    /// Applies the two look axes. Every field is optional: a null skin or font
+    /// leaves whatever the prefab was authored with, so the tile still draws
+    /// correctly for a mode that hasn't been given either.
+    /// </summary>
+    private void ApplyLook(TileLook look)
+    {
+        if (look.Skin != null)
+        {
+            if (look.Skin.baseSprite != null) tileRenderer.sprite = look.Skin.baseSprite;
+            if (letterLabel != null) letterLabel.color = look.Skin.letterColor;
+            if (scoreLabel != null) scoreLabel.color = look.Skin.scoreColor;
+        }
+
+        if (letterLabel != null)
+        {
+            if (look.LetterFont != null) letterLabel.font = look.LetterFont;
+            letterLabel.text = char.ToUpperInvariant(Letter).ToString();
+        }
     }
 
     public void AddModifier(TileModifier modifier)
@@ -95,27 +133,33 @@ public class Tile : MonoBehaviour
     }
 
     /// <summary>
-    /// Places and sizes the score label from the sprite's own bounds.
+    /// Places and sizes both labels from the tile sprite's own bounds.
     ///
-    /// Both are art-dependent and so can't be baked into the prefab: the tile is
+    /// This is art-dependent and so can't be baked into the prefab: the tile is
     /// uniformly scaled to fit its cell, so where the corner sits and how big the
-    /// text comes out both move when the sprite's dimensions change — and all the
-    /// current letter art is placeholder.
+    /// text comes out both move when the sprite's dimensions change — and a skin
+    /// can swap that sprite for one of any size.
     /// </summary>
-    private void LayOutScoreLabel(Sprite sprite)
+    private void LayOutLabels(Sprite sprite)
     {
-        if (scoreLabel == null) return;
-
-        var labelTransform = scoreLabel.transform;
         Bounds bounds = sprite != null ? sprite.bounds : new Bounds(Vector3.zero, Vector3.one);
         float spriteSize = Mathf.Max(bounds.size.x, bounds.size.y);
         if (spriteSize <= 0f) spriteSize = 1f;
 
+        PlaceLabel(letterLabel, bounds.center, spriteSize, sortingOffset: 1);
+
         float inset = scoreInset * spriteSize;
-        labelTransform.localPosition = new Vector3(
-            bounds.max.x - inset,
-            bounds.min.y + inset,
-            -scoreDepthOffset);
+        PlaceLabel(scoreLabel,
+            new Vector3(bounds.max.x - inset, bounds.min.y + inset, 0f),
+            spriteSize, sortingOffset: 2);
+    }
+
+    private void PlaceLabel(TMP_Text label, Vector3 localCenter, float spriteSize, int sortingOffset)
+    {
+        if (label == null) return;
+
+        var labelTransform = label.transform;
+        labelTransform.localPosition = new Vector3(localCenter.x, localCenter.y, -labelDepthOffset);
 
         // Cancels this tile's fit scaling, so the font size set on the prefab is
         // the size that actually shows up, whatever the art measures.
@@ -123,10 +167,10 @@ public class Tile : MonoBehaviour
 
         // A world-space TMP object draws through a MeshRenderer, which won't sort
         // against the tile sprites on its own.
-        if (letterRenderer != null && scoreLabel.TryGetComponent<Renderer>(out var labelRenderer))
+        if (tileRenderer != null && label.TryGetComponent<Renderer>(out var labelRenderer))
         {
-            labelRenderer.sortingLayerID = letterRenderer.sortingLayerID;
-            labelRenderer.sortingOrder = letterRenderer.sortingOrder + 1;
+            labelRenderer.sortingLayerID = tileRenderer.sortingLayerID;
+            labelRenderer.sortingOrder = tileRenderer.sortingOrder + sortingOffset;
         }
     }
 
@@ -157,7 +201,7 @@ public class Tile : MonoBehaviour
 
     private void SetColor(Color color)
     {
-        if (letterRenderer != null) letterRenderer.color = color;
+        if (tileRenderer != null) tileRenderer.color = color;
     }
 
     /// <summary>The tile's resting color, accounting for any modifier tint.</summary>

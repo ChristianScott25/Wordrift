@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 
 /// <summary>
@@ -80,11 +81,18 @@ public class Board : MonoBehaviour
     private int resolving;
     private LetterSet letterSet;
     private IReadOnlyList<TileModifier> modifiers;
+    private IReadOnlyList<TileSkin> skins;
+    private TMP_FontAsset letterFont;
 
-    public void Build(IBoardShape shape, LetterSet letters, IReadOnlyList<TileModifier> availableModifiers = null)
+    public void Build(IBoardShape shape, LetterSet letters,
+                      IReadOnlyList<TileModifier> availableModifiers = null,
+                      IReadOnlyList<TileSkin> availableSkins = null,
+                      TMP_FontAsset font = null)
     {
         letterSet = letters;
         modifiers = availableModifiers;
+        skins = availableSkins;
+        letterFont = font;
         cells = new HashSet<Vector2Int>(shape.Cells());
 
         if (cells.Count == 0)
@@ -296,12 +304,43 @@ public class Board : MonoBehaviour
         char letter = letterSet.Draw();
         var tile = Instantiate(tilePrefab, startPos, Quaternion.identity, transform);
         tile.name = $"Tile {char.ToUpperInvariant(letter)} ({cell.x},{cell.y})";
-        tile.Init(letter, letterSet.PointsFor(letter), letterSet.SpriteFor(letter),
-                  cell, startPos, cellSize);
+        tile.Init(letter, letterSet.PointsFor(letter), NextLook(), cell, startPos, cellSize);
         RollModifiers(tile);
         if (startPos != targetPos) tile.MoveTo(targetPos);
         tiles[cell] = tile;
         return tile;
+    }
+
+    /// <summary>
+    /// The look for the next tile. The font is fixed for the round; the skin is
+    /// a weighted draw, mirroring how LetterSet draws letters, so a mode can mix
+    /// tile types on one board. A null skin leaves the prefab's own art.
+    /// </summary>
+    private TileLook NextLook() => new TileLook
+    {
+        Skin = PickSkin(),
+        LetterFont = letterFont,
+    };
+
+    private TileSkin PickSkin()
+    {
+        if (skins == null || skins.Count == 0) return null;
+
+        int total = 0;
+        foreach (var skin in skins)
+            if (skin != null) total += Mathf.Max(0, skin.weight);
+
+        // Every weight zeroed out is a config mistake, not a reason to draw nothing.
+        if (total <= 0) return skins.FirstOrDefault(s => s != null);
+
+        int roll = Random.Range(0, total);
+        foreach (var skin in skins)
+        {
+            if (skin == null) continue;
+            roll -= Mathf.Max(0, skin.weight);
+            if (roll < 0) return skin;
+        }
+        return skins.FirstOrDefault(s => s != null);
     }
 
     private void RollModifiers(Tile tile)

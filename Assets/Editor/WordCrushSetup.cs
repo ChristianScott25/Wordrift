@@ -25,7 +25,6 @@ public static class WordCrushSetup
     private const string HudPrefabFolder = "Assets/Prefabs/Hud";
     private const string ScenePath = "Assets/Scenes/Game.unity";
     private const string MenuScenePath = "Assets/Scenes/Main Menu.unity";
-    private const string LetterSpriteFolder = "Assets/Resources/Letters";
 
     private static readonly Color BackgroundColor = new Color(0.09f, 0.16f, 0.22f);
     private static readonly Color AccentColor = new Color(1f, 0.75f, 0.1f);
@@ -47,6 +46,7 @@ public static class WordCrushSetup
         BuildTimedMode(shape, letterSet, modifiers);
         BuildMovesMode(shape, letterSet, modifiers);
         OverflowModeSetup.Build(shape, letterSet, modifiers);
+        TileSkinSetup.Build();
         BuildTilePrefab();
         BuildHudPrefabs();
 
@@ -68,7 +68,7 @@ public static class WordCrushSetup
         Debug.Log("Word Crush: rebuilt GameData assets, prefabs, and Assets/Scenes/Game.unity.");
         EditorUtility.DisplayDialog("Word Crush",
             "Rebuilt:\n\n" +
-            "• Assets/GameData (letter set, board shape, mode configs, modifiers)\n" +
+            "• Assets/GameData (letter set, board shape, mode configs, modifiers, tile skin)\n" +
             "• Assets/Prefabs (Tile + HUD widgets)\n" +
             "• Assets/Scenes/Game.unity\n\n" +
             "Open Game.unity and press Play, or start from Main Menu.", "OK");
@@ -83,39 +83,6 @@ public static class WordCrushSetup
     {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
         WireSceneAssets();
-    }
-
-    /// <summary>
-    /// Re-reads every sprite in the letters folder into the LetterSet. Run this
-    /// after dropping in replacement art so you don't re-drag 26 slots.
-    /// </summary>
-    [MenuItem("Word Crush/Rescan Letter Sprites")]
-    public static void RescanSprites()
-    {
-        var letterSet = AssetDatabase.LoadAssetAtPath<LetterSet>($"{DataFolder}/LetterSet_Scrabble.asset");
-        if (letterSet == null)
-        {
-            Debug.LogError("No LetterSet found — run 'Rebuild Game Scene & Assets' first.");
-            return;
-        }
-
-        int found = 0;
-        var so = new SerializedObject(letterSet);
-        var entries = so.FindProperty("entries");
-        for (int i = 0; i < entries.arraySize; i++)
-        {
-            var entry = entries.GetArrayElementAtIndex(i);
-            string letter = entry.FindPropertyRelative("letter").stringValue;
-            var sprite = FindLetterSprite(letter);
-            if (sprite != null)
-            {
-                entry.FindPropertyRelative("sprite").objectReferenceValue = sprite;
-                found++;
-            }
-        }
-        so.ApplyModifiedProperties();
-        AssetDatabase.SaveAssets();
-        Debug.Log($"Word Crush: matched {found} letter sprites from {LetterSpriteFolder}.");
     }
 
     // ------------------------------------------------------------------ data
@@ -145,26 +112,10 @@ public static class WordCrushSetup
             entry.FindPropertyRelative("letter").stringValue = letter;
             entry.FindPropertyRelative("points").intValue = points;
             entry.FindPropertyRelative("weight").intValue = weight;
-            entry.FindPropertyRelative("sprite").objectReferenceValue = FindLetterSprite(letter);
         }
         so.ApplyModifiedProperties();
         EditorUtility.SetDirty(asset);
         return asset;
-    }
-
-    private static Sprite FindLetterSprite(string letter)
-    {
-        if (string.IsNullOrEmpty(letter)) return null;
-        foreach (string extension in new[] { "png", "jpg", "psd", "asset" })
-        {
-            string path = $"{LetterSpriteFolder}/{letter}.{extension}";
-            if (!File.Exists(path)) continue;
-
-            // Sprites imported as "Multiple" live as sub-assets.
-            var sprite = AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().FirstOrDefault();
-            if (sprite != null) return sprite;
-        }
-        return null;
     }
 
     private static List<TileModifier> BuildModifiers()
@@ -229,25 +180,26 @@ public static class WordCrushSetup
         string path = $"{PrefabFolder}/Tile.prefab";
 
         var root = new GameObject("Tile", typeof(SpriteRenderer), typeof(Tile));
-        var letterRenderer = root.GetComponent<SpriteRenderer>();
-        letterRenderer.sortingOrder = 1;
+        var tileRenderer = root.GetComponent<SpriteRenderer>();
+        tileRenderer.sortingOrder = 1;
 
+        // Above the tile body, not behind it — an opaque skin would hide it.
         var badge = new GameObject("Badge", typeof(SpriteRenderer));
         badge.transform.SetParent(root.transform, false);
         var badgeRenderer = badge.GetComponent<SpriteRenderer>();
-        badgeRenderer.sortingOrder = 0;
+        badgeRenderer.sortingOrder = tileRenderer.sortingOrder + 3;
         badgeRenderer.enabled = false;
 
         var tile = root.GetComponent<Tile>();
-        SetRef(tile, "letterRenderer", letterRenderer);
+        SetRef(tile, "tileRenderer", tileRenderer);
         SetRef(tile, "badgeRenderer", badgeRenderer);
 
         PrefabUtility.SaveAsPrefabAsset(root, path);
         Object.DestroyImmediate(root);
 
-        // The score label is added by its own command, so a rebuild would drop it
-        // otherwise. Keep the two in step.
-        TileScoreLabelSetup.AddScoreLabel();
+        // The labels and the default tile sprite are added by their own command,
+        // so a rebuild would drop them otherwise. Keep the two in step.
+        TileLabelSetup.SetUpTilePrefab();
 
         return AssetDatabase.LoadAssetAtPath<GameObject>(path).GetComponent<Tile>();
     }

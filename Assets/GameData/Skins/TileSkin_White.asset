@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6462eb87e8525481f992037b127ee644, type: 3}
+  m_Name: TileSkin_White
+  m_EditorClassIdentifier: Assembly-CSharp::TileSkin
+  displayName: White
+  baseSprite: {fileID: 505239008261153616, guid: 588c0a8cc352e4da5b97b725144a4b59, type: 3}
+  letterColor: {r: 0.16, g: 0.17, b: 0.23, a: 1}
+  scoreColor: {r: 0.16, g: 0.17, b: 0.23, a: 1}
+  weight: 1

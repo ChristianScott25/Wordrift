@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 /// <summary>
@@ -26,6 +27,16 @@ public abstract class ModeConfig : ScriptableObject
 
     [Tooltip("Multiplies the whole word score. Useful for harder variants.")]
     public float scoreMultiplier = 1f;
+
+    [Header("Tile look")]
+    [Tooltip("Looks a spawned tile can take. List several and each tile draws one " +
+             "at random by weight, so different tile types can share a board. " +
+             "Leave empty to use whatever the Tile prefab was authored with.")]
+    public List<TileSkin> tileSkins = new();
+
+    [Tooltip("Typeface for the letter on every tile. Independent of the skin on " +
+             "purpose — a font swap shouldn't touch the art. Empty = the prefab's font.")]
+    public TMP_FontAsset letterFont;
 
     [Header("Special tiles")]
     [Tooltip("Modifiers that can appear on spawned tiles. Each one's spawn chance lives on its own asset. Leave empty for plain tiles.")]

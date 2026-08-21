@@ -2,9 +2,12 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// The alphabet: which letters exist, what they score, how often they spawn,
-/// and which sprite draws them. Everything is editable in the Inspector, so
-/// swapping art or rebalancing the letter distribution needs no code changes.
+/// The alphabet: which letters exist, what they score, and how often they spawn.
+/// Everything is editable in the Inspector, so rebalancing the letter
+/// distribution needs no code changes.
+///
+/// Deliberately no art: letters are drawn as text on a TileSkin, so the look of
+/// a tile and the rules of the alphabet vary independently.
 ///
 /// Duplicate this asset to make variants (an "easy" set with more vowels, a
 /// themed set with different art) and point a ModeConfig at it.
@@ -23,9 +26,6 @@ public class LetterSet : ScriptableObject
 
         [Tooltip("Relative spawn frequency. Higher = appears more often.")]
         public int weight = 1;
-
-        [Tooltip("Artwork for this letter. Drop in any sprite.")]
-        public Sprite sprite;
     }
 
     [SerializeField] private List<Entry> entries = new();
@@ -58,17 +58,6 @@ public class LetterSet : ScriptableObject
     {
         EnsureBuilt();
         return lookup.TryGetValue(char.ToLowerInvariant(letter), out var entry) ? entry.points : 0;
-    }
-
-    public Sprite SpriteFor(char letter)
-    {
-        EnsureBuilt();
-        if (!lookup.TryGetValue(char.ToLowerInvariant(letter), out var entry)) return null;
-        if (entry.sprite != null) return entry.sprite;
-
-        // Fallback so the game still runs if a sprite slot is left empty.
-        var loaded = Resources.LoadAll<Sprite>($"Letters/{char.ToLowerInvariant(letter)}");
-        return loaded.Length > 0 ? loaded[0] : null;
     }
 
     /// <summary>Draws a random letter using the weighted distribution.</summary>

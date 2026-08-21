@@ -6,7 +6,7 @@ using UnityEngine;
 /// Creates Assets/GameData/Mode_Overflow.asset, because a ScriptableObject
 /// can't be authored from the command line.
 ///
-/// Idempotent and narrow, like TileScoreLabelSetup: it re-points the board and
+/// Idempotent and narrow, like TileLabelSetup: it re-points the board and
 /// letter set at whatever Timed mode uses, but never overwrites the pacing
 /// numbers on an asset that already exists — so re-running it can't undo
 /// tuning. Safe to run any time; it does NOT touch any scene.

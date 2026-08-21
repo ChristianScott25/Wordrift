@@ -18,6 +18,9 @@ MonoBehaviour:
   minWordLength: 3
   lengthBonusPerExtraLetter: 0
   scoreMultiplier: 1
+  tileSkins:
+  - {fileID: 11400000, guid: 92229840c2a714561b5ae7a8519bea58, type: 2}
+  letterFont: {fileID: 0}
   tileModifiers:
   - {fileID: 11400000, guid: 4feeb697aa4bc4d6a8a5e0b449256678, type: 2}
   - {fileID: 11400000, guid: 728ccfa980b654c07a56408590f52235, type: 2}

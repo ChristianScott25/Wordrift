@@ -57,7 +57,8 @@ public class GameSession : MonoBehaviour
         // Attach first: the mode may swap the board's refill or gravity policy,
         // and Build performs the opening fill through whatever is installed.
         mode.Attach(board);
-        board.Build(Config.boardShape, Config.letterSet, Config.tileModifiers);
+        board.Build(Config.boardShape, Config.letterSet, Config.tileModifiers,
+                    Config.tileSkins, Config.letterFont);
         FrameBoard();
 
         chainController.Init(board, sceneCamera);

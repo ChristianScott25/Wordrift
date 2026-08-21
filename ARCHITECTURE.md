@@ -49,6 +49,11 @@ session doesn't need to know it exists.
 **A special tile** — subclass `TileModifier`, override `ModifyLetterScore` or
 `WordMultiplier`, set its `spawnChance`, add it to a mode config's list.
 
+**A new tile look** — create a `TileSkin` (body sprite + letter/score colors +
+spawn weight) and add it to a mode config's `Tile Skins`. Several in one list
+means tiles draw a random skin each, so looks can be mixed on one board. The
+letter's typeface is a separate axis (`letterFont`) so the two never entangle.
+
 **A new board shape** — subclass `BoardShapeAsset` and return any set of cells.
 The board and gravity work over arbitrary cell sets; nothing assumes rectangles.
 
@@ -83,5 +88,6 @@ lowercase word per line.
 something to keep re-running — hand edits to those assets are the normal path,
 and rebuilding overwrites the scene.
 
-`Word Crush -> Rescan Letter Sprites` re-matches `Assets/Resources/Letters/*`
-into the LetterSet, for when placeholder art gets replaced.
+`Word Crush -> Set Up Tile Prefab` re-authors the tile's letter and score
+labels. `Word Crush -> Create Tile Skin Asset` creates the default skin and adds
+it to every mode config. Both are idempotent and touch no scene.
