@@ -173,7 +173,8 @@ public class Board : MonoBehaviour
         char letter = letterSet.Draw();
         var tile = Instantiate(tilePrefab, startPos, Quaternion.identity, transform);
         tile.name = $"Tile {char.ToUpperInvariant(letter)} ({cell.x},{cell.y})";
-        tile.Init(letter, letterSet.SpriteFor(letter), cell, startPos, cellSize);
+        tile.Init(letter, letterSet.PointsFor(letter), letterSet.SpriteFor(letter),
+                  cell, startPos, cellSize);
         RollModifiers(tile);
         if (startPos != targetPos) tile.MoveTo(targetPos);
         tiles[cell] = tile;

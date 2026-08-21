@@ -31,13 +31,13 @@ public class ScoreCalculator
 
         foreach (var tile in chain)
         {
-            int points = letters.PointsFor(tile.Letter);
+            // Same helper the tile uses to print its own number, so what the
+            // player reads on the board is what actually gets added up.
+            basePoints += TileModifier.ApplyLetterModifiers(
+                letters.PointsFor(tile.Letter), tile.Modifiers);
+
             foreach (var modifier in tile.Modifiers)
-            {
-                points = modifier.ModifyLetterScore(points);
-                wordMultiplier *= modifier.WordMultiplier;
-            }
-            basePoints += points;
+                if (modifier != null) wordMultiplier *= modifier.WordMultiplier;
         }
 
         int extraLetters = Mathf.Max(0, chain.Count - config.minWordLength);

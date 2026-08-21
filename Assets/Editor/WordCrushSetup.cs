@@ -240,9 +240,14 @@ public static class WordCrushSetup
         SetRef(tile, "letterRenderer", letterRenderer);
         SetRef(tile, "badgeRenderer", badgeRenderer);
 
-        var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+        PrefabUtility.SaveAsPrefabAsset(root, path);
         Object.DestroyImmediate(root);
-        return prefab.GetComponent<Tile>();
+
+        // The score label is added by its own command, so a rebuild would drop it
+        // otherwise. Keep the two in step.
+        TileScoreLabelSetup.AddScoreLabel();
+
+        return AssetDatabase.LoadAssetAtPath<GameObject>(path).GetComponent<Tile>();
     }
 
     private class HudPrefabs

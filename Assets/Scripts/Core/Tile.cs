@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 /// <summary>
@@ -13,9 +14,21 @@ public class Tile : MonoBehaviour
     [SerializeField] private SpriteRenderer letterRenderer;
     [SerializeField] private SpriteRenderer badgeRenderer;
 
+    [Tooltip("Prints what this letter is worth. Its position and scale are set from " +
+             "the art every time the tile is initialised, so don't hand-place it — " +
+             "style it (font, size, color) and leave the transform alone.")]
+    [SerializeField] private TMP_Text scoreLabel;
+
     [Header("Fit")]
     [Tooltip("Fraction of the cell the tile art fills. 1 = edge to edge.")]
     [Range(0.5f, 1f)][SerializeField] private float fillFraction = 0.92f;
+
+    [Header("Score label")]
+    [Tooltip("How far in from the art's bottom-right corner, as a fraction of the tile.")]
+    [Range(0f, 0.4f)][SerializeField] private float scoreInset = 0.06f;
+
+    [Tooltip("Nudge toward the camera so the number never sorts behind the letter art.")]
+    [SerializeField] private float scoreDepthOffset = 0.05f;
 
     [Header("Movement")]
     [SerializeField] private float fallSpeed = 14f;
@@ -34,6 +47,12 @@ public class Tile : MonoBehaviour
     public Vector2Int Cell { get; set; }
     public bool IsSettled => !moving;
 
+    /// <summary>What this letter is worth before any of its modifiers apply.</summary>
+    public int LetterPoints { get; private set; }
+
+    /// <summary>The value shown on the tile: LetterPoints run through its modifiers.</summary>
+    public int DisplayPoints => TileModifier.ApplyLetterModifiers(LetterPoints, Modifiers);
+
     /// <summary>Special properties on this tile (multipliers etc.). Usually empty.</summary>
     public List<TileModifier> Modifiers { get; } = new();
 
@@ -43,9 +62,10 @@ public class Tile : MonoBehaviour
     private bool selected;
     private Coroutine flashRoutine;
 
-    public void Init(char letter, Sprite sprite, Vector2Int cell, Vector3 startPos, float cellSize)
+    public void Init(char letter, int points, Sprite sprite, Vector2Int cell, Vector3 startPos, float cellSize)
     {
         Letter = letter;
+        LetterPoints = points;
         Cell = cell;
         Modifiers.Clear();
 
@@ -63,6 +83,7 @@ public class Tile : MonoBehaviour
         targetPosition = startPos;
 
         if (badgeRenderer != null) badgeRenderer.enabled = false;
+        LayOutScoreLabel(sprite);
         ApplyModifierVisuals();
     }
 
@@ -73,8 +94,51 @@ public class Tile : MonoBehaviour
         ApplyModifierVisuals();
     }
 
+    /// <summary>
+    /// Places and sizes the score label from the sprite's own bounds.
+    ///
+    /// Both are art-dependent and so can't be baked into the prefab: the tile is
+    /// uniformly scaled to fit its cell, so where the corner sits and how big the
+    /// text comes out both move when the sprite's dimensions change — and all the
+    /// current letter art is placeholder.
+    /// </summary>
+    private void LayOutScoreLabel(Sprite sprite)
+    {
+        if (scoreLabel == null) return;
+
+        var labelTransform = scoreLabel.transform;
+        Bounds bounds = sprite != null ? sprite.bounds : new Bounds(Vector3.zero, Vector3.one);
+        float spriteSize = Mathf.Max(bounds.size.x, bounds.size.y);
+        if (spriteSize <= 0f) spriteSize = 1f;
+
+        float inset = scoreInset * spriteSize;
+        labelTransform.localPosition = new Vector3(
+            bounds.max.x - inset,
+            bounds.min.y + inset,
+            -scoreDepthOffset);
+
+        // Cancels this tile's fit scaling, so the font size set on the prefab is
+        // the size that actually shows up, whatever the art measures.
+        labelTransform.localScale = Vector3.one * spriteSize;
+
+        // A world-space TMP object draws through a MeshRenderer, which won't sort
+        // against the tile sprites on its own.
+        if (letterRenderer != null && scoreLabel.TryGetComponent<Renderer>(out var labelRenderer))
+        {
+            labelRenderer.sortingLayerID = letterRenderer.sortingLayerID;
+            labelRenderer.sortingOrder = letterRenderer.sortingOrder + 1;
+        }
+    }
+
+    private void RefreshScoreLabel()
+    {
+        if (scoreLabel != null) scoreLabel.text = DisplayPoints.ToString();
+    }
+
     private void ApplyModifierVisuals()
     {
+        RefreshScoreLabel();
+
         if (Modifiers.Count == 0)
         {
             if (badgeRenderer != null) badgeRenderer.enabled = false;
