@@ -1095,6 +1095,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1713453990}
   - component: {fileID: 1713453989}
+  - component: {fileID: 1713453991}
   m_Layer: 0
   m_Name: Board
   m_TagString: Untagged
@@ -1133,6 +1134,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1713453991
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1713453988}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b830aa08832da4cf88922b7600f69e92, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BoardBackground
+  cellSprite: {fileID: 21300000, guid: ab2b8e15d4b674304ad92fb4f1a02eea, type: 3}
+  color: {r: 0.09, g: 0.15, b: 0.29, a: 1}
+  cellScale: 1.12
+  sortingOrder: -10
+  depthOffset: 0.1
 --- !u!1 &1899240752
 GameObject:
   m_ObjectHideFlags: 0

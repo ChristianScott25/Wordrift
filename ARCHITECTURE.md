@@ -46,8 +46,11 @@ the asset, add a menu button pointing at it. Nothing existing changes.
 in `OnEnable` and unsubscribes in `OnDisable`. Drop it on the HUD Canvas. The
 session doesn't need to know it exists.
 
-**A special tile** — subclass `TileModifier`, override `ModifyLetterScore` or
-`WordMultiplier`, set its `spawnChance`, add it to a mode config's list.
+**A special tile** — for another multiplier, just duplicate one of the four
+assets in `Assets/GameData/Modifiers/` and change its `multiplier`, `badgeLabel`
+and `badgeColor`; no code. For a genuinely new *rule*, subclass `TileModifier`
+and override `ModifyLetterScore` or `WordMultiplier`. Either way, set
+`spawnChance` and add it to a mode config's list.
 
 **A new tile look** — create a `TileSkin` (body sprite + letter/score colors +
 spawn weight) and add it to a mode config's `Tile Skins`. Several in one list
@@ -55,7 +58,9 @@ means tiles draw a random skin each, so looks can be mixed on one board. The
 letter's typeface is a separate axis (`letterFont`) so the two never entangle.
 
 **A new board shape** — subclass `BoardShapeAsset` and return any set of cells.
-The board and gravity work over arbitrary cell sets; nothing assumes rectangles.
+The board, gravity and the board background all work over arbitrary cell sets;
+nothing assumes rectangles. `BoardBackground` draws one square per cell and lets
+their overlap form the border, so an odd silhouette needs no extra art.
 
 **A mode that manages the board itself** — override `GameMode.Attach` to swap
 `Board.Refill` (`IRefillPolicy`) or `Board.Gravity`, then drive the board from

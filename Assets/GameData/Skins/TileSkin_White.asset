@@ -16,4 +16,5 @@ MonoBehaviour:
   baseSprite: {fileID: 505239008261153616, guid: 588c0a8cc352e4da5b97b725144a4b59, type: 3}
   letterColor: {r: 0.16, g: 0.17, b: 0.23, a: 1}
   scoreColor: {r: 0.16, g: 0.17, b: 0.23, a: 1}
+  badgeSprite: {fileID: 21300000, guid: 91b375770cf7445b6ade2af95eef39f8, type: 3}
   weight: 1

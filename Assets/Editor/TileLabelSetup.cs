@@ -4,8 +4,9 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Authors the two text labels on Assets/Prefabs/Tile.prefab — the letter and
-/// the score — and gives the prefab a default tile sprite to fall back on.
+/// Authors the three text labels on Assets/Prefabs/Tile.prefab — the letter, the
+/// score, and the multiplier badge — and gives the prefab a default tile sprite
+/// to fall back on.
 ///
 /// This exists because world-space TextMeshPro objects can't be authored from
 /// the command line: their serialization is large and version-specific, and
@@ -25,6 +26,7 @@ public static class TileLabelSetup
 
     private const string LetterName = "Letter";
     private const string ScoreName = "Score";
+    private const string BadgeLabelName = "BadgeLabel";
 
     private static readonly Color InkColor = new Color(0.16f, 0.17f, 0.23f, 1f);
 
@@ -57,16 +59,17 @@ public static class TileLabelSetup
                 else Debug.LogWarning($"No sprite found at {DefaultTileSprite}.");
             }
 
-            // The badge used to sort *behind* the body, which was survivable while
-            // the letter art had transparency and is not now that the body is a
-            // solid tile. Modifier tiles are dormant (spawnChance 0), so this has
-            // never been visible either way.
+            // The badge circle used to sort *behind* the body, which was survivable
+            // while the letter art had transparency and is not now that the body is
+            // a solid tile. Tile re-applies this at runtime; setting it here keeps
+            // the prefab honest when you look at it in isolation.
             var badge = root.transform.Find("Badge");
             if (badge != null && renderer != null &&
                 badge.TryGetComponent<SpriteRenderer>(out var badgeRenderer))
             {
                 badgeRenderer.sortingLayerID = renderer.sortingLayerID;
                 badgeRenderer.sortingOrder = renderer.sortingOrder + 3;
+                badgeRenderer.enabled = false;   // only a modifier turns it on
             }
 
             // The letter: big and centred. Tile overwrites .text per spawn.
@@ -81,11 +84,22 @@ public static class TileLabelSetup
                        pivot: new Vector2(1f, 0f), size: new Vector2(1.2f, 0.9f));
             score.text = "1";
 
+            // The multiplier badge: two characters inside the circle. Smaller than
+            // the score on purpose — "2L" has to fit across a circle that's only
+            // ~38% of the tile wide, and the outline eats into that.
+            var badgeText = FindOrCreateLabel(root, BadgeLabelName);
+            StyleLabel(badgeText, fontSize: 1.6f, align: TextAlignmentOptions.Center,
+                       pivot: new Vector2(0.5f, 0.5f), size: new Vector2(2f, 2f));
+            badgeText.text = "2L";
+            badgeText.color = Color.white;
+            badgeText.enabled = false;   // only a modifier turns it on
+
             if (!WireLabel(tile, "letterLabel", letter)) return;
             if (!WireLabel(tile, "scoreLabel", score)) return;
+            if (!WireLabel(tile, "badgeLabel", badgeText)) return;
 
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
-            Debug.Log($"Tile prefab ready: letter + score labels wired on {PrefabPath}.");
+            Debug.Log($"Tile prefab ready: letter, score and badge labels wired on {PrefabPath}.");
         }
         finally
         {

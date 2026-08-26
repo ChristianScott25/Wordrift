@@ -79,6 +79,7 @@ public class Board : MonoBehaviour
 
     /// <summary>Outstanding resolve passes. A count, since clears can overlap.</summary>
     private int resolving;
+    private BoardBackground background;
     private LetterSet letterSet;
     private IReadOnlyList<TileModifier> modifiers;
     private IReadOnlyList<TileSkin> skins;
@@ -110,8 +111,25 @@ public class Board : MonoBehaviour
         foreach (var column in cells.GroupBy(c => c.x))
             columnCells[column.Key] = column.OrderBy(c => c.y).ToList();
 
+        BuildBackground();
         ClearTiles();
         FillEmptyCells();
+    }
+
+    /// <summary>
+    /// Lays the board's backing under every cell. Optional: a Board with no
+    /// BoardBackground component just plays on the scene's background colour.
+    /// </summary>
+    private void BuildBackground()
+    {
+        if (background == null) background = GetComponent<BoardBackground>();
+        if (background == null) return;
+
+        // Hand over world positions rather than cells, so the cell-to-world
+        // maths stays in one place.
+        var centers = new List<Vector3>(cells.Count);
+        foreach (var cell in cells) centers.Add(CellToWorld(cell));
+        background.Rebuild(centers, cellSize);
     }
 
     public void ResetBoard()

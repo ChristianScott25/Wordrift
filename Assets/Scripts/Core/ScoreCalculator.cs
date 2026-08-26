@@ -31,8 +31,9 @@ public class ScoreCalculator
 
         foreach (var tile in chain)
         {
-            // Same helper the tile uses to print its own number, so what the
-            // player reads on the board is what actually gets added up.
+            // The tile's corner shows the BASE letter value; the badge is what
+            // tells the player it gets multiplied. This is where that actually
+            // happens, and it's the only place letter modifiers are applied.
             basePoints += TileModifier.ApplyLetterModifiers(
                 letters.PointsFor(tile.Letter), tile.Modifiers);
 

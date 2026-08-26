@@ -10,12 +10,21 @@ using UnityEngine;
 /// </summary>
 public abstract class TileModifier : ScriptableObject
 {
-    [Header("Visuals")]
-    [Tooltip("Tint applied to the tile so the player can see it's special.")]
-    public Color tint = Color.white;
+    [Header("Badge")]
+    [Tooltip("Short label drawn in the tile's top-left corner. Two characters is " +
+             "the design target: 2L, 3W.")]
+    public string badgeLabel = "2L";
 
-    [Tooltip("Optional badge sprite drawn behind the letter.")]
-    public Sprite badge;
+    [Tooltip("Color of the circle behind the label. This is the only thing that " +
+             "marks the tile — the body keeps its skin color, so several " +
+             "multipliers on screen stay calm.")]
+    public Color badgeColor = new Color(0.20f, 0.52f, 0.88f, 1f);
+
+    [Tooltip("Color of the label text on that circle.")]
+    public Color badgeTextColor = Color.white;
+
+    // The circle sprite itself lives on TileSkin, not here — so swapping the
+    // badge treatment is one field on one asset rather than one per modifier.
 
     [Header("Spawning")]
     [Tooltip("Chance (0-1) that a newly spawned tile gets this modifier.")]

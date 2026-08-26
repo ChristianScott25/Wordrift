@@ -32,13 +32,29 @@ public class Tile : MonoBehaviour
              "style it (font, size, color) and leave the transform alone.")]
     [SerializeField] private TMP_Text scoreLabel;
 
+    [Tooltip("Prints a modifier's short label (2L, 3W) over the badge circle. " +
+             "Positioned from the art at runtime, same as the others.")]
+    [SerializeField] private TMP_Text badgeLabel;
+
     [Header("Fit")]
     [Tooltip("Fraction of the cell the tile art fills. 1 = edge to edge.")]
     [Range(0.5f, 1f)][SerializeField] private float fillFraction = 0.92f;
 
-    [Header("Score label")]
-    [Tooltip("How far in from the art's bottom-right corner, as a fraction of the tile.")]
-    [Range(0f, 0.4f)][SerializeField] private float scoreInset = 0.06f;
+    [Header("Corner labels")]
+    [Tooltip("How far in from the bottom-right corner the score sits, as a " +
+             "fraction of the tile.")]
+    [FormerlySerializedAs("scoreInset")]
+    [Range(0f, 0.4f)][SerializeField] private float cornerInset = 0.06f;
+
+    [Tooltip("How far in from the top-left corner the badge sits. Its own knob " +
+             "rather than sharing the score's, because the badge is big enough " +
+             "to crowd the letter and the score isn't. 0 tucks it into the " +
+             "tile's rounded corner.")]
+    [Range(0f, 0.4f)][SerializeField] private float badgeInset = 0.01f;
+
+    [Tooltip("Diameter of the badge circle, as a fraction of the tile. Shrinking " +
+             "this is the other way to pull it off the letter.")]
+    [Range(0.1f, 0.6f)][SerializeField] private float badgeSize = 0.38f;
 
     [Tooltip("Nudge the labels toward the camera so they never sort behind the tile art.")]
     [FormerlySerializedAs("scoreDepthOffset")]
@@ -64,8 +80,6 @@ public class Tile : MonoBehaviour
     /// <summary>What this letter is worth before any of its modifiers apply.</summary>
     public int LetterPoints { get; private set; }
 
-    /// <summary>The value shown on the tile: LetterPoints run through its modifiers.</summary>
-    public int DisplayPoints => TileModifier.ApplyLetterModifiers(LetterPoints, Modifiers);
 
     /// <summary>Special properties on this tile (multipliers etc.). Usually empty.</summary>
     public List<TileModifier> Modifiers { get; } = new();
@@ -116,6 +130,8 @@ public class Tile : MonoBehaviour
             if (look.Skin.baseSprite != null) tileRenderer.sprite = look.Skin.baseSprite;
             if (letterLabel != null) letterLabel.color = look.Skin.letterColor;
             if (scoreLabel != null) scoreLabel.color = look.Skin.scoreColor;
+            if (badgeRenderer != null && look.Skin.badgeSprite != null)
+                badgeRenderer.sprite = look.Skin.badgeSprite;
         }
 
         if (letterLabel != null)
@@ -148,10 +164,48 @@ public class Tile : MonoBehaviour
 
         PlaceLabel(letterLabel, bounds.center, spriteSize, sortingOffset: 1);
 
-        float inset = scoreInset * spriteSize;
+        float inset = cornerInset * spriteSize;
         PlaceLabel(scoreLabel,
             new Vector3(bounds.max.x - inset, bounds.min.y + inset, 0f),
             spriteSize, sortingOffset: 2);
+
+        // Top-left, offset by its own radius so badgeInset measures from the
+        // circle's edge to the tile's edge, the same way the score's does.
+        float radius = badgeSize * spriteSize / 2f;
+        float badgeMargin = badgeInset * spriteSize;
+        var badgeCenter = new Vector3(
+            bounds.min.x + badgeMargin + radius,
+            bounds.max.y - badgeMargin - radius,
+            0f);
+
+        LayOutBadge(badgeCenter, badgeSize * spriteSize);
+        PlaceLabel(badgeLabel, badgeCenter, spriteSize, sortingOffset: 4);
+    }
+
+    /// <summary>
+    /// Sizes the badge circle to badgeSize regardless of what the skin's sprite
+    /// measures, so a replacement circle doesn't change the layout.
+    /// </summary>
+    private void LayOutBadge(Vector3 localCenter, float worldSize)
+    {
+        if (badgeRenderer == null) return;
+
+        var badgeTransform = badgeRenderer.transform;
+        badgeTransform.localPosition = new Vector3(localCenter.x, localCenter.y, -labelDepthOffset);
+
+        var sprite = badgeRenderer.sprite;
+        float spriteSize = sprite != null
+            ? Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y)
+            : 1f;
+        if (spriteSize <= 0f) spriteSize = 1f;
+
+        badgeTransform.localScale = Vector3.one * (worldSize / spriteSize);
+
+        if (tileRenderer != null)
+        {
+            badgeRenderer.sortingLayerID = tileRenderer.sortingLayerID;
+            badgeRenderer.sortingOrder = tileRenderer.sortingOrder + 3;
+        }
     }
 
     private void PlaceLabel(TMP_Text label, Vector3 localCenter, float spriteSize, int sortingOffset)
@@ -176,27 +230,41 @@ public class Tile : MonoBehaviour
 
     private void RefreshScoreLabel()
     {
-        if (scoreLabel != null) scoreLabel.text = DisplayPoints.ToString();
+        // Deliberately the BASE value, not the multiplied one: the corner always
+        // means "what this letter is worth" and the badge explains the rest.
+        if (scoreLabel != null) scoreLabel.text = LetterPoints.ToString();
     }
 
+    /// <summary>
+    /// A modifier shows up as a badge and nothing else — the tile body keeps its
+    /// skin color, so a board full of multipliers stays readable.
+    /// </summary>
     private void ApplyModifierVisuals()
     {
         RefreshScoreLabel();
 
-        if (Modifiers.Count == 0)
-        {
-            if (badgeRenderer != null) badgeRenderer.enabled = false;
-            SetColor(normalColor);
-            return;
-        }
+        var top = Modifiers.Count > 0 ? Modifiers[Modifiers.Count - 1] : null;
 
-        var top = Modifiers[Modifiers.Count - 1];
-        SetColor(top.tint);
+        // The circle needs a sprite from the skin; the label doesn't. If the
+        // sprite is missing the label still draws, bare — wrong-looking, but
+        // legible, which beats a silently invisible multiplier.
         if (badgeRenderer != null)
         {
-            badgeRenderer.sprite = top.badge;
-            badgeRenderer.enabled = top.badge != null;
+            badgeRenderer.enabled = top != null && badgeRenderer.sprite != null;
+            if (top != null) badgeRenderer.color = top.badgeColor;
         }
+
+        if (badgeLabel != null)
+        {
+            badgeLabel.enabled = top != null;
+            if (top != null)
+            {
+                badgeLabel.text = top.badgeLabel;
+                badgeLabel.color = top.badgeTextColor;
+            }
+        }
+
+        SetColor(RestingColor);
     }
 
     private void SetColor(Color color)
@@ -204,9 +272,12 @@ public class Tile : MonoBehaviour
         if (tileRenderer != null) tileRenderer.color = color;
     }
 
-    /// <summary>The tile's resting color, accounting for any modifier tint.</summary>
-    private Color RestingColor =>
-        Modifiers.Count > 0 ? Modifiers[Modifiers.Count - 1].tint : normalColor;
+    /// <summary>
+    /// The tile body's colour when nothing is happening to it. Modifiers no
+    /// longer tint the body, but this is where a skin-supplied body colour would
+    /// slot in if one is ever added.
+    /// </summary>
+    private Color RestingColor => normalColor;
 
     public void MoveTo(Vector3 target)
     {

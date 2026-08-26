@@ -61,6 +61,7 @@ public static class WordCrushSetup
         AssetDatabase.Refresh();
 
         WireSceneAssets();
+        BoardBackgroundSetup.SetUp();
         RegisterScenes();
 
         AssetDatabase.SaveAssets();
@@ -70,7 +71,7 @@ public static class WordCrushSetup
             "Rebuilt:\n\n" +
             "• Assets/GameData (letter set, board shape, mode configs, modifiers, tile skin)\n" +
             "• Assets/Prefabs (Tile + HUD widgets)\n" +
-            "• Assets/Scenes/Game.unity\n\n" +
+            "• Assets/Scenes/Game.unity (with the board background)\n\n" +
             "Open Game.unity and press Play, or start from Main Menu.", "OK");
     }
 
@@ -118,22 +119,7 @@ public static class WordCrushSetup
         return asset;
     }
 
-    private static List<TileModifier> BuildModifiers()
-    {
-        var doubleLetter = CreateOrLoad<LetterMultiplierModifier>($"{ModifierFolder}/DoubleLetter.asset");
-        doubleLetter.multiplier = 2;
-        doubleLetter.tint = new Color(0.6f, 0.85f, 1f);
-        doubleLetter.spawnChance = 0f;   // off until you want special tiles
-        EditorUtility.SetDirty(doubleLetter);
-
-        var tripleWord = CreateOrLoad<WordMultiplierModifier>($"{ModifierFolder}/TripleWord.asset");
-        tripleWord.multiplier = 3;
-        tripleWord.tint = new Color(1f, 0.6f, 0.8f);
-        tripleWord.spawnChance = 0f;
-        EditorUtility.SetDirty(tripleWord);
-
-        return new List<TileModifier> { doubleLetter, tripleWord };
-    }
+    private static List<TileModifier> BuildModifiers() => TileModifierSetup.Build();
 
     private static RectangleBoardShape BuildBoardShape()
     {

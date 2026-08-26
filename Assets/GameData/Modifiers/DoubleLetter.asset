@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 80693e38415164164b41c55a03e82d1c, type: 3}
   m_Name: DoubleLetter
   m_EditorClassIdentifier: Assembly-CSharp::LetterMultiplierModifier
-  tint: {r: 0.6, g: 0.85, b: 1, a: 1}
-  badge: {fileID: 0}
-  spawnChance: 0
+  badgeLabel: 2L
+  badgeColor: {r: 0.2, g: 0.52, b: 0.88, a: 1}
+  badgeTextColor: {r: 1, g: 1, b: 1, a: 1}
+  spawnChance: 0.05
   multiplier: 2

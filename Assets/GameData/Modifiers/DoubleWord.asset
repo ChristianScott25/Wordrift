@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2f1805bdc2ded417ca9e9752b867cbd5, type: 3}
-  m_Name: TripleWord
+  m_Name: DoubleWord
   m_EditorClassIdentifier: Assembly-CSharp::WordMultiplierModifier
-  badgeLabel: 3W
-  badgeColor: {r: 0.55, g: 0.08, b: 0.12, a: 1}
+  badgeLabel: 2W
+  badgeColor: {r: 0.88, g: 0.28, b: 0.26, a: 1}
   badgeTextColor: {r: 1, g: 1, b: 1, a: 1}
-  spawnChance: 0.01
-  multiplier: 3
+  spawnChance: 0.02
+  multiplier: 2

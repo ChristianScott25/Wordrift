@@ -26,6 +26,11 @@ public class TileSkin : ScriptableObject
     [Tooltip("Color of the score in the corner.")]
     public Color scoreColor = new Color(0.16f, 0.17f, 0.23f, 1f);
 
+    [Tooltip("Circle drawn behind a multiplier badge. Tinted per modifier, so " +
+             "keep it white. Swap this to change the badge treatment for every " +
+             "modifier at once. Empty = the label draws with no circle behind it.")]
+    public Sprite badgeSprite;
+
     [Tooltip("Relative chance of a spawning tile taking this skin, when a mode " +
              "lists more than one. Same idea as a letter's spawn weight.")]
     [Min(0)] public int weight = 1;

@@ -18,6 +18,7 @@ public static class TileSkinSetup
     private const string SkinFolder = "Assets/GameData/Skins";
     private const string AssetPath = SkinFolder + "/TileSkin_White.asset";
     private const string BaseSpritePath = "Assets/Sprites/Tile - white.png";
+    private const string BadgeSpritePath = "Assets/Sprites/Score Multiplier - White.png";
 
     [MenuItem("Word Crush/Create Tile Skin Asset")]
     public static void CreateTileSkin() => Build();
@@ -37,10 +38,13 @@ public static class TileSkinSetup
             skin.displayName = "White";
         }
 
-        // Sprites imported as "Multiple" live as sub-assets, so load them all.
-        var sprite = AssetDatabase.LoadAllAssetsAtPath(BaseSpritePath).OfType<Sprite>().FirstOrDefault();
-        if (sprite != null) skin.baseSprite = sprite;
+        var body = LoadSprite(BaseSpritePath);
+        if (body != null) skin.baseSprite = body;
         else Debug.LogWarning($"No sprite found at {BaseSpritePath} — assign Base Sprite by hand.");
+
+        var badge = LoadSprite(BadgeSpritePath);
+        if (badge != null) skin.badgeSprite = badge;
+        else Debug.LogWarning($"No sprite found at {BadgeSpritePath} — assign Badge Sprite by hand.");
 
         EditorUtility.SetDirty(skin);
 
@@ -53,6 +57,10 @@ public static class TileSkinSetup
         Selection.activeObject = skin;
         return skin;
     }
+
+    /// <summary>Sprites imported as "Multiple" live as sub-assets, so load them all.</summary>
+    private static Sprite LoadSprite(string path) =>
+        AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().FirstOrDefault();
 
     /// <summary>Adds the skin to any mode config that doesn't already list it.</summary>
     private static int AttachToModes(TileSkin skin)
