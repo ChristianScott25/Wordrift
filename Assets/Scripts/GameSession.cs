@@ -122,6 +122,7 @@ public class GameSession : MonoBehaviour
             WordsFound = wordsFound,
             BestWord = bestWord,
             BestWordPoints = bestWordPoints,
+            Headline = mode.Outcome,
         });
     }
 

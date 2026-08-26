@@ -37,9 +37,9 @@ public class Board : MonoBehaviour
     /// <summary>
     /// Whether clearing a word blocks input until the stack has settled.
     ///
-    /// A mode where tiles are always in the air (OverflowMode) must turn this
-    /// off — otherwise there is always something falling, Busy never clears,
-    /// and input dies for the rest of the round.
+    /// A mode where tiles are always in the air must turn this off — otherwise
+    /// there is always something falling, Busy never clears, and input dies for
+    /// the rest of the round. No current mode needs to; Overflow did.
     /// </summary>
     public bool GateInputWhileResolving { get; set; } = true;
 
@@ -70,6 +70,13 @@ public class Board : MonoBehaviour
     /// <summary>Swap this to change what happens to cleared cells (see IRefillPolicy).</summary>
     public IRefillPolicy Refill { get; set; } = new FillEveryCell();
 
+    /// <summary>
+    /// Where new tiles' letters come from (see ILetterSource). Install a finite
+    /// one in GameMode.Attach to give a mode a bag it can empty; left alone,
+    /// Build fits an endless draw over the mode's LetterSet.
+    /// </summary>
+    public ILetterSource Letters { get; set; }
+
     private readonly Dictionary<Vector2Int, Tile> tiles = new();
 
     /// <summary>Every cell of each column, ordered bottom to top.</summary>
@@ -91,6 +98,15 @@ public class Board : MonoBehaviour
                       TMP_FontAsset font = null)
     {
         letterSet = letters;
+        if (letters == null)
+            Debug.LogError("Board built with no LetterSet — no tiles can spawn.", this);
+
+        // A mode may have installed a finite source in Attach; only fall back
+        // when it didn't. Reset here rather than in Build's caller so the
+        // opening fill always draws from a full source.
+        Letters ??= new EndlessLetters(letters);
+        Letters.Reset();
+
         modifiers = availableModifiers;
         skins = availableSkins;
         letterFont = font;
@@ -137,6 +153,7 @@ public class Board : MonoBehaviour
         StopAllCoroutines();
         Busy = false;
         resolving = 0;   // the routines that would have decremented it are gone
+        Letters?.Reset();  // a finite bag is whole again for the replay
         ClearTiles();
         FillEmptyCells();
     }
@@ -190,8 +207,10 @@ public class Board : MonoBehaviour
 
     /// <summary>
     /// Drops one new tile into a column from above the board, landing on top of
-    /// whatever is already there. Returns false if the column has no room —
-    /// that's how OverflowMode detects a loss.
+    /// whatever is already there. Returns false if the column has no room, which
+    /// is how a mode feeding the board itself detects it has run out of space.
+    ///
+    /// Unused since Overflow mode was cut, as are the column queries above.
     /// </summary>
     public bool TryDropInto(int column)
     {
@@ -216,8 +235,10 @@ public class Board : MonoBehaviour
         Vector3 target = CellToWorld(landing);
         var start = new Vector3(
             target.x, ColumnTopY(column) + cellSize * (1.5f + inFlight), target.z);
-        SpawnTile(landing, start, target);
-        return true;
+
+        // Also false when the letter source has run dry, so a caller can't tell
+        // "no room" from "no tiles" — fine while nothing calls this.
+        return SpawnTile(landing, start, target) != null;
     }
 
     /// <summary>
@@ -310,16 +331,23 @@ public class Board : MonoBehaviour
             {
                 Vector3 target = CellToWorld(ordered[i]);
                 var start = new Vector3(target.x, topY + cellSize * (i + 1.5f), target.z);
-                moved.Add(SpawnTile(ordered[i], start, target));
+                var spawned = SpawnTile(ordered[i], start, target);
+                if (spawned != null) moved.Add(spawned);
             }
         }
 
         return moved;
     }
 
+    /// <summary>
+    /// Instantiates one tile, or returns null when the letter source has nothing
+    /// left. Null is a normal outcome for a finite source, not an error — the
+    /// cell just stays empty.
+    /// </summary>
     private Tile SpawnTile(Vector2Int cell, Vector3 startPos, Vector3 targetPos)
     {
-        char letter = letterSet.Draw();
+        if (Letters == null || !Letters.TryDraw(out char letter)) return null;
+
         var tile = Instantiate(tilePrefab, startPos, Quaternion.identity, transform);
         tile.name = $"Tile {char.ToUpperInvariant(letter)} ({cell.x},{cell.y})";
         tile.Init(letter, letterSet.PointsFor(letter), NextLook(), cell, startPos, cellSize);

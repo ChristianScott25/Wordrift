@@ -48,7 +48,10 @@ public class GameOverPanel : MonoBehaviour
 
     private void OnRoundEnded(RoundSummary summary)
     {
-        if (titleLabel != null) titleLabel.text = title;
+        // A mode that can be passed or failed names its own ending; the rest
+        // fall back to this panel's wording.
+        if (titleLabel != null)
+            titleLabel.text = string.IsNullOrEmpty(summary.Headline) ? title : summary.Headline;
         if (scoreLabel != null) scoreLabel.text = summary.Score.ToString();
         if (detailLabel != null)
         {

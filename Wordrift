@@ -1,0 +1,13 @@
+Word rift
+
+Main Idea:
+A rogue-like tile based word game. A combination of Candy Crush (connecting tiles to destroy them and earn points, causing new tiles to fall down), Scrabble (spelling actual words obviously) and Balatro (rogue-like aspect - upgrade tiles, tile bag, "bookmarks" and such in between rounds).
+
+Ideas:
+- bookmarks
+	- basically the "Jokers" of this game, that give you upgrades and special abilities
+		- "Bookend" - Extra points if word starts and ends with same letter
+		- "Stutter" - Extra points if same word repeated, or how many times its been played previously
+
+Needed:
+- Check board for viable words after ever score so that if there are no possible words the round or game ends

@@ -27,6 +27,13 @@ public struct ModeStatus
     public string Value;    // "0:47", "12"
     public float Fraction;  // 1 = full, 0 = spent (for a progress bar)
     public bool Urgent;     // true when running out, so the HUD can go red
+
+    /// <summary>
+    /// A second readout, for a mode that is chasing something as well as
+    /// spending something — "60 / 120   BAG 12". Empty for the modes with only
+    /// one number to show, which is most of them.
+    /// </summary>
+    public string Goal;
 }
 
 /// <summary>Everything the game-over screen needs.</summary>
@@ -36,4 +43,11 @@ public struct RoundSummary
     public int WordsFound;
     public string BestWord;
     public int BestWordPoints;
+
+    /// <summary>
+    /// What to call this ending — "TARGET REACHED", "OUT OF MOVES". Empty leaves
+    /// the game-over panel's own wording, which is what a mode that simply runs
+    /// out of its resource wants.
+    /// </summary>
+    public string Headline;
 }

@@ -7,7 +7,7 @@ using UnityEngine;
 /// This is deliberately separate from IGravityRule: gravity says where the
 /// surviving tiles end up, this says whether the holes they left get filled.
 /// Match-3 style modes want every hole filled immediately; a mode that feeds
-/// tiles in on its own clock (see OverflowMode) wants none of them filled.
+/// tiles in on its own clock wants none of them filled.
 /// </summary>
 public interface IRefillPolicy
 {
@@ -31,6 +31,9 @@ public class FillEveryCell : IRefillPolicy
 /// Never fill anything. Cleared cells stay empty and the stack just compacts,
 /// which leaves the board's population entirely up to whoever is dropping
 /// tiles in — that's the mode.
+///
+/// Nothing uses this since Overflow mode was cut. Kept because it's half of
+/// what a mode owning its own board population needs, and it costs nothing.
 /// </summary>
 public class NeverRefill : IRefillPolicy
 {

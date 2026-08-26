@@ -43,9 +43,8 @@ public static class WordCrushSetup
         var letterSet = BuildLetterSet();
         var modifiers = BuildModifiers();
         var shape = BuildBoardShape();
-        BuildTimedMode(shape, letterSet, modifiers);
         BuildMovesMode(shape, letterSet, modifiers);
-        OverflowModeSetup.Build(shape, letterSet, modifiers);
+        RogueDemoModeSetup.Build(shape, letterSet, modifiers, null);
         TileSkinSetup.Build();
         BuildTilePrefab();
         BuildHudPrefabs();
@@ -128,22 +127,6 @@ public static class WordCrushSetup
         shape.height = 10;
         EditorUtility.SetDirty(shape);
         return shape;
-    }
-
-    private static TimedModeConfig BuildTimedMode(BoardShapeAsset shape, LetterSet letters, List<TileModifier> modifiers)
-    {
-        var mode = CreateOrLoad<TimedModeConfig>($"{DataFolder}/Mode_Timed.asset");
-        mode.displayName = "Timed Mode";
-        mode.boardShape = shape;
-        mode.letterSet = letters;
-        mode.minWordLength = 3;
-        mode.roundSeconds = 60f;
-        mode.secondsPerWord = 0f;
-        mode.secondsPerExtraLetter = 1f;
-        mode.extraLettersStartAt = 4;
-        mode.tileModifiers = new List<TileModifier>(modifiers);
-        EditorUtility.SetDirty(mode);
-        return mode;
     }
 
     private static MovesModeConfig BuildMovesMode(BoardShapeAsset shape, LetterSet letters, List<TileModifier> modifiers)
@@ -411,7 +394,7 @@ public static class WordCrushSetup
 
         var tilePrefab = Require<GameObject>($"{PrefabFolder}/Tile.prefab");
         if (tilePrefab != null) SetRef(board, "tilePrefab", tilePrefab.GetComponent<Tile>());
-        SetRef(session, "fallbackMode", Require<TimedModeConfig>($"{DataFolder}/Mode_Timed.asset"));
+        SetRef(session, "fallbackMode", Require<RogueDemoModeConfig>($"{DataFolder}/Mode_RogueDemo.asset"));
         SetRef(session, "wordList", Require<TextAsset>("Assets/Resources/wordlist.txt"));
 
         EditorSceneManager.MarkSceneDirty(scene);

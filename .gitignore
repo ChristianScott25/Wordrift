@@ -1,5 +1,5 @@
 # ==============================================================================
-# Unity .gitignore for Word-Crush
+# Unity .gitignore for Wordrift
 # Keeps source + assets; excludes Unity's regenerated caches and IDE project files.
 # (Library/ alone is multiple GB of derived cache — never commit it.)
 # ==============================================================================
@@ -13,13 +13,16 @@
 [Ll]ogs/
 [Uu]ser[Ss]ettings/
 [Mm]emoryCaptures/
+# Unity drops crash-recovery autosaves of open scenes here. They are stale copies,
+# never live wiring — one was committed by accident in fd3c08c and removed later.
+/[Aa]ssets/_[Rr]ecovery/
 
 # Asset meta files must stay tracked alongside their assets (Unity breaks without them),
 # so re-include any .meta even if a parent rule above would have caught it.
 !/[Aa]ssets/**/*.meta
 
 # --- Auto-generated IDE / build project files (Unity rewrites these) ---
-# Note: Word-Crush.slnx is the canonical solution and is intentionally kept.
+# Note: Wordrift.slnx is the canonical solution and is intentionally kept.
 *.csproj
 *.unityproj
 *.sln
@@ -57,4 +60,9 @@ mono_crash.*
 .LSOverride
 ._*
 Thumbs.db
+
+# --- Local-only notes ---
+# CLAUDE.md is this machine's guidance file, not part of the game. Kept untracked so it
+# never collides on a cherry-pick from Word-Crush. ARCHITECTURE.md and ROGUELIKE-IDEAS.md
+# ARE tracked — they're project documentation.
 CLAUDE.md

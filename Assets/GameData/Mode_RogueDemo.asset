@@ -9,10 +9,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 317844d6b19e44e5896e9ca6dee6a2d6, type: 3}
-  m_Name: Mode_Overflow
-  m_EditorClassIdentifier: Assembly-CSharp::OverflowModeConfig
-  displayName: Overflow
+  m_Script: {fileID: 11500000, guid: e0dbdb985e7324ee5890c5f7d7b67f8f, type: 3}
+  m_Name: Mode_RogueDemo
+  m_EditorClassIdentifier: Assembly-CSharp::RogueDemoModeConfig
+  displayName: Rogue Demo
   boardShape: {fileID: 11400000, guid: 6e341966805774ebab975c05bfb0cacd, type: 2}
   letterSet: {fileID: 11400000, guid: 6d97dafb14cc54f7a8ae45fe2c470957, type: 2}
   minWordLength: 3
@@ -26,10 +26,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 728ccfa980b654c07a56408590f52235, type: 2}
   - {fileID: 11400000, guid: 157f5c144f75145678553219bd43dc63, type: 2}
   - {fileID: 11400000, guid: 3e5e91049c5b3404e959e1e8974ffc94, type: 2}
-  startingRows: 4
-  baseDropInterval: 2
-  minDropInterval: 0.35
-  secondsPerLevel: 20
-  levelSpeedUp: 0.8
-  minimumTiles: 12
-  floorDropInterval: 0.12
+  moves: 20
+  targetScore: 120
+  endOnTargetReached: 1
+  rejectedWordsCostMoves: 0
+  urgentMoves: 3
+  bagCopies: 1
