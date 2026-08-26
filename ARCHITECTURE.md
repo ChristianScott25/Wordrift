@@ -1,4 +1,4 @@
-# Word Crush — architecture
+# Wordrift — architecture
 
 Drag across adjacent letter tiles to spell words. Valid words demolish; tiles fall in.
 
