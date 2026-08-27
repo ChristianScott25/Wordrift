@@ -2,7 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// The alphabet: which letters exist, what they score, and how often they spawn.
+/// The tile catalog: everything a tile can spell — single letters today, "qu"
+/// or "ie" someday — with each one's base values and spawn frequency. This is
+/// THE list a new TileSpec is stamped from (CreateSpec); grow Entry when tiles
+/// need more base values than score, so every spec picks them up in one place.
 /// Everything is editable in the Inspector, so rebalancing the letter
 /// distribution needs no code changes.
 ///
@@ -18,13 +21,17 @@ public class LetterSet : ScriptableObject
     [System.Serializable]
     public class Entry
     {
-        [Tooltip("A single letter. Lowercase.")]
+        [Tooltip("What a tile of this kind spells. Lowercase. Usually one letter; " +
+                 "multi-letter entries (qu, ie) are allowed but not playable yet.")]
         public string letter = "a";
 
-        [Tooltip("Points this letter is worth.")]
+        // Entry is where per-letter base values live. Add future ones (base
+        // money? base whatever) here, and stamp them in CreateSpec below.
+        [Tooltip("Base score a tile of this kind starts with.")]
         public int points = 1;
 
-        [Tooltip("Relative spawn frequency. Higher = appears more often.")]
+        [Tooltip("Relative spawn frequency — and, read as a count, how many go " +
+                 "into a run's sack. 0 = in the catalog but never spawns naturally.")]
         public int weight = 1;
     }
 
@@ -32,19 +39,19 @@ public class LetterSet : ScriptableObject
 
     public IReadOnlyList<Entry> Entries => entries;
 
-    private Dictionary<char, Entry> lookup;
+    private Dictionary<string, Entry> lookup;
     private int totalWeight;
 
     private void EnsureBuilt()
     {
         if (lookup != null) return;
-        lookup = new Dictionary<char, Entry>();
+        // Keyed by the full string, so "q" and "qu" are different catalog rows.
+        lookup = new Dictionary<string, Entry>();
         totalWeight = 0;
         foreach (var entry in entries)
         {
             if (string.IsNullOrEmpty(entry.letter)) continue;
-            char c = char.ToLowerInvariant(entry.letter[0]);
-            lookup[c] = entry;
+            lookup[entry.letter.ToLowerInvariant()] = entry;
             totalWeight += Mathf.Max(0, entry.weight);
         }
         if (totalWeight <= 0)
@@ -54,14 +61,39 @@ public class LetterSet : ScriptableObject
     /// <summary>Call after editing entries at runtime so caches rebuild.</summary>
     public void Invalidate() => lookup = null;
 
-    public int PointsFor(char letter)
+    /// <summary>The catalog row for what a tile spells, or null if unlisted.</summary>
+    public Entry EntryFor(string letters)
     {
+        if (string.IsNullOrEmpty(letters)) return null;
         EnsureBuilt();
-        return lookup.TryGetValue(char.ToLowerInvariant(letter), out var entry) ? entry.points : 0;
+        return lookup.TryGetValue(letters.ToLowerInvariant(), out var entry) ? entry : null;
     }
 
-    /// <summary>Draws a random letter using the weighted distribution.</summary>
-    public char Draw()
+    /// <summary>
+    /// Makes a new tile of the given kind, stamped with the catalog's base
+    /// values. THE way a TileSpec is born: when Entry grows new base values,
+    /// stamping them here hands them to every spec in the game at once.
+    /// </summary>
+    public TileSpec CreateSpec(string letters)
+    {
+        var entry = EntryFor(letters);
+        if (entry == null)
+        {
+            Debug.LogError($"LetterSet '{name}' has no entry for '{letters}' — spec created worth 0.", this);
+            return new TileSpec { letters = letters, baseScore = 0 };
+        }
+        return CreateSpec(entry);
+    }
+
+    /// <summary>Same stamp, for callers already holding the row (see RunState).</summary>
+    public static TileSpec CreateSpec(Entry entry) => new TileSpec
+    {
+        letters = entry.letter,
+        baseScore = entry.points,
+    };
+
+    /// <summary>Draws a random catalog row using the weighted distribution.</summary>
+    public Entry Draw()
     {
         EnsureBuilt();
         int roll = Random.Range(0, Mathf.Max(1, totalWeight));
@@ -69,8 +101,8 @@ public class LetterSet : ScriptableObject
         {
             roll -= Mathf.Max(0, entry.weight);
             if (roll < 0 && !string.IsNullOrEmpty(entry.letter))
-                return char.ToLowerInvariant(entry.letter[0]);
+                return entry;
         }
-        return 'e';
+        return null;
     }
 }

@@ -1,5 +1,7 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Runs one round. Owns the loop every mode shares — drag, validate, score,
@@ -51,13 +53,13 @@ public class GameSession : MonoBehaviour
         if (sceneCamera == null) sceneCamera = Camera.main;
 
         validator = new WordValidator(wordList);
-        scorer = new ScoreCalculator(Config.letterSet, Config);
+        scorer = new ScoreCalculator(Config);
         mode = Config.CreateMode();
 
-        // Attach first: the mode may swap the board's refill or gravity policy,
-        // and Build performs the opening fill through whatever is installed.
-        mode.Attach(board);
-        board.Build(Config.boardShape, Config.letterSet, Config.tileModifiers,
+        // Attach first: the mode may swap the board's refill, gravity, or tile
+        // source, and Build performs the opening fill through whatever is installed.
+        mode.Attach(this, board);
+        board.Build(Config.boardShape, Config.letterSet,
                     Config.tileSkins, Config.letterFont);
         FrameBoard();
 
@@ -78,6 +80,7 @@ public class GameSession : MonoBehaviour
 
     public void StartRound()
     {
+        leavingScene = false;
         Score = 0;
         wordsFound = 0;
         bestWord = "";
@@ -96,6 +99,12 @@ public class GameSession : MonoBehaviour
     /// <summary>Replays the same mode without reloading the scene.</summary>
     public void Restart()
     {
+        // A fresh rule object every time, so Restart works exactly like a scene
+        // load: Attach runs again and no round state can leak between plays.
+        // For a run that just died this is also what starts the NEW run —
+        // Attach finds RunState.Current empty and builds one from scratch.
+        mode = Config.CreateMode();
+        mode.Attach(this, board);
         board.ResetBoard();
         StartRound();
     }
@@ -115,6 +124,11 @@ public class GameSession : MonoBehaviour
         IsPlaying = false;
         chainController.InputEnabled = false;
         chainController.CancelChain();
+
+        // The mode may claim the ending (advance the run, head for the shop).
+        // If it did, the next scene IS the ending — no game-over panel.
+        mode.End();
+        if (leavingScene) return;
 
         GameEvents.RaiseRoundEnded(new RoundSummary
         {
@@ -167,6 +181,25 @@ public class GameSession : MonoBehaviour
         GameEvents.RaiseStatusChanged(mode.Status);
 
         if (mode.IsRoundOver) EndRound();
+    }
+
+    private bool leavingScene;
+
+    /// <summary>
+    /// Leaves this round for another scene after a short beat — long enough for
+    /// the last word's demolition to land. For a mode whose round flows
+    /// somewhere other than the game-over panel; calling this skips the panel.
+    /// </summary>
+    public void ContinueTo(string sceneName, float delay = 1f)
+    {
+        leavingScene = true;
+        StartCoroutine(LoadAfterBeat(sceneName, delay));
+    }
+
+    private IEnumerator LoadAfterBeat(string sceneName, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        SceneManager.LoadScene(sceneName);
     }
 
     private bool IsValidWord(string word) =>

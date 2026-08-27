@@ -360,7 +360,7 @@ MonoBehaviour:
   chainController: {fileID: 673790878}
   sceneCamera: {fileID: 934115278}
   wordList: {fileID: 4900000, guid: f91145ed704864d0fbd132d57bdaf188, type: 3}
-  fallbackMode: {fileID: 11400000, guid: e7d850ff3a26049409a657824077adfd, type: 2}
+  fallbackMode: {fileID: 11400000, guid: aad34857138d84029b9289b37b0dbc1f, type: 2}
   paddingAbove: 1.6
   paddingSides: 0.4
   verticalOffset: 0.5

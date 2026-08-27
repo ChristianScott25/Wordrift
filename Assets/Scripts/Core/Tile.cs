@@ -73,11 +73,16 @@ public class Tile : MonoBehaviour
     [SerializeField] private float invalidFlashSeconds = 0.25f;
     [SerializeField] private float demolishSeconds = 0.15f;
 
+    /// <summary>The persistent identity this tile is the body of (see TileSpec).</summary>
+    public TileSpec Spec { get; private set; }
+
+    /// <summary>The single character this tile plays as, until multi-letter lands.</summary>
     public char Letter { get; private set; }
+
     public Vector2Int Cell { get; set; }
     public bool IsSettled => !moving;
 
-    /// <summary>What this letter is worth before any of its modifiers apply.</summary>
+    /// <summary>The spec's baseScore: what this tile is worth before any of its modifiers apply.</summary>
     public int LetterPoints { get; private set; }
 
 
@@ -90,10 +95,11 @@ public class Tile : MonoBehaviour
     private bool selected;
     private Coroutine flashRoutine;
 
-    public void Init(char letter, int points, TileLook look, Vector2Int cell, Vector3 startPos, float cellSize)
+    public void Init(TileSpec spec, TileLook look, Vector2Int cell, Vector3 startPos, float cellSize)
     {
-        Letter = letter;
-        LetterPoints = points;
+        Spec = spec;
+        Letter = spec.Letter;
+        LetterPoints = spec.baseScore;
         Cell = cell;
         Modifiers.Clear();
 
@@ -137,7 +143,9 @@ public class Tile : MonoBehaviour
         if (letterLabel != null)
         {
             if (look.LetterFont != null) letterLabel.font = look.LetterFont;
-            letterLabel.text = char.ToUpperInvariant(Letter).ToString();
+            // The full spelling, so a "QU" tile reads QU the day one exists —
+            // though the label isn't sized for more than ~2 characters.
+            letterLabel.text = Spec.letters.ToUpperInvariant();
         }
     }
 

@@ -39,7 +39,8 @@ public abstract class ModeConfig : ScriptableObject
     public TMP_FontAsset letterFont;
 
     [Header("Special tiles")]
-    [Tooltip("Modifiers that can appear on spawned tiles. Each one's spawn chance lives on its own asset. Leave empty for plain tiles.")]
+    [Tooltip("The pool of modifiers this mode can hand out as tile upgrades (a " +
+             "future shop draws from here). Nothing spawns with these on its own.")]
     public List<TileModifier> tileModifiers = new();
 
     /// <summary>Creates the live rule object that runs one round of this mode.</summary>

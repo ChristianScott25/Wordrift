@@ -1,83 +1,98 @@
 using UnityEngine;
 
 /// <summary>
-/// The first roguelike round: reach a score target within a fixed number of
-/// words, playing off a finite bag of letters.
+/// The roguelike round: reach the run's current score target within a fixed
+/// number of words, playing off the run's finite sack of tiles.
 ///
-/// The bag is the new idea. Every tile the board spawns comes out of it and
-/// never goes back — the opening fill included — so a 50-cell board has already
-/// spent half a Scrabble bag before the first word is played. When the bag runs
-/// dry the board stops refilling and the round plays out on whatever is still
-/// sitting there, which is what turns spending a rare letter into a decision.
+/// The mode is one round's rules; the RUN lives in RunState. The mode finds
+/// the run in Attach (starting one when there isn't one), plays a round
+/// against its target, and in End either sends the session on to the shop
+/// (cleared) or ends the run (failed). The sack belongs to the run — this
+/// mode just drains a copy of it for the round.
 ///
 /// The mode doesn't drive the board at all: no clock, no drip. It installs the
-/// bag, then counts. Everything else is the shared loop.
+/// sack, then counts moves. Everything else is the shared loop.
 /// </summary>
 public class RogueDemoMode : GameMode
 {
     private readonly RogueDemoModeConfig config;
-    private TileBag bag;
-
+    private RunState run;
+    private TileSack sack;
     private int movesLeft;
-    private int scored;
 
     public RogueDemoMode(RogueDemoModeConfig config) => this.config = config;
 
-    public override void Attach(Board board)
+    public override void Attach(GameSession session, Board board)
     {
-        base.Attach(board);
+        base.Attach(session, board);
 
-        // Attach is the last moment before the opening fill, and that fill draws
-        // from the bag like everything else — so the bag has to exist by now.
-        // The board resets it before every fill; we never touch it again.
-        bag = new TileBag(config.letterSet, config.bagCopies);
-        board.Letters = bag;
+        // Playing this mode with no run in progress — scene opened directly,
+        // fresh from the menu, or restarting after a loss — starts one.
+        // Mid-run, the existing run carries the round number and the sack.
+        run = RunState.Current;
+        if (run == null || run.Template != config) run = RunState.StartNew(config);
+
+        // Attach is the last moment before the opening fill, and the fill
+        // draws from the sack like everything else — so it has to exist by
+        // now. The board resets it before every fill, which refills the copy
+        // from the run's tiles: the full sack returns each round, and anything
+        // a shop added is simply in it.
+        sack = new TileSack(run.Sack);
+        board.TileSource = sack;
     }
 
-    public override void Begin()
-    {
-        movesLeft = config.moves;
-        scored = 0;
-    }
+    public override void Begin() => movesLeft = config.moves;
 
-    public override void OnWordAccepted(WordResult result)
-    {
-        movesLeft--;
-
-        // The session owns the real score. This mode keeps its own running total
-        // because GameMode has no handle on the session, and a target the mode
-        // can't see is a target it can't judge.
-        scored += result.Points;
-    }
+    public override void OnWordAccepted(WordResult result) => movesLeft--;
 
     public override void OnWordRejected(WordResult result)
     {
         if (config.rejectedWordsCostMoves) movesLeft--;
     }
 
-    private bool TargetReached => scored >= config.targetScore;
+    // The session owns the score, the run owns the target; this just compares.
+    private bool TargetReached => session.Score >= run.TargetScore;
 
     /// <summary>
-    /// Nothing left to play with: the bag is empty, so no more tiles are coming,
-    /// and what's on the board can't even reach the minimum word length.
+    /// Nothing left to play with: the sack is empty, so no more tiles are
+    /// coming, and what's on the board can't even reach the minimum word
+    /// length.
     ///
     /// Without this the round can lock. Moves only tick down when a word is
-    /// submitted, so a player who runs the bag dry and clears the board keeps
+    /// submitted, so a player who runs the sack dry and clears the board keeps
     /// their remaining moves forever with no way to spend them. Waiting out
     /// Resolving just lets the last clear finish before the panel appears.
     /// </summary>
     private bool OutOfTiles =>
         board != null && !board.Resolving &&
-        bag != null && bag.Remaining == 0 &&
+        sack != null && sack.Remaining == 0 &&
         board.TileCount < config.minWordLength;
 
     public override bool IsRoundOver =>
         movesLeft <= 0 || OutOfTiles || (config.endOnTargetReached && TargetReached);
 
+    public override void End()
+    {
+        if (TargetReached)
+        {
+            // Cleared: the run continues in the shop, and the panel is skipped.
+            // The shop advances the round when the player leaves it, so it can
+            // still talk about the round that was just cleared.
+            session.ContinueTo(config.shopSceneName);
+        }
+        else
+        {
+            // The run died with this round. Ending it now is what makes the
+            // panel's PLAY AGAIN start over: Restart re-attaches, finds no run,
+            // and builds a fresh one at round 1 with a stock sack.
+            RunState.End();
+        }
+    }
+
     /// <summary>
-    /// This mode can be passed or failed, so it says which. Reading TargetReached
-    /// rather than remembering a flag means running out of moves ON the target
-    /// still counts as a win.
+    /// This mode can be passed or failed, so it says which. Reading
+    /// TargetReached rather than remembering a flag means running out of moves
+    /// ON the target still counts as a win.
     /// </summary>
     public override string Outcome =>
         TargetReached ? "TARGET REACHED" :
@@ -90,8 +105,9 @@ public class RogueDemoMode : GameMode
         Fraction = config.moves > 0 ? (float)movesLeft / config.moves : 0f,
         Urgent = movesLeft <= config.urgentMoves && !TargetReached,
 
-        // Target and bag share one string because the HUD has exactly one spare
-        // slot. Giving each its own readout is the next HUD job, not this one.
-        Goal = $"{scored} / {config.targetScore}   BAG {(bag != null ? bag.Remaining : 0)}",
+        // Round, target and sack share one string because the HUD has exactly
+        // one spare slot, and it's getting crowded — "R2" not "ROUND 2" so it
+        // still fits. A real multi-readout HUD is due, but it's a HUD job.
+        Goal = $"R{run.Round}   {session.Score} / {run.TargetScore}   SACK {sack.Remaining}",
     };
 }

@@ -122,9 +122,9 @@ public static class WordCrushSetup
 
     private static RectangleBoardShape BuildBoardShape()
     {
-        var shape = CreateOrLoad<RectangleBoardShape>($"{DataFolder}/Board_5x10.asset");
+        var shape = CreateOrLoad<RectangleBoardShape>($"{DataFolder}/Board_5x5.asset");
         shape.width = 5;
-        shape.height = 10;
+        shape.height = 5;
         EditorUtility.SetDirty(shape);
         return shape;
     }
@@ -450,6 +450,7 @@ public static class WordCrushSetup
         var wanted = new List<string>();
         if (File.Exists(MenuScenePath)) wanted.Add(MenuScenePath);
         wanted.Add(ScenePath);
+        if (File.Exists(ShopSceneSetup.ScenePath)) wanted.Add(ShopSceneSetup.ScenePath);
 
         EditorBuildSettings.scenes = wanted
             .Select(path => new EditorBuildSettingsScene(path, true))
@@ -458,14 +459,14 @@ public static class WordCrushSetup
 
     // --------------------------------------------------------------- helpers
 
-    private static GameObject NewUI(string name, params System.Type[] components)
+    internal static GameObject NewUI(string name, params System.Type[] components)
     {
         var go = new GameObject(name, components);
         if (go.GetComponent<RectTransform>() == null) go.AddComponent<RectTransform>();
         return go;
     }
 
-    private static void Anchor(GameObject go, Vector2 anchor, Vector2 offset, Vector2 size)
+    internal static void Anchor(GameObject go, Vector2 anchor, Vector2 offset, Vector2 size)
     {
         var rect = go.GetComponent<RectTransform>();
         rect.anchorMin = rect.anchorMax = rect.pivot = anchor;
@@ -473,7 +474,7 @@ public static class WordCrushSetup
         rect.sizeDelta = size;
     }
 
-    private static void Stretch(GameObject go)
+    internal static void Stretch(GameObject go)
     {
         var rect = go.GetComponent<RectTransform>();
         rect.anchorMin = Vector2.zero;
@@ -481,7 +482,7 @@ public static class WordCrushSetup
         rect.offsetMin = rect.offsetMax = Vector2.zero;
     }
 
-    private static TextMeshProUGUI MakeText(Transform parent, string name, float size, TextAlignmentOptions align)
+    internal static TextMeshProUGUI MakeText(Transform parent, string name, float size, TextAlignmentOptions align)
     {
         var go = new GameObject(name, typeof(TextMeshProUGUI));
         go.transform.SetParent(parent, false);
@@ -495,7 +496,7 @@ public static class WordCrushSetup
         return text;
     }
 
-    private static Button MakeButton(Transform parent, string name, string label, Vector2 offset, Color background, Color textColor)
+    internal static Button MakeButton(Transform parent, string name, string label, Vector2 offset, Color background, Color textColor)
     {
         var go = NewUI(name, typeof(Image), typeof(Button));
         go.transform.SetParent(parent, false);
@@ -528,7 +529,7 @@ public static class WordCrushSetup
     /// Assigns a serialized reference and verifies it actually stuck. Silent
     /// failures here are how you end up with an empty board and no error.
     /// </summary>
-    private static void SetRef(Object target, string field, Object value)
+    internal static void SetRef(Object target, string field, Object value)
     {
         var so = new SerializedObject(target);
         var property = so.FindProperty(field);

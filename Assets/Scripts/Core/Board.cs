@@ -71,11 +71,11 @@ public class Board : MonoBehaviour
     public IRefillPolicy Refill { get; set; } = new FillEveryCell();
 
     /// <summary>
-    /// Where new tiles' letters come from (see ILetterSource). Install a finite
-    /// one in GameMode.Attach to give a mode a bag it can empty; left alone,
-    /// Build fits an endless draw over the mode's LetterSet.
+    /// Where new tiles come from (see ITileSource). Install a finite one in
+    /// GameMode.Attach to give a mode a sack it can empty; left alone, Build
+    /// fits an endless draw over the mode's LetterSet.
     /// </summary>
-    public ILetterSource Letters { get; set; }
+    public ITileSource TileSource { get; set; }
 
     private readonly Dictionary<Vector2Int, Tile> tiles = new();
 
@@ -88,12 +88,10 @@ public class Board : MonoBehaviour
     private int resolving;
     private BoardBackground background;
     private LetterSet letterSet;
-    private IReadOnlyList<TileModifier> modifiers;
     private IReadOnlyList<TileSkin> skins;
     private TMP_FontAsset letterFont;
 
     public void Build(IBoardShape shape, LetterSet letters,
-                      IReadOnlyList<TileModifier> availableModifiers = null,
                       IReadOnlyList<TileSkin> availableSkins = null,
                       TMP_FontAsset font = null)
     {
@@ -104,10 +102,9 @@ public class Board : MonoBehaviour
         // A mode may have installed a finite source in Attach; only fall back
         // when it didn't. Reset here rather than in Build's caller so the
         // opening fill always draws from a full source.
-        Letters ??= new EndlessLetters(letters);
-        Letters.Reset();
+        TileSource ??= new EndlessTiles(letters);
+        TileSource.Reset();
 
-        modifiers = availableModifiers;
         skins = availableSkins;
         letterFont = font;
         cells = new HashSet<Vector2Int>(shape.Cells());
@@ -153,7 +150,7 @@ public class Board : MonoBehaviour
         StopAllCoroutines();
         Busy = false;
         resolving = 0;   // the routines that would have decremented it are gone
-        Letters?.Reset();  // a finite bag is whole again for the replay
+        TileSource?.Reset();  // a finite sack is whole again for the replay
         ClearTiles();
         FillEmptyCells();
     }
@@ -346,12 +343,20 @@ public class Board : MonoBehaviour
     /// </summary>
     private Tile SpawnTile(Vector2Int cell, Vector3 startPos, Vector3 targetPos)
     {
-        if (Letters == null || !Letters.TryDraw(out char letter)) return null;
+        if (TileSource == null || !TileSource.TryDraw(out TileSpec spec)) return null;
+
+        // Multi-letter specs ("qu") aren't playable yet — Tile, the chain, and
+        // scoring all speak single characters — so only the first letter plays.
+        char letter = spec.Letter;
 
         var tile = Instantiate(tilePrefab, startPos, Quaternion.identity, transform);
         tile.name = $"Tile {char.ToUpperInvariant(letter)} ({cell.x},{cell.y})";
-        tile.Init(letter, letterSet.PointsFor(letter), NextLook(), cell, startPos, cellSize);
-        RollModifiers(tile);
+        tile.Init(spec, NextLook(), cell, startPos, cellSize);
+
+        // Modifiers come from the spec and ONLY the spec: a tile has a
+        // multiplier because the run put it there (an upgrade), never because
+        // the board rolled dice at spawn. Boards don't decide upgrades.
+        ApplySpecModifiers(tile, spec);
         if (startPos != targetPos) tile.MoveTo(targetPos);
         tiles[cell] = tile;
         return tile;
@@ -389,17 +394,11 @@ public class Board : MonoBehaviour
         return skins.FirstOrDefault(s => s != null);
     }
 
-    private void RollModifiers(Tile tile)
+    /// <summary>Attaches every modifier the spec carries — a tile can have several.</summary>
+    private static void ApplySpecModifiers(Tile tile, TileSpec spec)
     {
-        if (modifiers == null) return;
-        foreach (var modifier in modifiers)
-        {
-            if (modifier == null || modifier.spawnChance <= 0f) continue;
-            if (Random.value < modifier.spawnChance)
-            {
-                tile.AddModifier(modifier);
-                return; // at most one modifier per tile for now
-            }
-        }
+        if (spec.modifiers == null) return;
+        foreach (var modifier in spec.modifiers)
+            if (modifier != null) tile.AddModifier(modifier);
     }
 }

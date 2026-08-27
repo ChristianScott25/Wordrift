@@ -23,6 +23,9 @@ public class MainMenu : MonoBehaviour
             Debug.LogError("No mode config set on this button — assign one in the Inspector.", this);
             return;
         }
+        // Starting from the menu always starts fresh — a run abandoned in the
+        // shop shouldn't resume just because its static survived the loads.
+        RunState.End();
         ModeSelection.Select(config);
         SceneManager.LoadScene(gameSceneName);
     }

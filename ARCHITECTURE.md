@@ -4,9 +4,13 @@ Drag across adjacent letter tiles to spell words. Valid words demolish; tiles fa
 
 ## The one rule
 
-**`GameSession` runs the loop. `GameMode` decides the rules.** The session never
-knows what a timer is. If you're about to add `if (mode == RogueDemo)`
-anywhere, add a mode instead.
+**`GameSession` runs the loop. `GameMode` decides the rules. `RunState` is the
+run.** The session never knows what a timer is; if you're about to add
+`if (mode == RogueDemo)` anywhere, add a mode instead. And nothing ever writes
+into an authored asset at runtime: configs and letter sets are read-only
+recipes, and everything a run changes (its sack of tiles, its round number —
+later money and bookmarks) lives on `RunState.Current`, a plain C# static that
+survives scene loads the same way `ModeSelection` does.
 
 ```
 drag  ->  ChainController  ->  GameSession  ->  WordValidator   (is it a word?)
@@ -20,8 +24,8 @@ drag  ->  ChainController  ->  GameSession  ->  WordValidator   (is it a word?)
 
 | Folder | Contains | Depends on |
 |---|---|---|
-| `Scripts/Core` | Board, Tile, ChainController, ScoreCalculator, WordValidator, gravity, modifiers | nothing above it |
-| `Scripts/Modes` | `GameMode` + one class per mode | Core, Config |
+| `Scripts/Core` | Board, Tile, TileSpec, ChainController, ScoreCalculator, WordValidator, gravity, modifiers | nothing above it |
+| `Scripts/Modes` | `GameMode` + one class per mode | Core, Config, GameSession, RunState |
 | `Scripts/Config` | ScriptableObjects: LetterSet, board shapes, mode configs | Core |
 | `Scripts/UI` | HUD widgets, each listening to `GameEvents` | Core |
 | `Editor/` | Six scaffold scripts; `WordCrushSetup.cs` regenerates assets/prefabs/scene | everything |
@@ -43,7 +47,12 @@ Core never references Modes or UI. That's what keeps modes cheap to add.
 ## Adding things
 
 **A new mode** — subclass `GameMode` (rules) and `ModeConfig` (numbers), create
-the asset, add a menu button pointing at it. Nothing existing changes.
+the asset, add a menu button pointing at it. Nothing existing changes. The mode
+gets the session in `Attach`, so shared state the session owns (the score) is
+read from there, never duplicated. A mode whose round flows somewhere other
+than the game-over panel calls `session.ContinueTo(scene)` from its `End()`
+override — that skips the panel (RogueDemo's cleared round goes to the shop
+this way).
 
 **A new HUD element** — a MonoBehaviour that subscribes to a `GameEvents` event
 in `OnEnable` and unsubscribes in `OnDisable`. Drop it on the HUD Canvas. The
@@ -52,8 +61,10 @@ session doesn't need to know it exists.
 **A special tile** — for another multiplier, just duplicate one of the four
 assets in `Assets/GameData/Modifiers/` and change its `multiplier`, `badgeLabel`
 and `badgeColor`; no code. For a genuinely new *rule*, subclass `TileModifier`
-and override `ModifyLetterScore` or `WordMultiplier`. Either way, set
-`spawnChance` and add it to a mode config's list.
+and override `ModifyLetterScore` or `WordMultiplier`. Either way, add it to a
+mode config's `tileModifiers` — the pool of upgrades that mode can hand out.
+A modifier reaches an actual tile only via `TileSpec.AddModifier` (an upgrade
+on a specific tile in the run's sack); nothing spawns with one randomly.
 
 **A new tile look** — create a `TileSkin` (body sprite + letter/score colors +
 spawn weight) and add it to a mode config's `Tile Skins`. Several in one list
@@ -72,12 +83,30 @@ those policies still matter for the opening fill. Overflow mode was the worked
 example (`NeverRefill` plus its own drop clock) until it was cut; the pieces it
 used are still in Board, unused.
 
-**A mode with a finite supply of letters** — install an `ILetterSource` on
-`Board.Letters` in `GameMode.Attach`. `TileBag` reads a `LetterSet`'s weights as
-tile counts and draws without replacement; when it empties, `Board.SpawnTile`
-returns null and cells it would have filled stay empty. The board resets the
-source before every full fill, so a replay starts on a full bag for free.
-`RogueDemoMode` is the worked example.
+**A mode with a finite supply of tiles** — install an `ITileSource` on
+`Board.TileSource` in `GameMode.Attach`. `TileSack` drains a copy of a stock
+list and draws without replacement; when it empties, `Board.SpawnTile` returns
+null and cells it would have filled stay empty. The board resets the source
+before every full fill, and `Reset` re-copies from the stock — so a replay (and
+every round of a run) starts on a full sack, and tiles a shop added to the
+stock are simply in it. `RogueDemoMode` is the worked example.
+
+**The run.** `RunState.StartNew(config)` builds the sack from the `LetterSet`'s
+weights read as tile counts (`LetterSet_Scrabble` sums to Scrabble's 98) and
+holds it as `List<TileSpec>`. A `TileSpec` is a tile's persistent identity —
+`letters` (a *string*, because multi-letter tiles like "qu" are planned even
+though everything downstream still plays one char), `baseScore` (stamped from
+the `LetterSet` catalog by `CreateSpec`, the one place specs are born — so one
+tile's worth can diverge from its letter's), plus baked-on modifiers (a bought
+2L tile keeps its 2L, and one tile can stack several — `TileSpec.AddModifier`
+is how a shop applies an upgrade).
+The flow: menu always ends any stale run; `RogueDemoMode.Attach` finds
+`RunState.Current` or starts one; a cleared round continues to the Shop scene
+(a stub — `ShopScreen` shows what cleared and what's next, its Continue
+advances the round and reloads Game); a failed round ends the run, so the
+panel's PLAY AGAIN starts a fresh one at round 1. Round targets come from
+`RogueDemoModeConfig.roundTargets` (authored per round, `targetGrowth` compounds
+past the end of the list).
 
 **A different word list** — swap the TextAsset on `GameSession`. Plain text, one
 lowercase word per line.
@@ -91,7 +120,14 @@ lowercase word per line.
 - **`GameEvents` is static.** Fine for one session at a time; it's what makes
   HUD prefabs drop-in with no wiring. Would need revisiting for split-screen or
   simultaneous boards.
-- **One modifier per tile.** `Board.RollModifiers` stops at the first hit.
+- **Stacked-modifier visuals.** A `TileSpec` can carry several modifiers and
+  scoring honours all of them, but the tile badge only displays the last one.
+  Needs a treatment (stacked badges? combined label?) before upgrades ship.
+- **Wild tiles.** Not designed yet: a special `TileSpec.letters` value ("?") or
+  a `TileModifier` are both plausible. Decide before building.
+- **The HUD's one spare slot.** Round, target and sack share `ModeStatus.Goal`,
+  one shrunken string. A run HUD (round, money, target, sack) needs a real
+  multi-readout `ModeStatus` and widget.
 - **An unplayable board that isn't empty.** A finite-bag mode ends the round when
   the bag is dry and fewer tiles remain than `minWordLength` — provably nothing
   to play. But a board can hold ten tiles that spell nothing, and moves only tick
@@ -108,7 +144,8 @@ and rebuilding overwrites the scene.
 
 Every *other* item on that menu is idempotent and safe to re-run: `Set Up Tile
 Prefab` (re-authors the tile's letter and score labels), `Create Tile Skin Asset`,
-`Create Tile Modifier Assets`, `Create Rogue Demo Mode Asset`, `Set Up Board
-Background`, and `Repair Scene References`. They only fill in what's missing, so
+`Create Tile Modifier Assets`, `Create Rogue Demo Mode Asset`, `Create Shop
+Scene` (never touches an existing Shop.unity), `Set Up Board Background`, and
+`Repair Scene References`. They only fill in what's missing, so
 hand tuning survives — CLAUDE.md has the per-item detail on what each one will
 and won't overwrite.

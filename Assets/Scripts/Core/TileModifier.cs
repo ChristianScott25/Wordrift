@@ -25,10 +25,10 @@ public abstract class TileModifier : ScriptableObject
 
     // The circle sprite itself lives on TileSkin, not here — so swapping the
     // badge treatment is one field on one asset rather than one per modifier.
-
-    [Header("Spawning")]
-    [Tooltip("Chance (0-1) that a newly spawned tile gets this modifier.")]
-    [Range(0f, 1f)] public float spawnChance = 0f;
+    //
+    // There is deliberately NO spawn chance: a modifier reaches a tile by being
+    // on its TileSpec (an upgrade the run applied), never by a random roll at
+    // spawn. Which modifiers a mode OFFERS is ModeConfig.tileModifiers' job.
 
     /// <summary>Applied to this tile's own letter value.</summary>
     public virtual int ModifyLetterScore(int points) => points;

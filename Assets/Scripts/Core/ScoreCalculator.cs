@@ -15,14 +15,9 @@ using UnityEngine;
 /// </summary>
 public class ScoreCalculator
 {
-    private readonly LetterSet letters;
     private readonly ModeConfig config;
 
-    public ScoreCalculator(LetterSet letters, ModeConfig config)
-    {
-        this.letters = letters;
-        this.config = config;
-    }
+    public ScoreCalculator(ModeConfig config) => this.config = config;
 
     public WordResult Evaluate(IReadOnlyList<Tile> chain, string word)
     {
@@ -34,8 +29,10 @@ public class ScoreCalculator
             // The tile's corner shows the BASE letter value; the badge is what
             // tells the player it gets multiplied. This is where that actually
             // happens, and it's the only place letter modifiers are applied.
+            // The tile carries its own base worth (TileSpec.baseScore), so a
+            // specific tile's value can differ from its letter's usual one.
             basePoints += TileModifier.ApplyLetterModifiers(
-                letters.PointsFor(tile.Letter), tile.Modifiers);
+                tile.LetterPoints, tile.Modifiers);
 
             foreach (var modifier in tile.Modifiers)
                 if (modifier != null) wordMultiplier *= modifier.WordMultiplier;

@@ -1,8 +1,10 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
-/// First pass at the roguelike round: no clock, a finite bag of letters, and a
-/// score you have to reach inside a fixed number of words.
+/// First pass at the roguelike round: no clock, a finite sack of tiles, and a
+/// score you have to reach inside a fixed number of words. Played as a RUN —
+/// clear the target and the shop leads to the next round, with a higher one.
 ///
 /// Named "Rogue Demo" on purpose — it's somewhere to start and build off, not
 /// the shape the real mode will end up in.
@@ -11,11 +13,8 @@ using UnityEngine;
 public class RogueDemoModeConfig : ModeConfig
 {
     [Header("Round")]
-    [Tooltip("Words the player gets to reach the target.")]
+    [Tooltip("Words the player gets to reach the target. The same every round for now.")]
     [Min(1)] public int moves = 20;
-
-    [Tooltip("Score needed to clear the round.")]
-    [Min(1)] public int targetScore = 120;
 
     [Tooltip("End the round the moment the target is reached, rather than always " +
              "playing out every move.")]
@@ -27,12 +26,45 @@ public class RogueDemoModeConfig : ModeConfig
     [Tooltip("Move counter turns red at or below this many moves.")]
     public int urgentMoves = 3;
 
-    [Header("Tile bag")]
-    [Tooltip("Full copies of the Letter Set's distribution to pour into the bag. " +
-             "1 = a single Scrabble bag — 98 tiles, nine A's, one Q. The board's " +
-             "opening fill is paid for out of this, and once it's empty tiles stop " +
-             "falling and the board only ever gets smaller.")]
-    [Min(1)] public int bagCopies = 1;
+    [Tooltip("Scene a cleared round continues to, between the rounds of a run.")]
+    public string shopSceneName = "Shop";
+
+    [Header("Targets")]
+    [Tooltip("Score target for each round of a run, in order — round 1 is the " +
+             "first entry. Tune the difficulty curve here.")]
+    public int[] roundTargets = { 60, 90, 130 };
+
+    [Tooltip("Once a run outlives the list above, each further round's target " +
+             "grows by this factor.")]
+    [Min(1f)] public float targetGrowth = 1.5f;
+
+    [Tooltip("Fallback target when the list above is empty. Also the base the " +
+             "growth factor compounds from in that case.")]
+    [Min(1)] public int targetScore = 60;
+
+    [Header("Tile sack")]
+    [Tooltip("Full copies of the Letter Set's distribution to pour into the sack " +
+             "at the start of a run. 1 = a single Scrabble bag — 98 tiles, nine " +
+             "A's, one Q. The board's opening fill is paid for out of this, and " +
+             "once it's empty tiles stop falling for the rest of the round. The " +
+             "full sack returns every round.")]
+    [FormerlySerializedAs("bagCopies")]
+    [Min(1)] public int sackCopies = 1;
+
+    /// <summary>The score target for a given 1-based round of a run.</summary>
+    public int TargetForRound(int round)
+    {
+        round = Mathf.Max(1, round);
+
+        if (roundTargets != null && roundTargets.Length > 0)
+        {
+            if (round <= roundTargets.Length) return roundTargets[round - 1];
+            int last = roundTargets[roundTargets.Length - 1];
+            return Mathf.RoundToInt(last * Mathf.Pow(targetGrowth, round - roundTargets.Length));
+        }
+
+        return Mathf.RoundToInt(targetScore * Mathf.Pow(targetGrowth, round - 1));
+    }
 
     public override GameMode CreateMode() => new RogueDemoMode(this);
 }

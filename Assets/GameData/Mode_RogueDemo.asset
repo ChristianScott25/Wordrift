@@ -27,7 +27,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 157f5c144f75145678553219bd43dc63, type: 2}
   - {fileID: 11400000, guid: 3e5e91049c5b3404e959e1e8974ffc94, type: 2}
   moves: 20
-  targetScore: 120
+  targetScore: 60
   endOnTargetReached: 1
   rejectedWordsCostMoves: 0
   urgentMoves: 3

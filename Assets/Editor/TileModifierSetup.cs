@@ -6,10 +6,10 @@ using UnityEngine;
 /// Creates the four multiplier assets and puts them on every mode config,
 /// because ScriptableObjects can't be authored from the command line.
 ///
-/// Idempotent, and careful about what it overwrites: the fields that define
-/// what a modifier *is* (multiplier, label, colors) are refreshed every run,
-/// but spawnChance is only seeded when it's still zero. So tuning survives,
-/// while a modifier that was never switched on gets a sensible starting value.
+/// Idempotent: the fields that define what a modifier *is* (multiplier, label,
+/// colors) are refreshed every run. There is nothing else on a modifier to
+/// preserve — spawn chances are gone, since modifiers only reach tiles as
+/// upgrades on a TileSpec.
 ///
 /// Adding a fifth kind is an Inspector job — Create -> Word Crush -> Tile
 /// Modifier -> ..., set its label and color, add it to a mode's list.
@@ -33,49 +33,43 @@ public static class TileModifierSetup
 
         var modifiers = new List<TileModifier>
         {
-            Letter("DoubleLetter", 2, "2L", LetterBlue,     seedChance: 0.05f),
-            Letter("TripleLetter", 3, "3L", LetterBlueDark, seedChance: 0.02f),
-            Word("DoubleWord",     2, "2W", WordRed,        seedChance: 0.02f),
-            Word("TripleWord",     3, "3W", WordRedDark,    seedChance: 0.01f),
+            Letter("DoubleLetter", 2, "2L", LetterBlue),
+            Letter("TripleLetter", 3, "3L", LetterBlueDark),
+            Word("DoubleWord",     2, "2W", WordRed),
+            Word("TripleWord",     3, "3W", WordRedDark),
         };
 
         int added = AttachToModes(modifiers);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log($"Tile modifiers ready in {ModifierFolder}; {added} added to mode configs. " +
-                  "Spawn chances are only seeded while they're zero — tune them on the assets.");
+        Debug.Log($"Tile modifiers ready in {ModifierFolder}; {added} added to mode configs.");
         return modifiers;
     }
 
     private static LetterMultiplierModifier Letter(
-        string name, int multiplier, string label, Color color, float seedChance)
+        string name, int multiplier, string label, Color color)
     {
         var asset = CreateOrLoad<LetterMultiplierModifier>(name);
         asset.multiplier = multiplier;
-        Style(asset, label, color, seedChance);
+        Style(asset, label, color);
         return asset;
     }
 
     private static WordMultiplierModifier Word(
-        string name, int multiplier, string label, Color color, float seedChance)
+        string name, int multiplier, string label, Color color)
     {
         var asset = CreateOrLoad<WordMultiplierModifier>(name);
         asset.multiplier = multiplier;
-        Style(asset, label, color, seedChance);
+        Style(asset, label, color);
         return asset;
     }
 
-    private static void Style(TileModifier asset, string label, Color color, float seedChance)
+    private static void Style(TileModifier asset, string label, Color color)
     {
         asset.badgeLabel = label;
         asset.badgeColor = color;
         asset.badgeTextColor = Color.white;
-
-        // Zero means "never switched on", so it's safe to seed. Anything else is
-        // a deliberate value and gets left alone.
-        if (Mathf.Approximately(asset.spawnChance, 0f)) asset.spawnChance = seedChance;
-
         EditorUtility.SetDirty(asset);
     }
 
