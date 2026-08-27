@@ -89,6 +89,19 @@ public class Tile : MonoBehaviour
     /// <summary>Special properties on this tile (multipliers etc.). Usually empty.</summary>
     public List<TileModifier> Modifiers { get; } = new();
 
+    // Where the first badge sits and how big one badge is, in the tile art's
+    // local units — stored by LayOutLabels so ApplyModifierVisuals can lay out
+    // however many badges the tile's modifiers need.
+    private Vector3 badgeAnchor;
+    private float badgeUnit;
+    private float spriteUnit = 1f;
+
+    // One circle+label pair per modifier shown. Index 0 is the authored pair
+    // from the prefab; the rest are runtime clones of it, made only when a
+    // tile actually stacks modifiers.
+    private readonly List<SpriteRenderer> badgeCircles = new();
+    private readonly List<TMP_Text> badgeTexts = new();
+
     private Vector3 targetPosition;
     private bool moving;
     private float baseScale = 1f;
@@ -179,29 +192,30 @@ public class Tile : MonoBehaviour
 
         // Top-left, offset by its own radius so badgeInset measures from the
         // circle's edge to the tile's edge, the same way the score's does.
+        // Only the anchor is computed here — ApplyModifierVisuals places the
+        // badges, because how many there are depends on the modifiers.
         float radius = badgeSize * spriteSize / 2f;
         float badgeMargin = badgeInset * spriteSize;
-        var badgeCenter = new Vector3(
+        badgeAnchor = new Vector3(
             bounds.min.x + badgeMargin + radius,
             bounds.max.y - badgeMargin - radius,
             0f);
-
-        LayOutBadge(badgeCenter, badgeSize * spriteSize);
-        PlaceLabel(badgeLabel, badgeCenter, spriteSize, sortingOffset: 4);
+        badgeUnit = badgeSize * spriteSize;
+        spriteUnit = spriteSize;
     }
 
     /// <summary>
-    /// Sizes the badge circle to badgeSize regardless of what the skin's sprite
+    /// Sizes a badge circle to badgeSize regardless of what the skin's sprite
     /// measures, so a replacement circle doesn't change the layout.
     /// </summary>
-    private void LayOutBadge(Vector3 localCenter, float worldSize)
+    private void LayOutBadge(SpriteRenderer circle, Vector3 localCenter, float worldSize, int sortingOffset)
     {
-        if (badgeRenderer == null) return;
+        if (circle == null) return;
 
-        var badgeTransform = badgeRenderer.transform;
+        var badgeTransform = circle.transform;
         badgeTransform.localPosition = new Vector3(localCenter.x, localCenter.y, -labelDepthOffset);
 
-        var sprite = badgeRenderer.sprite;
+        var sprite = circle.sprite;
         float spriteSize = sprite != null
             ? Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y)
             : 1f;
@@ -211,8 +225,8 @@ public class Tile : MonoBehaviour
 
         if (tileRenderer != null)
         {
-            badgeRenderer.sortingLayerID = tileRenderer.sortingLayerID;
-            badgeRenderer.sortingOrder = tileRenderer.sortingOrder + 3;
+            circle.sortingLayerID = tileRenderer.sortingLayerID;
+            circle.sortingOrder = tileRenderer.sortingOrder + sortingOffset;
         }
     }
 
@@ -244,35 +258,72 @@ public class Tile : MonoBehaviour
     }
 
     /// <summary>
-    /// A modifier shows up as a badge and nothing else — the tile body keeps its
-    /// skin color, so a board full of multipliers stays readable.
+    /// Modifiers show up as badges and nothing else — the tile body keeps its
+    /// skin color, so a board full of multipliers stays readable. One badge per
+    /// modifier: stacks fan to the right, each 10% of a badge over and past the
+    /// last. A first pass so stacks are at least visible — the real treatment
+    /// is an open design question (see ARCHITECTURE.md).
     /// </summary>
     private void ApplyModifierVisuals()
     {
         RefreshScoreLabel();
 
-        var top = Modifiers.Count > 0 ? Modifiers[Modifiers.Count - 1] : null;
+        if (badgeCircles.Count == 0 && badgeRenderer != null && badgeLabel != null)
+        {
+            badgeCircles.Add(badgeRenderer);
+            badgeTexts.Add(badgeLabel);
+        }
+
+        int shown = 0;
+        if (badgeCircles.Count > 0)
+        {
+            foreach (var modifier in Modifiers)
+            {
+                if (modifier == null) continue;
+                ShowBadge(shown, modifier);
+                shown++;
+            }
+        }
+
+        // Hide the pairs beyond what this tile carries — the authored pair
+        // included, which is how a plain tile shows no badge at all.
+        for (int i = shown; i < badgeCircles.Count; i++)
+        {
+            if (badgeCircles[i] != null) badgeCircles[i].enabled = false;
+            if (badgeTexts[i] != null) badgeTexts[i].enabled = false;
+        }
+
+        SetColor(RestingColor);
+    }
+
+    private void ShowBadge(int index, TileModifier modifier)
+    {
+        // Clone the authored pair on demand; clones live and die with the tile.
+        while (badgeCircles.Count <= index)
+        {
+            badgeCircles.Add(Instantiate(badgeRenderer, badgeRenderer.transform.parent));
+            badgeTexts.Add(Instantiate(badgeLabel, badgeLabel.transform.parent));
+        }
+
+        var circle = badgeCircles[index];
+        var text = badgeTexts[index];
+        var center = badgeAnchor + new Vector3(index * 0.1f * badgeUnit, 0f, 0f);
+
+        // Each badge sorts two above the previous so its circle clears the
+        // previous badge's label.
+        LayOutBadge(circle, center, badgeUnit, sortingOffset: 3 + index * 2);
+        circle.sprite = badgeRenderer.sprite;
+        circle.color = modifier.badgeColor;
 
         // The circle needs a sprite from the skin; the label doesn't. If the
         // sprite is missing the label still draws, bare — wrong-looking, but
         // legible, which beats a silently invisible multiplier.
-        if (badgeRenderer != null)
-        {
-            badgeRenderer.enabled = top != null && badgeRenderer.sprite != null;
-            if (top != null) badgeRenderer.color = top.badgeColor;
-        }
+        circle.enabled = badgeRenderer.sprite != null;
 
-        if (badgeLabel != null)
-        {
-            badgeLabel.enabled = top != null;
-            if (top != null)
-            {
-                badgeLabel.text = top.badgeLabel;
-                badgeLabel.color = top.badgeTextColor;
-            }
-        }
-
-        SetColor(RestingColor);
+        PlaceLabel(text, center, spriteUnit, sortingOffset: 4 + index * 2);
+        text.text = modifier.badgeLabel;
+        text.color = modifier.badgeTextColor;
+        text.enabled = true;
     }
 
     private void SetColor(Color color)

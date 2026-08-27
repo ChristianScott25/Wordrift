@@ -103,8 +103,10 @@ is how a shop applies an upgrade).
 The flow: menu always ends any stale run; `RogueDemoMode.Attach` finds
 `RunState.Current` or starts one; a cleared round continues to the Shop scene
 (a stub — `ShopScreen` shows what cleared and what's next, its Continue
-advances the round and reloads Game); a failed round ends the run, so the
-panel's PLAY AGAIN starts a fresh one at round 1. Round targets come from
+advances the round and reloads Game; it also gilds three random sack tiles
+with random modifiers on every visit, marked TEMPORARY in the code, purely so
+upgrades can be seen working before there's anything to buy); a failed round
+ends the run, so the panel's PLAY AGAIN starts a fresh one at round 1. Round targets come from
 `RogueDemoModeConfig.roundTargets` (authored per round, `targetGrowth` compounds
 past the end of the list).
 
@@ -120,9 +122,9 @@ lowercase word per line.
 - **`GameEvents` is static.** Fine for one session at a time; it's what makes
   HUD prefabs drop-in with no wiring. Would need revisiting for split-screen or
   simultaneous boards.
-- **Stacked-modifier visuals.** A `TileSpec` can carry several modifiers and
-  scoring honours all of them, but the tile badge only displays the last one.
-  Needs a treatment (stacked badges? combined label?) before upgrades ship.
+- **Stacked-modifier visuals.** A tile draws one badge per modifier, fanned
+  10% of a badge to the right and over the previous — a first pass so stacks
+  are visible, not the final treatment.
 - **Wild tiles.** Not designed yet: a special `TileSpec.letters` value ("?") or
   a `TileModifier` are both plausible. Decide before building.
 - **The HUD's one spare slot.** Round, target and sack share `ModeStatus.Goal`,
