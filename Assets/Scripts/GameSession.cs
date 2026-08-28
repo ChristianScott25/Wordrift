@@ -40,6 +40,10 @@ public class GameSession : MonoBehaviour
     private string bestWord = "";
     private int bestWordPoints;
 
+    // Every word accepted this round. Bookmarks read it to spot a repeat, so it
+    // has to be cleared per round and written AFTER the word has been scored.
+    private readonly HashSet<string> wordsThisRound = new();
+
     private void Awake()
     {
         Config = ModeSelection.Take() ?? fallbackMode;
@@ -85,6 +89,7 @@ public class GameSession : MonoBehaviour
         wordsFound = 0;
         bestWord = "";
         bestWordPoints = 0;
+        wordsThisRound.Clear();
 
         mode.Begin();
         IsPlaying = true;
@@ -164,9 +169,12 @@ public class GameSession : MonoBehaviour
             return;
         }
 
-        var result = scorer.Evaluate(chain, word);
+        // The mode supplies the scoring hooks; the session doesn't know what
+        // they are. wordsThisRound is passed BEFORE this word joins it.
+        var result = scorer.Evaluate(chain, word, wordsThisRound, mode.Bookmarks);
         Score += result.Points;
         wordsFound++;
+        wordsThisRound.Add(word);
         if (result.Points > bestWordPoints)
         {
             bestWordPoints = result.Points;

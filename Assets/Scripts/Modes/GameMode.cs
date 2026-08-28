@@ -58,6 +58,14 @@ public abstract class GameMode
     /// </summary>
     public virtual void End() { }
 
+    /// <summary>
+    /// Scoring hooks the session should run for this mode — a run's bookmarks,
+    /// in slot order. Null for a mode without a run, which makes the bookmark
+    /// stage of scoring a no-op. This is how the session hands scoring the
+    /// run's items without Core ever learning what a run is.
+    /// </summary>
+    public virtual System.Collections.Generic.IReadOnlyList<BookmarkSpec> Bookmarks => null;
+
     /// <summary>What the HUD should display for this mode's resource.</summary>
     public abstract ModeStatus Status { get; }
 

@@ -3,8 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// Everything one run remembers between rounds: which round you're on, the
-/// tiles you own, and the money you've banked. Bookmarks and sack abilities
-/// will live here too.
+/// tiles you own, the bookmarks you've bought, and the money you've banked.
+/// Sack abilities will live here too.
 ///
 /// Plain C# held in a static, like ModeSelection, because scene loads wipe
 /// object references. Mutable ON PURPOSE — shops and bookmarks edit this run.
@@ -29,6 +29,31 @@ public class RunState
     /// draws, and the change sticks for the rest of the run.
     /// </summary>
     public List<TileSpec> Sack { get; } = new();
+
+    /// <summary>
+    /// The bookmarks this run owns, in slot order — which is the order they get
+    /// to touch a word's score. No cap on how many: with three in the game a
+    /// limit would be invisible, and a slot count is easy to add to the config
+    /// when there's a reason for one.
+    /// </summary>
+    public List<BookmarkSpec> Bookmarks { get; } = new();
+
+    /// <summary>Already owned? The shop never offers a duplicate.</summary>
+    public bool Owns(Bookmark bookmark)
+    {
+        if (bookmark == null) return false;
+        foreach (var owned in Bookmarks)
+            if (owned.bookmark == bookmark) return true;
+        return false;
+    }
+
+    /// <summary>Takes ownership of a bookmark, refusing a duplicate.</summary>
+    public bool AddBookmark(Bookmark bookmark)
+    {
+        if (bookmark == null || Owns(bookmark)) return false;
+        Bookmarks.Add(new BookmarkSpec(bookmark));
+        return true;
+    }
 
     /// <summary>
     /// What the run has to spend. Earned by clearing rounds, spent in the shop,

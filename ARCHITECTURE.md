@@ -108,6 +108,17 @@ so the panel's PLAY AGAIN starts a fresh one at round 1. Round targets come from
 `RogueDemoModeConfig.roundTargets` (authored per round, `targetGrowth` compounds
 past the end of the list).
 
+**Bookmarks.** The run's items, and the answer to `ROGUELIKE-IDEAS.md`'s "relics need to
+intercept scoring". `ScoreCalculator` now ends with an open stage: it builds a
+`ScoringContext { Word, Tiles, WordsThisRound, Points, Mult }` and hands it to each of the
+run's bookmarks **in slot order**, then multiplies. A `Bookmark` is an authored
+ScriptableObject with one method (`OnWordScored`); a `BookmarkSpec` is the copy a run owns,
+and it exists so editions can live on the owned copy rather than the shared asset — the same
+recipe/instance split as `TileModifier` → `TileSpec`. The session gets the list from
+`GameMode.Bookmarks` (null for a mode with no run), so `Scripts/Core` still knows nothing
+about runs. To add a bookmark: subclass `Bookmark`, create the asset, add it to a mode's
+`bookmarks` pool. To add a bookmark that needs new information, widen `ScoringContext`.
+
 **Money.** `RunState` owns the balance: in through `AddMoney` only, out through
 `TrySpend` only (it refuses rather than going negative), and gone when the run
 is — so there's nothing to persist and no meta-currency to design around. What a

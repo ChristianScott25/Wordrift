@@ -39,9 +39,14 @@ public abstract class ModeConfig : ScriptableObject
     public TMP_FontAsset letterFont;
 
     [Header("Special tiles")]
-    [Tooltip("The pool of modifiers this mode can hand out as tile upgrades (a " +
-             "future shop draws from here). Nothing spawns with these on its own.")]
+    [Tooltip("The pool of modifiers this mode can hand out as tile upgrades (the " +
+             "shop draws from here). Nothing spawns with these on its own.")]
     public List<TileModifier> tileModifiers = new();
+
+    [Header("Bookmarks")]
+    [Tooltip("The pool of bookmarks this mode's shop can offer. A run can own each " +
+             "at most once, and an empty list simply means no bookmark is for sale.")]
+    public List<Bookmark> bookmarks = new();
 
     /// <summary>Creates the live rule object that runs one round of this mode.</summary>
     public abstract GameMode CreateMode();

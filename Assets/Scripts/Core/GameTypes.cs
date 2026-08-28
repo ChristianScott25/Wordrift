@@ -14,6 +14,8 @@ public struct WordResult
     public int BasePoints;      // letter values before multipliers / bonuses
     public int WordMultiplier;  // combined multiplier from tile modifiers
     public int LengthBonus;     // extra points for going past the minimum length
+    public int BookmarkBonus;        // flat points the run's bookmarks added
+    public float BookmarkMultiplier; // combined multiplier they applied (1 = none fired)
     public int TileCount;
 }
 
@@ -34,6 +36,14 @@ public struct ModeStatus
     /// one number to show, which is most of them.
     /// </summary>
     public string Goal;
+
+    /// <summary>
+    /// A third readout, for whatever a mode wants a standing line of text for —
+    /// the run's bookmarks today. Deliberately generic: it's a slot, not a
+    /// bookmark field, so the next mode that needs a line can use it too. Empty
+    /// for most modes, and simply not drawn if the HUD has no label wired.
+    /// </summary>
+    public string Extra;
 }
 
 /// <summary>Everything the game-over screen needs.</summary>

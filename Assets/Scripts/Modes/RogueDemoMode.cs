@@ -20,6 +20,10 @@ public class RogueDemoMode : GameMode
     private TileSack sack;
     private int movesLeft;
 
+    // Built once per round: bookmarks can only change in the shop, and Status is
+    // rebuilt every frame — no reason to re-join the same string 60 times a second.
+    private string bookmarkLine = "";
+
     public RogueDemoMode(RogueDemoModeConfig config) => this.config = config;
 
     public override void Attach(GameSession session, Board board)
@@ -41,7 +45,28 @@ public class RogueDemoMode : GameMode
         board.TileSource = sack;
     }
 
-    public override void Begin() => movesLeft = config.moves;
+    public override void Begin()
+    {
+        movesLeft = config.moves;
+        bookmarkLine = BuildBookmarkLine();
+    }
+
+    /// <summary>The run's bookmarks, in the order they'll get to score.</summary>
+    public override System.Collections.Generic.IReadOnlyList<BookmarkSpec> Bookmarks =>
+        run?.Bookmarks;
+
+    private string BuildBookmarkLine()
+    {
+        if (run == null || run.Bookmarks.Count == 0) return "";
+
+        var names = new System.Text.StringBuilder();
+        foreach (var owned in run.Bookmarks)
+        {
+            if (names.Length > 0) names.Append("  ·  ");
+            names.Append(owned.Name.ToUpperInvariant());
+        }
+        return names.ToString();
+    }
 
     public override void OnWordAccepted(WordResult result) => movesLeft--;
 
@@ -117,5 +142,9 @@ public class RogueDemoMode : GameMode
         // overdue, but it's a HUD job: wire StatusWidget.goalLabel.
         Goal = $"R{run.Round}   {session.Score} / {run.TargetScore}   " +
                $"SACK {sack.Remaining}   ${run.Money}",
+
+        // Whatever bookmarks the run is carrying. Drawn on its own HUD line, or
+        // dropped entirely if the widget has no label for it.
+        Extra = bookmarkLine,
     };
 }

@@ -8,10 +8,13 @@ using UnityEngine;
 ///     -> per-tile modifiers   (double letter)
 ///     -> word multipliers     (triple word)
 ///     -> length bonus         (longer words pay more)
+///     -> the run's bookmarks, in slot order  (they mutate a ScoringContext)
 ///     -> mode score multiplier
 ///
-/// New scoring ideas slot into this pipeline instead of being scattered
-/// through the session.
+/// The first stages are fixed rules about tiles. The bookmark stage is the
+/// OPEN one: anything that wants to intervene in scoring does it there, by
+/// changing the running Points and Mult, rather than by growing this method.
+/// Modes with no bookmarks pass none and the stage is a no-op.
 /// </summary>
 public class ScoreCalculator
 {
@@ -19,7 +22,14 @@ public class ScoreCalculator
 
     public ScoreCalculator(ModeConfig config) => this.config = config;
 
-    public WordResult Evaluate(IReadOnlyList<Tile> chain, string word)
+    /// <param name="wordsThisRound">
+    /// What's already been played this round, so a bookmark can spot a repeat.
+    /// Must NOT contain the word being scored yet.
+    /// </param>
+    /// <param name="bookmarks">The run's bookmarks in slot order; null for a mode without a run.</param>
+    public WordResult Evaluate(IReadOnlyList<Tile> chain, string word,
+                               ICollection<string> wordsThisRound = null,
+                               IReadOnlyList<BookmarkSpec> bookmarks = null)
     {
         int basePoints = 0;
         int wordMultiplier = 1;
@@ -41,7 +51,22 @@ public class ScoreCalculator
         int extraLetters = Mathf.Max(0, chain.Count - config.minWordLength);
         int lengthBonus = extraLetters * config.lengthBonusPerExtraLetter;
 
-        int total = Mathf.RoundToInt((basePoints * wordMultiplier + lengthBonus) * config.scoreMultiplier);
+        int beforeBookmarks = basePoints * wordMultiplier + lengthBonus;
+
+        var ctx = new ScoringContext
+        {
+            Word = word,
+            Tiles = chain,
+            WordsThisRound = wordsThisRound,
+            Points = beforeBookmarks,
+            Mult = 1f,
+        };
+
+        if (bookmarks != null)
+            for (int i = 0; i < bookmarks.Count; i++)
+                bookmarks[i]?.Apply(ctx);   // slot order is the call order
+
+        int total = Mathf.RoundToInt(ctx.Points * ctx.Mult * config.scoreMultiplier);
 
         return new WordResult
         {
@@ -51,6 +76,8 @@ public class ScoreCalculator
             BasePoints = basePoints,
             WordMultiplier = wordMultiplier,
             LengthBonus = lengthBonus,
+            BookmarkBonus = ctx.Points - beforeBookmarks,
+            BookmarkMultiplier = ctx.Mult,
             TileCount = chain.Count,
         };
     }
@@ -61,6 +88,7 @@ public class ScoreCalculator
         Accepted = false,
         Points = 0,
         WordMultiplier = 1,
+        BookmarkMultiplier = 1f,
         TileCount = tileCount,
     };
 }

@@ -26,6 +26,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 728ccfa980b654c07a56408590f52235, type: 2}
   - {fileID: 11400000, guid: 157f5c144f75145678553219bd43dc63, type: 2}
   - {fileID: 11400000, guid: 3e5e91049c5b3404e959e1e8974ffc94, type: 2}
+  bookmarks:
+  - {fileID: 11400000, guid: ec1dab9a3f28844b291476291231e9f1, type: 2}
+  - {fileID: 11400000, guid: 6a3c724c8ace444d79e51f50b1cea56f, type: 2}
+  - {fileID: 11400000, guid: 88f06e66d4a184746bf51ab65373fe51, type: 2}
   moves: 20
   rejectedWordsCostMoves: 0
   urgentMoves: 3

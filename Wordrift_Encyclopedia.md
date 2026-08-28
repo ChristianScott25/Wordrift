@@ -3,7 +3,7 @@
 > **The game, not the code.** How Wordrift is played, what the rules are, and what every
 > number currently is. `ARCHITECTURE.md` explains how it's built — this explains what it *is*.
 
-**Last updated:** 2026-08-27 · money, the buyable shop, and halved round targets
+**Last updated:** 2026-08-27 · bookmarks (Bookend, Deja Vu, Vowel Fanatic) and the scoring pipeline they hang off
 **Status:** playable demo in active design — the loop works end to end; the content doesn't exist yet
 
 ### How to read this
@@ -23,12 +23,13 @@ is named in *(italics)*.
 2. [How it's meant to be played](#2-how-its-meant-to-be-played)
 3. [Making words](#3-making-words)
 4. [Tiles](#4-tiles)
-5. [The run](#5-the-run)
-6. [Money](#6-money)
-7. [The shop](#7-the-shop-)
-8. [Modes](#8-modes)
-9. [Every number, in one place](#9-every-number-in-one-place)
-10. [Built · planned · open](#10-built--planned--open)
+5. [Bookmarks](#5-bookmarks)
+6. [The run](#6-the-run)
+7. [Money](#7-money)
+8. [The shop](#8-the-shop-)
+9. [Modes](#9-modes)
+10. [Every number, in one place](#10-every-number-in-one-place)
+11. [Built · planned · open](#11-built--planned--open)
 
 ---
 
@@ -109,10 +110,10 @@ target beats you. ❓ That ending is undesigned.
 ### Where the fun is supposed to come from
 
 - **Recognition** — spotting a word nobody would find, in a grid that only exists for a second.
-- **Compounding** — a tile you bought in round 1 paying off for the rest of the run.
+- **Compounding** — a tile or bookmark you bought in round 1 paying off for the rest of the run.
 - **Escalation** — the target curve going up faster than you're comfortable with.
-- 🚧 The third one is doing most of the work right now, because there's very little to buy. The
-  shop is the part of the design that most needs to become interesting.
+- 🚧 The shop is still the thinnest part: four tile upgrades and three bookmarks is not yet a
+  space worth exploring. It's the part of the design that most needs to become interesting.
 
 ---
 
@@ -144,7 +145,8 @@ Applied in this order:
 | 2 | That tile's **letter multipliers** (2L, 3L), applied to its own value | stacks in order |
 | 3 | Every **word multiplier** (2W, 3W) on the word, multiplied together | applies to the sum |
 | 4 | **Length bonus** — points per letter past the minimum | **0 — off** |
-| 5 | The mode's **score multiplier** | **×1** |
+| 5 | **Your bookmarks**, each in turn, in the order you bought them | see §5 |
+| 6 | The mode's **score multiplier** | **×1** |
 
 > **Worked example.** `CAT` = C(3) + A(1) + T(1) = **5**.
 > Put a 2L on the C and it's (3×2) + 1 + 1 = **8**.
@@ -195,7 +197,45 @@ designed. The catalog can already hold them; nothing can play them yet.
 
 ---
 
-## 5. The run
+## 5. Bookmarks
+
+**Bookmarks are the run's special abilities** — this game's version of Balatro's jokers. You
+buy them in the shop, you keep them for the rest of the run, and they change how every word
+scores from then on.
+
+| Bookmark | What it does | Price |
+|---|---|--:|
+| **Bookend** | ×2 if the word starts and ends with the same letter | $12 |
+| **Deja Vu** | +10 points for a word you already spelled **this round** | $10 |
+| **Vowel Fanatic** | ×2 if the word has more vowels than consonants | $14 |
+
+The rules around them:
+
+- **One of each, at most.** The shop never offers a bookmark you already own, and there's no
+  limit on how many different ones you can hold.
+- **They stack.** Bookend and Vowel Fanatic both firing on the same word is **×4** — the same
+  way tile multipliers already multiply together. `EYE` with both is a four-times word.
+- **They fire in the order you bought them.** With these three that changes nothing, because
+  doubling twice is doubling twice either way. It will start to matter the moment a bookmark
+  *adds* to the multiplier instead of multiplying it — that's why the order is fixed and
+  visible rather than arbitrary.
+- **Bookmarks die with the run**, like money and tile upgrades.
+
+Details worth knowing:
+
+- **Vowel Fanatic treats Y as a consonant.** `YOYO` is 2 vowels against 2 consonants, so it
+  doesn't fire; `AREA` (3 v 1) does. It needs *strictly* more, so an even split pays nothing.
+- **Deja Vu counts repeats within a round only** — the list resets when a new round starts.
+  Nothing in the game stops you playing the same word twice, so this turns a quirk into a
+  tactic: spell `EYE`, then spell it again for +10.
+- 🚧 **Nothing tells you when a bookmark fires.** The score just comes out higher. Feedback in
+  the word popup is an obvious next addition.
+
+❓ **Editions** — Balatro's holographic / negative / foil upgrades applied to a joker — are
+planned but not built. A bookmark you own is already stored as its own object rather than as a
+pointer to the shop's copy, specifically so two copies can differ later.
+
+## 6. The run
 
 A **run** is a sequence of rounds. It starts fresh from the main menu, and it ends the first
 time you fail a round. Everything you earn and upgrade lives for exactly one run — **nothing
@@ -249,7 +289,7 @@ today you'd burn moves on rejects to escape it.
 
 ---
 
-## 6. Money
+## 7. Money
 
 Earned per cleared round, kept for the whole run, spent in the shop.
 
@@ -276,12 +316,15 @@ What that means in play:
 - Money shows in the round HUD, but it can't change mid-round.
 - Failing pays nothing, and the run's money dies with the run.
 
+One shop visit is roughly **one bookmark or two tile upgrades**, which is the interesting
+part: permanent scoring abilities and better letters compete for exactly the same money.
+
 ❓ No interest, no per-round purse, no sink other than the shop. Interest on savings — Balatro's
 strongest economic hook — is an obvious next candidate.
 
 ---
 
-## 7. The shop 🚧
+## 8. The shop 🚧
 
 Between rounds. It shows the round you cleared, what it paid, the next target, and what's for
 sale. **CONTINUE** starts the next round.
@@ -296,16 +339,27 @@ sale. **CONTINUE** starts the next round.
 and shown on the button, so you can see what you're buying:
 
 ```
-   2L → E      $5     [ BUY ]
-   3L → Q      $9     [ BUY ]
-   2W → A     $14     [ BUY ]
-   3W → T     $22       $22      ← greyed out, can't afford
+   BOOKMARKS   BOOKEND
+
+   2L → E            $5     [ BUY ]
+   3L → Q            $9     [ BUY ]
+   2W → A           $14     [ BUY ]
+   3W → T           $22       $22    ← greyed out, can't afford
+   VOWEL FANATIC    $14     [ BUY ]  ← gone once you own them all
 ```
 
 You never *choose* the tile. After each purchase that row rolls a different one.
 
 🚧 **Re-buying the same option in one visit costs more each time** — ×1.5, rounded: $5 → $8 →
 $12. Other rows are unaffected, and prices reset on the next visit.
+
+**A fifth row sells one bookmark** — a random one you don't already own, picked when the shop
+opens and fixed for that visit. Buy it and the row rolls a different one. **When you own every
+bookmark the row simply isn't there**, and the shop carries on as normal. Bookmark prices
+never escalate, since you can only buy each one once.
+
+Your owned bookmarks are listed above the shelf, and again on their own line in the round HUD
+during play.
 
 🚧 **There's no reroll, no skip, and nothing else to spend on.** Unspent money simply carries.
 
@@ -315,7 +369,7 @@ remove tiles.
 
 ---
 
-## 8. Modes
+## 9. Modes
 
 | Mode | What it is |
 |---|---|
@@ -327,7 +381,7 @@ collection.*
 
 ---
 
-## 9. Every number, in one place
+## 10. Every number, in one place
 
 | | Value | Lives in |
 |---|--:|---|
@@ -345,21 +399,23 @@ collection.*
 | $ per unused move | 1 | `Mode_RogueDemo.asset` |
 | Re-buy price growth | ×1.5 | `Mode_RogueDemo.asset` |
 | Modifier prices | 5 / 9 / 14 / 22 | each asset in `GameData/Modifiers/` |
+| Bookmark prices | 12 / 10 / 14 | each asset in `GameData/Bookmarks/` |
+| Deja Vu bonus | +10 | `DejaVu.asset` |
+| Bookend / Vowel Fanatic multiplier | ×2 | their assets in `GameData/Bookmarks/` |
 
 ---
 
-## 10. Built · planned · open
+## 11. Built · planned · open
 
 ### ✅ Built and playable
 
 The board and word-making · scoring with stacking multipliers · the run (rounds, escalating
-targets, a persistent finite sack) · money · a placeholder shop that sells permanent tile
-upgrades.
+targets, a persistent finite sack) · money · bookmarks (three of them, with a scoring pipeline
+built to take many more) · a placeholder shop that sells permanent tile upgrades and one
+bookmark a visit.
 
 ### 📋 Decided, not built
 
-- **Bookmarks** — the working name for Balatro-style relics that hook into scoring. Nothing
-  exists yet.
 - **Sacks with abilities**, boards of varying **size and shape**, and boards where **gravity
   flows differently**. All three have seams in the code; no content uses them.
 - **Tile skins as a player-facing thing** — several looks can already share a board, but
@@ -373,4 +429,6 @@ upgrades.
 - **How a run ends** — there's no boss round and no victory.
 - **Reproducible runs** — every draw is unseeded, so sharing or replaying a seed isn't possible.
 - **A board that's playable-looking but dead** — full of tiles that spell nothing (see §5).
-- **The HUD** — round, target, sack and money are four readouts crammed into one line.
+- **The HUD** — round, target, sack and money share one line; bookmarks have their own below it.
+- **Bookmark editions** — holographic / negative / foil equivalents are planned, undesigned.
+- **Bookmark feedback** — nothing shows you *which* bookmark just paid out.

@@ -18,6 +18,11 @@ public class StatusWidget : MonoBehaviour
              "label instead, so a mode that sets one is readable with no wiring.")]
     [SerializeField] private TMP_Text goalLabel;
 
+    [Tooltip("Optional third readout — a standing line of text the mode wants shown, " +
+             "the run's bookmarks today. Nothing rides along if this is empty: it's " +
+             "extra colour, not a number, so dropping it costs the player nothing.")]
+    [SerializeField] private TMP_Text extraLabel;
+
     [Header("Colors")]
     [SerializeField] private Color normalColor = Color.white;
     [SerializeField] private Color urgentColor = new Color(1f, 0.4f, 0.4f);
@@ -50,6 +55,8 @@ public class StatusWidget : MonoBehaviour
                 ? status.Label
                 : $"{status.Label}   <size=60%>{status.Goal}</size>";
         }
+        if (extraLabel != null) extraLabel.text = status.Extra;
+
         if (progressBar != null)
         {
             progressBar.fillAmount = Mathf.Clamp01(status.Fraction);

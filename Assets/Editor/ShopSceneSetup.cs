@@ -30,8 +30,11 @@ public static class ShopSceneSetup
     private static readonly Color AccentColor = new Color(1f, 0.75f, 0.1f);
     private static readonly Color OfferColor = new Color(1f, 1f, 1f, 0.14f);
 
-    /// <summary>How many buy rows the shop lays out. The stock itself is temporary.</summary>
-    private const int OfferRows = 4;
+    /// <summary>
+    /// How many buy rows the shop lays out: four tile upgrades and the bookmark.
+    /// The stock behind them is temporary; the row count is just furniture.
+    /// </summary>
+    private const int OfferRows = 5;
 
     [MenuItem("Word Crush/Create Shop Scene")]
     public static void Create()
@@ -112,17 +115,24 @@ public static class ShopSceneSetup
             t.text = "ROUND 1 CLEARED";
             t.color = AccentColor;
         });
-        WordCrushSetup.Anchor(headline.gameObject, Center, new Vector2(0f, 640f), new Vector2(1000f, 140f));
+        WordCrushSetup.Anchor(headline.gameObject, Center, new Vector2(0f, 700f), new Vector2(1000f, 140f));
 
         var detail = Ensure(root, "Detail", 52, ref added, t => t.text = "NEXT TARGET   90");
-        WordCrushSetup.Anchor(detail.gameObject, Center, new Vector2(0f, 530f), new Vector2(1000f, 80f));
+        WordCrushSetup.Anchor(detail.gameObject, Center, new Vector2(0f, 585f), new Vector2(1000f, 80f));
 
         var money = Ensure(root, "Money", 76, ref added, t =>
         {
             t.text = "$0";
             t.color = AccentColor;
         });
-        WordCrushSetup.Anchor(money.gameObject, Center, new Vector2(0f, 410f), new Vector2(1000f, 110f));
+        WordCrushSetup.Anchor(money.gameObject, Center, new Vector2(0f, 470f), new Vector2(1000f, 110f));
+
+        var bookmarks = Ensure(root, "Bookmarks", 36, ref added, t =>
+        {
+            t.text = "";
+            t.color = new Color(1f, 1f, 1f, 0.7f);
+        });
+        WordCrushSetup.Anchor(bookmarks.gameObject, Center, new Vector2(0f, 370f), new Vector2(1000f, 60f));
 
         // The old stub's "nothing for sale yet" line is now a lie. Deleting a
         // child isn't this script's job, so it's parked under the button and —
@@ -157,7 +167,7 @@ public static class ShopSceneSetup
             buttons[i] = existing.GetComponent<Button>();
             labels[i] = existing.GetComponentInChildren<TMP_Text>();
             WordCrushSetup.Anchor(existing.gameObject, Center,
-                new Vector2(0f, 280f - i * 130f), new Vector2(640f, 110f));
+                new Vector2(0f, 280f - i * 120f), new Vector2(640f, 104f));
         }
 
         var continueButton = root.Find("ContinueButton");
@@ -174,6 +184,7 @@ public static class ShopSceneSetup
         WordCrushSetup.SetRef(shop, "headline", headline);
         WordCrushSetup.SetRef(shop, "detail", detail);
         WordCrushSetup.SetRef(shop, "moneyLabel", money);
+        WordCrushSetup.SetRef(shop, "bookmarkLabel", bookmarks);
         WireRows(shop, buttons, labels);
 
         return added;

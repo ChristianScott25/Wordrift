@@ -82,6 +82,12 @@ is a large chunk of where Balatro's depth comes from.
 This is a refactor of a core file, not a bolt-on. It should be a deliberate decision, not
 something that happens on the way to something else.
 
+**Built 2026-08-27.** The pipeline above now exists: `ScoringContext { Points, Mult }`,
+mutated by the run's bookmarks in slot order, as the final stage of `ScoreCalculator`.
+Three bookmarks use it — Bookend (from the table below), Deja Vu, Vowel Fanatic — and the
+shop sells one per visit. The hooks beyond scoring (round start, per tile, on refill, on
+money earned) do **not** exist; only the word-scored one does.
+
 Relic ideas, only to show the space is wide — not a shortlist:
 
 | Name | Effect |
