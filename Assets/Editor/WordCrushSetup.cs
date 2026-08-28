@@ -60,6 +60,7 @@ public static class WordCrushSetup
 
         WireSceneAssets();
         BoardBackgroundSetup.SetUp();
+        WordActionsSetup.Run();
         RegisterScenes();
 
         AssetDatabase.SaveAssets();
@@ -69,7 +70,7 @@ public static class WordCrushSetup
             "Rebuilt:\n\n" +
             "• Assets/GameData (letter set, board shape, mode configs, modifiers, tile skin)\n" +
             "• Assets/Prefabs (Tile + HUD widgets)\n" +
-            "• Assets/Scenes/Game.unity (with the board background)\n\n" +
+            "• Assets/Scenes/Game.unity (board background, ENTER/DISCARD buttons)\n\n" +
             "Open Game.unity and press Play, or start from Main Menu.", "OK");
     }
 

@@ -4,8 +4,12 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Runs one round. Owns the loop every mode shares — drag, validate, score,
+/// Runs one round. Owns the loop every mode shares — select, validate, score,
 /// demolish, refill — and delegates anything mode-specific to a GameMode.
+///
+/// Selecting tiles and COMMITTING to them are separate steps: ChainController
+/// only ever reports a selection, and SubmitSelection / DiscardSelection are
+/// what act on it. Both are public because the HUD's buttons call them.
 ///
 /// It deliberately does NOT know what a timer is. Add modes, not branches.
 /// </summary>
@@ -98,7 +102,7 @@ public class GameSession : MonoBehaviour
         GameEvents.RaiseRoundStarted();
         GameEvents.RaiseScoreChanged(Score);
         GameEvents.RaiseStatusChanged(mode.Status);
-        GameEvents.RaiseChainChanged("", false);
+        RaiseSelection();
     }
 
     /// <summary>Replays the same mode without reloading the scene.</summary>
@@ -145,19 +149,77 @@ public class GameSession : MonoBehaviour
         });
     }
 
-    private void OnChainChanged(IReadOnlyList<Tile> chain)
+    private void OnChainChanged(IReadOnlyList<Tile> chain) => RaiseSelection();
+
+    /// <summary>
+    /// Publishes what's selected and what may be done with it. The dictionary
+    /// and the mode are both consulted HERE, once — the buttons only obey the
+    /// answer, so a rule change can't leave a button offering something the
+    /// session would refuse.
+    /// </summary>
+    private void RaiseSelection()
     {
+        var chain = chainController.Selection;
         string word = ChainController.WordOf(chain);
-        GameEvents.RaiseChainChanged(word, IsValidWord(word));
+
+        GameEvents.RaiseSelectionChanged(new SelectionState
+        {
+            Word = word,
+            TileCount = chain.Count,
+            CanSubmit = IsPlaying && chain.Count > 0 && IsValidWord(word),
+            CanDiscard = IsPlaying && mode.CanDiscard(chain.Count),
+            DiscardsLeft = mode.DiscardsLeft,
+        });
+    }
+
+    /// <summary>
+    /// Plays the selected tiles as a word. Wired to the ENTER button — the only
+    /// way a word is submitted now that lifting the finger doesn't do it.
+    /// </summary>
+    public void SubmitSelection()
+    {
+        if (!IsPlaying) return;
+        chainController.Submit();
+    }
+
+    /// <summary>
+    /// Throws the selected tiles off the board without scoring them. They are
+    /// spent exactly like played tiles: gone for this round, back in the bag
+    /// next round, and never returned to the draw mid-round.
+    ///
+    /// Costs no move — the allowance it spends is the mode's, not the move
+    /// counter's.
+    /// </summary>
+    public void DiscardSelection()
+    {
+        if (!IsPlaying) return;
+
+        // Ask the mode, not the button: the button may be a frame stale, and
+        // this is the call site that actually takes the allowance.
+        int count = chainController.Selection.Count;
+        if (!mode.CanDiscard(count)) return;
+
+        var discarded = chainController.TakeSelection();
+        mode.OnTilesDiscarded(discarded.Count);
+        board.RemoveTiles(discarded);
+
+        RaiseSelection();
+        GameEvents.RaiseStatusChanged(mode.Status);
+
+        // Discarding can empty a bag-limited board, so the round may be over.
+        // OutOfTiles waits out the resolve, so this normally lands in Update.
+        if (mode.IsRoundOver) EndRound();
     }
 
     private void OnChainSubmitted(IReadOnlyList<Tile> chain)
     {
-        GameEvents.RaiseChainChanged("", false);
         if (!IsPlaying || chain.Count == 0) return;
 
         string word = ChainController.WordOf(chain);
 
+        // Unreachable through the ENTER button, which disables itself on an
+        // invalid word — kept because the submit path is public and the rule
+        // that a bad word costs nothing shouldn't live only in a button.
         if (!IsValidWord(word))
         {
             var rejected = ScoreCalculator.Rejected(word, chain.Count);
@@ -165,6 +227,7 @@ public class GameSession : MonoBehaviour
             mode.OnWordRejected(rejected);
             GameEvents.RaiseWordSubmitted(rejected);
             GameEvents.RaiseStatusChanged(mode.Status);
+            RaiseSelection();
             if (mode.IsRoundOver) EndRound();
             return;
         }
@@ -187,6 +250,7 @@ public class GameSession : MonoBehaviour
         GameEvents.RaiseScoreChanged(Score);
         GameEvents.RaiseWordSubmitted(result);
         GameEvents.RaiseStatusChanged(mode.Status);
+        RaiseSelection();
 
         if (mode.IsRoundOver) EndRound();
     }

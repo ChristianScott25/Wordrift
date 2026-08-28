@@ -25,6 +25,13 @@ public class RogueDemoModeConfig : ModeConfig
     [Tooltip("Move counter turns red at or below this many moves.")]
     public int urgentMoves = 3;
 
+    [Tooltip("Tiles the player may throw off the board per round, in TILES not " +
+             "uses — discarding three at once spends three. Refilled every round, " +
+             "never carried over. Costs no move: it's a separate budget, so it " +
+             "stays an escape hatch from a bad board rather than a second tax. " +
+             "0 turns discarding off entirely.")]
+    [Min(0)] public int discardsPerRound = 5;
+
     [Tooltip("Scene a cleared round continues to, between the rounds of a run.")]
     public string shopSceneName = "Shop";
 

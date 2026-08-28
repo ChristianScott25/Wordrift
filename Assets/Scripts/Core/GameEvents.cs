@@ -12,14 +12,19 @@ public static class GameEvents
     public static event Action RoundStarted;
     public static event Action<int> ScoreChanged;
     public static event Action<ModeStatus> StatusChanged;
-    public static event Action<string, bool> ChainChanged;   // live word, is it valid
+    /// <summary>
+    /// The board selection changed — tiles added, removed, cleared, or submitted.
+    /// Carries what's selected AND what may be done with it (see SelectionState),
+    /// because the word preview and the action buttons need the same snapshot.
+    /// </summary>
+    public static event Action<SelectionState> SelectionChanged;
     public static event Action<WordResult> WordSubmitted;
     public static event Action<RoundSummary> RoundEnded;
 
     public static void RaiseRoundStarted() => RoundStarted?.Invoke();
     public static void RaiseScoreChanged(int score) => ScoreChanged?.Invoke(score);
     public static void RaiseStatusChanged(ModeStatus status) => StatusChanged?.Invoke(status);
-    public static void RaiseChainChanged(string word, bool valid) => ChainChanged?.Invoke(word, valid);
+    public static void RaiseSelectionChanged(SelectionState selection) => SelectionChanged?.Invoke(selection);
     public static void RaiseWordSubmitted(WordResult result) => WordSubmitted?.Invoke(result);
     public static void RaiseRoundEnded(RoundSummary summary) => RoundEnded?.Invoke(summary);
 }

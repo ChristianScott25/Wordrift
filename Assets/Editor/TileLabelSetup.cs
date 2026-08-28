@@ -5,8 +5,8 @@ using UnityEngine;
 
 /// <summary>
 /// Authors the three text labels on Assets/Prefabs/Tile.prefab — the letter, the
-/// score, and the multiplier badge — and gives the prefab a default tile sprite
-/// to fall back on.
+/// score, and the multiplier badge — plus the selection box behind the tile, and
+/// gives the prefab a default tile sprite to fall back on.
 ///
 /// This exists because world-space TextMeshPro objects can't be authored from
 /// the command line: their serialization is large and version-specific, and
@@ -24,9 +24,15 @@ public static class TileLabelSetup
     private const string PrefabPath = "Assets/Prefabs/Tile.prefab";
     private const string DefaultTileSprite = "Assets/Sprites/Tile - white.png";
 
+    // A sharp square, so the overhang reads as a box rather than following the
+    // tile's rounded corners. Swap this on the prefab for "Tile - white" if a
+    // rounded border is wanted instead — Tile sizes whatever it finds.
+    private const string SelectionBoxSprite = "Assets/Sprites/White Square.png";
+
     private const string LetterName = "Letter";
     private const string ScoreName = "Score";
     private const string BadgeLabelName = "BadgeLabel";
+    private const string SelectionBoxName = "SelectionBox";
 
     private static readonly Color InkColor = new Color(0.16f, 0.17f, 0.23f, 1f);
 
@@ -72,6 +78,23 @@ public static class TileLabelSetup
                 badgeRenderer.enabled = false;   // only a modifier turns it on
             }
 
+            // The selection box: a square behind the body, switched on while the
+            // tile is selected. Tile sizes and sorts it at runtime from the body
+            // sprite's bounds, so only the sprite matters here.
+            var box = FindOrCreateSelectionBox(root);
+            if (box.sprite == null)
+            {
+                var boxSprite = LoadSprite(SelectionBoxSprite);
+                if (boxSprite != null) box.sprite = boxSprite;
+                else Debug.LogWarning($"No sprite found at {SelectionBoxSprite}.");
+            }
+            if (renderer != null)
+            {
+                box.sortingLayerID = renderer.sortingLayerID;
+                box.sortingOrder = renderer.sortingOrder - 1;
+            }
+            box.enabled = false;   // only a selection turns it on
+
             // The letter: big and centred. Tile overwrites .text per spawn.
             var letter = FindOrCreateLabel(root, LetterName);
             StyleLabel(letter, fontSize: 6f, align: TextAlignmentOptions.Center,
@@ -94,12 +117,14 @@ public static class TileLabelSetup
             badgeText.color = Color.white;
             badgeText.enabled = false;   // only a modifier turns it on
 
-            if (!WireLabel(tile, "letterLabel", letter)) return;
-            if (!WireLabel(tile, "scoreLabel", score)) return;
-            if (!WireLabel(tile, "badgeLabel", badgeText)) return;
+            if (!WireRef(tile, "letterLabel", letter)) return;
+            if (!WireRef(tile, "scoreLabel", score)) return;
+            if (!WireRef(tile, "badgeLabel", badgeText)) return;
+            if (!WireRef(tile, "selectionBox", box)) return;
 
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
-            Debug.Log($"Tile prefab ready: letter, score and badge labels wired on {PrefabPath}.");
+            Debug.Log($"Tile prefab ready: letter, score and badge labels plus the " +
+                      $"selection box wired on {PrefabPath}.");
         }
         finally
         {
@@ -150,8 +175,22 @@ public static class TileLabelSetup
         return created.GetComponent<TextMeshPro>();
     }
 
-    /// <summary>Assigns one of Tile's private label fields.</summary>
-    private static bool WireLabel(Tile tile, string field, TextMeshPro label)
+    private static SpriteRenderer FindOrCreateSelectionBox(GameObject root)
+    {
+        var existing = root.transform.Find(SelectionBoxName);
+        if (existing != null)
+        {
+            return existing.GetComponent<SpriteRenderer>()
+                   ?? existing.gameObject.AddComponent<SpriteRenderer>();
+        }
+
+        var created = new GameObject(SelectionBoxName, typeof(SpriteRenderer));
+        created.transform.SetParent(root.transform, false);
+        return created.GetComponent<SpriteRenderer>();
+    }
+
+    /// <summary>Assigns one of Tile's private serialized reference fields.</summary>
+    private static bool WireRef(Tile tile, string field, Object value)
     {
         var serialized = new SerializedObject(tile);
         var property = serialized.FindProperty(field);
@@ -161,7 +200,7 @@ public static class TileLabelSetup
             return false;
         }
 
-        property.objectReferenceValue = label;
+        property.objectReferenceValue = value;
         serialized.ApplyModifiedPropertiesWithoutUndo();
         return true;
     }

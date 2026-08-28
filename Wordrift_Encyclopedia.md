@@ -3,7 +3,7 @@
 > **The game, not the code.** How Wordrift is played, what the rules are, and what every
 > number currently is. `ARCHITECTURE.md` explains how it's built — this explains what it *is*.
 
-**Last updated:** 2026-08-28 · the tile bag halved to 52 and renamed from "sack"; Moves mode cut
+**Last updated:** 2026-08-28 · tap-to-select with ENTER / DISCARD buttons; the tile bag halved to 52 and renamed from "sack"; Moves mode cut
 **Status:** playable demo in active design — the loop works end to end; the content doesn't exist yet
 
 ### How to read this
@@ -121,19 +121,60 @@ target beats you. ❓ That ending is undesigned.
 
 **The board** is a 5×5 grid, always full at the start of a round. *(`Board_5x5.asset`)*
 
-**To make a word**, drag across touching tiles. **Diagonals count**, so a tile has up to eight
-neighbours. A tile can't be used twice in one word. Release to submit.
+### Selecting tiles
 
-**A word is valid** if it's at least **3 letters** *(`minWordLength`)* and appears in the
-dictionary — about 175,000 English words. An invalid word flashes red and **costs you
-nothing**: no move, no penalty. *(`rejectedWordsCostMoves` — off)*
+**Two ways, same result.** Drag across touching tiles, or tap them one at a time. **Diagonals
+count**, so a tile has up to eight neighbours, and a tile can't be used twice in one word.
+Selected tiles are lit and boxed.
 
-**When a word is accepted**, its tiles demolish, everything above them falls straight down,
-and new tiles drop from the top to fill the gaps — for as long as the bag has tiles left to
-give.
+**Lifting your finger does nothing.** The selection stays on the board until you act on it —
+that pause is the whole point, because it's where you decide between playing the word and
+throwing it away.
 
-**Tiles in motion can't be grabbed.** A tile has to settle before it will respond to a drag,
-so nothing slides out from under your finger mid-word.
+| You do | What happens |
+|---|---|
+| Tap an empty tile next to your last one | It joins the end |
+| Tap a tile that isn't touching your selection | The selection clears and starts again from that tile |
+| Tap a tile already selected | It and everything after it drop off — tap the last one to undo one letter |
+| Drag onto a tile that isn't adjacent | **Ignored.** A fast swipe skips tiles, and wiping your selection over a sampling gap would be maddening |
+| Tap the board background | Nothing. Deselecting is done by tapping a tile, so a stray tap can't cost you a word |
+
+**Tiles in motion can't be grabbed.** A tile has to settle before it will respond, so nothing
+slides out from under your finger mid-word.
+
+### The two buttons
+
+They appear as soon as anything is selected, and they are the only way to act on it.
+
+**ENTER** plays the selection as a word. It is **disabled unless the selection is a valid
+word** — at least **3 letters** *(`minWordLength`)* and in the dictionary, about 175,000
+English words. You can no longer submit a bad word at all, so nothing flashes red any more and
+nothing is ever penalised for a wrong guess. *(`rejectedWordsCostMoves` is now unreachable.)*
+
+**DISCARD** throws the selected tiles off the board without scoring them. It shows what it
+would cost and what you have left — `DISCARD 3   5 LEFT` — and is **disabled when you've
+selected more tiles than you have discards remaining**.
+
+**When tiles leave the board** — played or discarded — they demolish, everything above them
+falls straight down, and new tiles drop from the top to fill the gaps, for as long as the bag
+has tiles left to give.
+
+### Discarding
+
+You may throw away **5 tiles per round** *(`discardsPerRound`)*.
+
+- It's counted in **tiles, not uses**. One five-tile discard and five single-tile discards
+  both spend the whole allowance.
+- **It costs no move.** The 20-word budget is for words; this is a separate resource, so
+  discarding stays an escape hatch rather than a second tax.
+- Discarded tiles are **spent exactly like played ones**: gone for this round, and back in
+  the bag at the start of the next. Nothing is destroyed permanently.
+- The allowance **refills every round** and never carries over. Unused discards are worth
+  nothing — unlike unused moves, which pay $1 each.
+
+🎯 Discarding is what you do when the board won't give you a word: dump the four consonants
+strangling a corner and let something else fall in. It's also the only partial answer to a
+board full of tiles that spell nothing — see §6.
 
 ### How a word is scored
 
@@ -304,8 +345,9 @@ unused words rather than playing them out.
 | ❌ **Out of tiles** | Bag empty *and* too few tiles left on the board to make any word | **Run over.** |
 
 That last one exists so a round can't stall forever with moves left and nothing to spend them
-on. ❓ The softer version — tiles remain but no word can be made from them — isn't handled;
-today you'd burn moves on rejects to escape it.
+on. ❓ The softer version — tiles remain but no word can be made from them — still isn't
+*detected*, but it now has an exit: **discard your way out of it** (§3), up to five tiles a
+round. Whether five is enough to unstick a genuinely dead board is untested.
 
 **PLAY AGAIN starts a completely new run**: round 1, a stock bag, $0.
 
@@ -412,7 +454,8 @@ second mode would slot into; there just isn't one.*
 | Length bonus per extra letter | 0 (off) | `Mode_RogueDemo.asset` |
 | Score multiplier | ×1 | `Mode_RogueDemo.asset` |
 | Words per round | 20 | `Mode_RogueDemo.asset` |
-| Invalid word costs a move | no | `Mode_RogueDemo.asset` |
+| Discards per round | 5 tiles | `Mode_RogueDemo.asset` |
+| Invalid word costs a move | n/a — can't be submitted | `Mode_RogueDemo.asset` |
 | Move counter turns red at | 3 left | `Mode_RogueDemo.asset` |
 | Round targets | 30 / 45 / 65, then ×1.5 | `Mode_RogueDemo.asset` |
 | Tile bag size | 52 tiles (~half a Scrabble set) | `Mode_RogueDemo.asset` |
@@ -431,7 +474,8 @@ second mode would slot into; there just isn't one.*
 
 ### ✅ Built and playable
 
-The board and word-making · scoring with stacking multipliers · the run (rounds, escalating
+The board, tap-or-drag selection and the ENTER / DISCARD buttons · scoring with stacking
+multipliers · the run (rounds, escalating
 targets, a persistent finite tile bag) · money · bookmarks (three of them, with a scoring pipeline
 built to take many more) · a placeholder shop that sells permanent tile upgrades and one
 bookmark a visit.

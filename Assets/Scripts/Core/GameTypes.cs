@@ -46,6 +46,33 @@ public struct ModeStatus
     public string Extra;
 }
 
+/// <summary>
+/// What is currently selected on the board, and what the player is allowed to
+/// do with it. Raised every time the selection changes, so the word preview and
+/// the action buttons both read one snapshot rather than each working it out.
+///
+/// The two Can* flags are decisions, not raw facts: the session has already
+/// asked the dictionary and the mode. A widget should obey them, never re-derive
+/// them — that's what stops the button and the rule drifting apart.
+/// </summary>
+public struct SelectionState
+{
+    public string Word;      // what the selected tiles spell, lowercase
+    public int TileCount;
+
+    /// <summary>The selection is a word the session would accept.</summary>
+    public bool CanSubmit;
+
+    /// <summary>The selection can be discarded — non-empty, and within the allowance.</summary>
+    public bool CanDiscard;
+
+    /// <summary>Tiles the mode will still let you discard this round.</summary>
+    public int DiscardsLeft;
+
+    /// <summary>Nothing selected: the action buttons have nothing to act on.</summary>
+    public bool IsEmpty => TileCount == 0;
+}
+
 /// <summary>Everything the game-over screen needs.</summary>
 public struct RoundSummary
 {

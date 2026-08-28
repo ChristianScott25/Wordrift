@@ -47,6 +47,28 @@ public abstract class GameMode
     /// <summary>An invalid chain was submitted.</summary>
     public virtual void OnWordRejected(WordResult result) { }
 
+    /// <summary>
+    /// Tiles this mode will still let the player throw away this round. 0 —
+    /// the default — means a mode simply has no discarding, and the button
+    /// never enables.
+    ///
+    /// Counted in TILES, not in uses: discarding three tiles spends three of
+    /// the allowance. That's what makes a big discard a real decision rather
+    /// than free value.
+    /// </summary>
+    public virtual int DiscardsLeft => 0;
+
+    /// <summary>
+    /// May this many tiles be discarded right now? The session asks before it
+    /// touches the board, and the HUD asks to decide whether the button is
+    /// enabled — one answer, so the button can't offer what the rule refuses.
+    /// </summary>
+    public virtual bool CanDiscard(int tileCount) =>
+        tileCount > 0 && tileCount <= DiscardsLeft;
+
+    /// <summary>Tiles were discarded. Spend the allowance here.</summary>
+    public virtual void OnTilesDiscarded(int tileCount) { }
+
     /// <summary>The session ends the round as soon as this turns true.</summary>
     public abstract bool IsRoundOver { get; }
 

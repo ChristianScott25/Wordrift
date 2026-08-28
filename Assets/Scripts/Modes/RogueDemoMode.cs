@@ -19,6 +19,7 @@ public class RogueDemoMode : GameMode
     private RunState run;
     private TileBag bag;
     private int movesLeft;
+    private int discardsLeft;
 
     // Built once per round: bookmarks can only change in the shop, and Status is
     // rebuilt every frame — no reason to re-join the same string 60 times a second.
@@ -48,8 +49,19 @@ public class RogueDemoMode : GameMode
     public override void Begin()
     {
         movesLeft = config.moves;
+        discardsLeft = config.discardsPerRound;
         bookmarkLine = BuildBookmarkLine();
     }
+
+    /// <summary>
+    /// A fresh allowance every round, never carried over — see Begin. Spending
+    /// it costs no move on purpose: the move budget is for words, and a discard
+    /// is what you do when the board won't give you one.
+    /// </summary>
+    public override int DiscardsLeft => discardsLeft;
+
+    public override void OnTilesDiscarded(int tileCount) =>
+        discardsLeft = Mathf.Max(0, discardsLeft - tileCount);
 
     /// <summary>The run's bookmarks, in the order they'll get to score.</summary>
     public override System.Collections.Generic.IReadOnlyList<BookmarkSpec> Bookmarks =>

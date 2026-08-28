@@ -22,6 +22,13 @@ public class Tile : MonoBehaviour
 
     [SerializeField] private SpriteRenderer badgeRenderer;
 
+    [Tooltip("The selection box: a square drawn BEHIND the tile body, slightly " +
+             "larger, so the overhang reads as a border. Behind rather than on " +
+             "top because the body is opaque — a box over it would hide the " +
+             "letter. Optional: a tile prefab without one still selects, it just " +
+             "shows the tint and the scale-up.")]
+    [SerializeField] private SpriteRenderer selectionBox;
+
     [Tooltip("Draws the letter itself. Position and scale are set from the tile " +
              "art at runtime, so don't hand-place it — style it and leave the " +
              "transform alone. Its font can be overridden per mode.")]
@@ -67,6 +74,12 @@ public class Tile : MonoBehaviour
     [SerializeField] private Color normalColor = Color.white;
     [SerializeField] private Color selectedColor = new Color(1f, 0.9f, 0.4f);
     [SerializeField] private float selectedScale = 1.15f;
+
+    [Tooltip("How far the selection box sticks out past the tile, as a fraction " +
+             "of the tile. 0.12 = a border a bit over a tenth of a tile wide.")]
+    [Range(0f, 0.5f)][SerializeField] private float selectionBoxOvershoot = 0.14f;
+
+    [SerializeField] private Color selectionBoxColor = new Color(1f, 0.75f, 0.1f);
 
     [Header("Feedback")]
     [SerializeField] private Color invalidColor = new Color(1f, 0.35f, 0.35f);
@@ -134,6 +147,7 @@ public class Tile : MonoBehaviour
 
         if (badgeRenderer != null) badgeRenderer.enabled = false;
         LayOutLabels(sprite);
+        LayOutSelectionBox(sprite);
         ApplyModifierVisuals();
     }
 
@@ -360,6 +374,42 @@ public class Tile : MonoBehaviour
         selected = value;
         SetColor(value ? selectedColor : RestingColor);
         transform.localScale = Vector3.one * (value ? baseScale * selectedScale : baseScale);
+        if (selectionBox != null) selectionBox.enabled = value;
+    }
+
+    /// <summary>
+    /// Sizes the box from the body sprite's bounds, for the same reason the
+    /// labels are: a skin can swap the body for a sprite of any size, and the
+    /// whole tile is then uniformly scaled to its cell. Sits one sorting step
+    /// BELOW the body, which still leaves it above the board backing at -10.
+    /// </summary>
+    private void LayOutSelectionBox(Sprite sprite)
+    {
+        if (selectionBox == null) return;
+
+        selectionBox.enabled = false;
+        selectionBox.color = selectionBoxColor;
+
+        Bounds bounds = sprite != null ? sprite.bounds : new Bounds(Vector3.zero, Vector3.one);
+        float bodySize = Mathf.Max(bounds.size.x, bounds.size.y);
+        if (bodySize <= 0f) bodySize = 1f;
+
+        var boxSprite = selectionBox.sprite;
+        float boxSize = boxSprite != null
+            ? Mathf.Max(boxSprite.bounds.size.x, boxSprite.bounds.size.y)
+            : 1f;
+        if (boxSize <= 0f) boxSize = 1f;
+
+        var boxTransform = selectionBox.transform;
+        boxTransform.localPosition = new Vector3(bounds.center.x, bounds.center.y, labelDepthOffset);
+        boxTransform.localScale =
+            Vector3.one * (bodySize * (1f + selectionBoxOvershoot) / boxSize);
+
+        if (tileRenderer != null)
+        {
+            selectionBox.sortingLayerID = tileRenderer.sortingLayerID;
+            selectionBox.sortingOrder = tileRenderer.sortingOrder - 1;
+        }
     }
 
     /// <summary>Brief flash used when a chain isn't a valid word.</summary>

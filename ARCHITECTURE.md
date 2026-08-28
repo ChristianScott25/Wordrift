@@ -13,12 +13,26 @@ money — later bookmarks) lives on `RunState.Current`, a plain C# static that
 survives scene loads the same way `ModeSelection` does.
 
 ```
-drag  ->  ChainController  ->  GameSession  ->  WordValidator   (is it a word?)
-                                            ->  ScoreCalculator (how many points?)
-                                            ->  GameMode        (spend a resource? round over?)
-                                            ->  Board           (demolish + refill)
-                                            ->  GameEvents      (tell the HUD)
+tap / drag  ->  ChainController  ->  a SELECTION, and nothing more
+                                          |
+ENTER / DISCARD  ->  GameSession  <-------+
+                                  ->  WordValidator   (is it a word?)
+                                  ->  ScoreCalculator (how many points?)
+                                  ->  GameMode        (spend a resource? round over?)
+                                  ->  Board           (demolish + refill)
+                                  ->  GameEvents      (tell the HUD)
 ```
+
+**Choosing tiles and committing to them are separate steps.** `ChainController` reports a
+selection and never submits — lifting the pointer does nothing. `GameSession.SubmitSelection`
+and `GameSession.DiscardSelection` are the two ways out of a selection, both driven by the
+HUD's buttons (`WordActionsWidget`). The gap between the two is what makes discarding
+possible at all, so don't collapse it back into a submit-on-release.
+
+Everything a widget needs to draw those buttons arrives in one `SelectionState`, published by
+the session: the word, the tile count, and the two *decisions* `CanSubmit` / `CanDiscard`.
+Widgets obey those flags rather than re-deriving them, which is what keeps a button from
+offering something the session would refuse.
 
 ## Layout
 
