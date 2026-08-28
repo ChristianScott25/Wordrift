@@ -45,6 +45,12 @@ a run would want to modify. "Add three more E's", "remove every Q", "S is worth 
 "vowels spawn twice as often" are all edits to a bag carried between rounds. This is the
 strongest single mapping and the cheapest to prototype.
 
+**Partly built 2026-08-28.** The bag itself is real and carried between rounds
+(`RunState.TileBag`), and its SIZE is now an authored number (`tileBagSize`, currently 52)
+that `LetterSet.BuildTileBag` shares the catalog's weights out over — so "a bigger bag" is
+already one field away. Editing the bag's *contents* is still only what the shop's tile
+upgrades do; adding, removing or re-valuing letters mid-run doesn't exist.
+
 ### Boss rounds are policy swaps
 
 Balatro's boss blinds warp one rule for one round. `IGravityRule` / `IRefillPolicy` /
@@ -130,7 +136,7 @@ picked.
 - **Run state cannot live in ScriptableObjects.** Mutating a `LetterSet` asset at runtime
   permanently rewrites the asset on disk in the editor — you'd finish a playtest and find
   your letter weights are whatever the last run left them at. A run needs a `RunState`
-  holding *clones*: modified bag, owned relics, money, ante, tier levels.
+  holding *clones*: modified tile bag, owned relics, money, ante, tier levels.
 - **Scene handoff.** Object references don't survive a scene load. The existing static
   `ModeSelection.Take()` pattern is the right thing to extend for carrying a run into a shop
   scene and back.

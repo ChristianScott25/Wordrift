@@ -43,7 +43,6 @@ public static class WordCrushSetup
         var letterSet = BuildLetterSet();
         var modifiers = BuildModifiers();
         var shape = BuildBoardShape();
-        BuildMovesMode(shape, letterSet, modifiers);
         RogueDemoModeSetup.Build(shape, letterSet, modifiers, null);
         TileSkinSetup.Build();
         BuildTilePrefab();
@@ -87,7 +86,7 @@ public static class WordCrushSetup
 
     // ------------------------------------------------------------------ data
 
-    // letter, points, spawn weight (Scrabble values and tile-bag counts)
+    // letter, points, spawn weight (Scrabble values, which also scale the tile bag)
     private static readonly (string letter, int points, int weight)[] ScrabbleLetters =
     {
         ("a", 1, 9), ("b", 3, 2), ("c", 3, 2), ("d", 2, 4), ("e", 1, 12),
@@ -127,19 +126,6 @@ public static class WordCrushSetup
         shape.height = 5;
         EditorUtility.SetDirty(shape);
         return shape;
-    }
-
-    private static MovesModeConfig BuildMovesMode(BoardShapeAsset shape, LetterSet letters, List<TileModifier> modifiers)
-    {
-        var mode = CreateOrLoad<MovesModeConfig>($"{DataFolder}/Mode_Moves.asset");
-        mode.displayName = "Moves Mode";
-        mode.boardShape = shape;
-        mode.letterSet = letters;
-        mode.minWordLength = 3;
-        mode.moves = 20;
-        mode.tileModifiers = new List<TileModifier>(modifiers);
-        EditorUtility.SetDirty(mode);
-        return mode;
     }
 
     // --------------------------------------------------------------- prefabs

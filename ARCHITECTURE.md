@@ -8,7 +8,7 @@ Drag across adjacent letter tiles to spell words. Valid words demolish; tiles fa
 run.** The session never knows what a timer is; if you're about to add
 `if (mode == RogueDemo)` anywhere, add a mode instead. And nothing ever writes
 into an authored asset at runtime: configs and letter sets are read-only
-recipes, and everything a run changes (its sack of tiles, its round number, its
+recipes, and everything a run changes (its bag of tiles, its round number, its
 money — later bookmarks) lives on `RunState.Current`, a plain C# static that
 survives scene loads the same way `ModeSelection` does.
 
@@ -64,7 +64,7 @@ and `badgeColor`; no code. For a genuinely new *rule*, subclass `TileModifier`
 and override `ModifyLetterScore` or `WordMultiplier`. Either way, add it to a
 mode config's `tileModifiers` — the pool of upgrades that mode can hand out.
 A modifier reaches an actual tile only via `TileSpec.AddModifier` (an upgrade
-on a specific tile in the run's sack); nothing spawns with one randomly.
+on a specific tile in the run's bag); nothing spawns with one randomly.
 
 **A new tile look** — create a `TileSkin` (body sprite + letter/score colors +
 spawn weight) and add it to a mode config's `Tile Skins`. Several in one list
@@ -84,16 +84,20 @@ example (`NeverRefill` plus its own drop clock) until it was cut; the pieces it
 used are still in Board, unused.
 
 **A mode with a finite supply of tiles** — install an `ITileSource` on
-`Board.TileSource` in `GameMode.Attach`. `TileSack` drains a copy of a stock
+`Board.TileSource` in `GameMode.Attach`. `TileBag` drains a copy of a stock
 list and draws without replacement; when it empties, `Board.SpawnTile` returns
 null and cells it would have filled stay empty. The board resets the source
 before every full fill, and `Reset` re-copies from the stock — so a replay (and
-every round of a run) starts on a full sack, and tiles a shop added to the
+every round of a run) starts on a full bag, and tiles a shop added to the
 stock are simply in it. `RogueDemoMode` is the worked example.
 
-**The run.** `RunState.StartNew(config)` builds the sack from the `LetterSet`'s
-weights read as tile counts (`LetterSet_Scrabble` sums to Scrabble's 98) and
-holds it as `List<TileSpec>`. A `TileSpec` is a tile's persistent identity —
+**The run.** `RunState.StartNew(config)` builds the bag with
+`LetterSet.BuildTileBag(config.tileBagSize)` and holds it as `List<TileSpec>`.
+The split there is load-bearing: the `LetterSet`'s weights are a **ratio**, the
+config's `tileBagSize` is the **count**, and `BuildTileBag` shares the one out
+over the other by largest remainder with a floor of one of every letter. So the
+bag can be resized — by a config tweak now, by an upgrade later — without
+re-authoring 26 weights, and at 98 it still reproduces Scrabble exactly. A `TileSpec` is a tile's persistent identity —
 `letters` (a *string*, because multi-letter tiles like "qu" are planned even
 though everything downstream still plays one char), `baseScore` (stamped from
 the `LetterSet` catalog by `CreateSpec`, the one place specs are born — so one
@@ -149,13 +153,13 @@ lowercase word per line.
   are visible, not the final treatment.
 - **Wild tiles.** Not designed yet: a special `TileSpec.letters` value ("?") or
   a `TileModifier` are both plausible. Decide before building.
-- **The HUD's one spare slot.** Round, target, sack AND money now share
+- **The HUD's one spare slot.** Round, target, bag AND money now share
   `ModeStatus.Goal`, one shrunken string four readouts wide — close to
   overflowing the 400px name label. A run HUD needs a real multi-readout
   `ModeStatus` and widget; wiring `StatusWidget.goalLabel` to a dedicated label
   is the cheap interim fix.
 - **Price lives on `TileModifier`.** Fine while the shop only sells modifiers;
-  once it stocks bookmarks, tiles and sack upgrades, price belongs on an *offer*
+  once it stocks bookmarks, tiles and bag upgrades, price belongs on an *offer*
   asset rather than on a modifier's identity.
 - **An unplayable board that isn't empty.** A finite-bag mode ends the round when
   the bag is dry and fewer tiles remain than `minWordLength` — provably nothing

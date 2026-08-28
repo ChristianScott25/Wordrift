@@ -30,8 +30,8 @@ public class LetterSet : ScriptableObject
         [Tooltip("Base score a tile of this kind starts with.")]
         public int points = 1;
 
-        [Tooltip("Relative spawn frequency — and, read as a count, how many go " +
-                 "into a run's sack. 0 = in the catalog but never spawns naturally.")]
+        [Tooltip("Relative spawn frequency — and the share of a run's tile bag " +
+                 "this letter gets. 0 = in the catalog but never appears.")]
         public int weight = 1;
     }
 
@@ -91,6 +91,87 @@ public class LetterSet : ScriptableObject
         letters = entry.letter,
         baseScore = entry.points,
     };
+
+    /// <summary>
+    /// A bag of exactly <paramref name="targetCount"/> tiles, sharing them out
+    /// across the catalog in proportion to weight, with a floor of ONE of every
+    /// letter that has any weight at all.
+    ///
+    /// Weight is a ratio here, not a count — which is what lets the bag be
+    /// resized to any number without re-authoring the catalog, and what a
+    /// "bigger bag" upgrade will turn. Scrabble's own 98 falls out of this
+    /// unchanged, because at that size the ratios already ARE the counts.
+    ///
+    /// The floor is what costs the distribution its accuracy: a letter with
+    /// weight 1 can't halve, so at 52 tiles J K Q X Z take five where their
+    /// share says two and a half, and the common letters make up the
+    /// difference. That's the trade the floor buys — never opening a run
+    /// unable to spell a Q word at all.
+    /// </summary>
+    public List<TileSpec> BuildTileBag(int targetCount)
+    {
+        EnsureBuilt();
+
+        var bag = new List<TileSpec>();
+        if (totalWeight <= 0) return bag;
+
+        // Only letters that can appear at all take part; a weight-0 catalog row
+        // is listed, not stocked.
+        var stocked = new List<Entry>();
+        foreach (var entry in entries)
+            if (entry != null && !string.IsNullOrEmpty(entry.letter) && entry.weight > 0)
+                stocked.Add(entry);
+        if (stocked.Count == 0) return bag;
+
+        if (targetCount < stocked.Count)
+        {
+            Debug.LogWarning($"LetterSet '{name}': a bag of {targetCount} can't hold one of each " +
+                             $"of its {stocked.Count} letters — using {stocked.Count}.", this);
+            targetCount = stocked.Count;
+        }
+
+        // Largest remainder: floor everyone (never below one), then hand the
+        // leftovers to whoever the flooring shortchanged most. Deterministic —
+        // ties go to the earlier catalog row — so the same set always builds
+        // the same bag.
+        var ideal = new float[stocked.Count];
+        var counts = new int[stocked.Count];
+        int placed = 0;
+        for (int i = 0; i < stocked.Count; i++)
+        {
+            ideal[i] = stocked[i].weight * (float)targetCount / totalWeight;
+            counts[i] = Mathf.Max(1, Mathf.FloorToInt(ideal[i]));
+            placed += counts[i];
+        }
+
+        while (placed < targetCount)
+        {
+            int best = -1;
+            for (int i = 0; i < stocked.Count; i++)
+                if (best < 0 || ideal[i] - counts[i] > ideal[best] - counts[best]) best = i;
+            counts[best]++;
+            placed++;
+        }
+
+        // Only reachable when the floor pushed the bag over target: take back
+        // from whoever is furthest over, but never below the floor of one.
+        while (placed > targetCount)
+        {
+            int worst = -1;
+            for (int i = 0; i < stocked.Count; i++)
+                if (counts[i] > 1 && (worst < 0 || ideal[i] - counts[i] < ideal[worst] - counts[worst]))
+                    worst = i;
+            if (worst < 0) break;   // everyone is at one; the floor wins
+            counts[worst]--;
+            placed--;
+        }
+
+        for (int i = 0; i < stocked.Count; i++)
+            for (int n = 0; n < counts[i]; n++)
+                bag.Add(CreateSpec(stocked[i]));
+
+        return bag;
+    }
 
     /// <summary>Draws a random catalog row using the weighted distribution.</summary>
     public Entry Draw()

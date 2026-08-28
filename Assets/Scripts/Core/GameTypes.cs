@@ -32,7 +32,7 @@ public struct ModeStatus
 
     /// <summary>
     /// A second readout, for a mode that is chasing something as well as
-    /// spending something — "R2   60 / 120   SACK 12". Empty for the modes with only
+    /// spending something — "R2   60 / 120   BAG 12". Empty for the modes with only
     /// one number to show, which is most of them.
     /// </summary>
     public string Goal;

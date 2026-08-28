@@ -72,7 +72,7 @@ public class Board : MonoBehaviour
 
     /// <summary>
     /// Where new tiles come from (see ITileSource). Install a finite one in
-    /// GameMode.Attach to give a mode a sack it can empty; left alone, Build
+    /// GameMode.Attach to give a mode a bag it can empty; left alone, Build
     /// fits an endless draw over the mode's LetterSet.
     /// </summary>
     public ITileSource TileSource { get; set; }
@@ -150,7 +150,7 @@ public class Board : MonoBehaviour
         StopAllCoroutines();
         Busy = false;
         resolving = 0;   // the routines that would have decremented it are gone
-        TileSource?.Reset();  // a finite sack is whole again for the replay
+        TileSource?.Reset();  // a finite bag is whole again for the replay
         ClearTiles();
         FillEmptyCells();
     }

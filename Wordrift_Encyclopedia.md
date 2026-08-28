@@ -3,7 +3,7 @@
 > **The game, not the code.** How Wordrift is played, what the rules are, and what every
 > number currently is. `ARCHITECTURE.md` explains how it's built — this explains what it *is*.
 
-**Last updated:** 2026-08-27 · bookmarks (Bookend, Deja Vu, Vowel Fanatic) and the scoring pipeline they hang off
+**Last updated:** 2026-08-28 · the tile bag halved to 52 and renamed from "sack"; Moves mode cut
 **Status:** playable demo in active design — the loop works end to end; the content doesn't exist yet
 
 ### How to read this
@@ -44,7 +44,7 @@ spend the money in a shop; go again against a higher number. Miss it once and th
 and you start again from nothing.
 
 The twist that makes it a roguelike rather than a word game with a timer: **you own your
-letters.** A run gives you a sack of 98 tiles, and the shop lets you permanently improve
+letters.** A run gives you a bag of 52 tiles, and the shop lets you permanently improve
 individual tiles inside it. The E you gild in round 1 is the same E that comes back to you in
 round 5.
 
@@ -80,9 +80,9 @@ for the one big word that ends it early and pays for it.
 
 ### The run
 
-Rounds don't reset you. Money carries. Upgrades carry. **Your sack is the only thing that
-grows**, so the whole run is a race between the target curve going up and your tiles getting
-better.
+Rounds don't reset you. Money carries. Upgrades carry. **Your tile bag is the only thing
+that grows**, so the whole run is a race between the target curve going up and your tiles
+getting better.
 
 🎯 **The shop is where a run is actually won or lost.** Points come from good words, but good
 words come from good tiles — and tiles only get better if you paid for it. A run that spends
@@ -101,7 +101,7 @@ nothing dies around the point the targets start compounding.
        ▼                                                 │
    RUN OVER  ◄─────────────── missed ────────────────────┘
        │
-       └──►  PLAY AGAIN  =  a brand new run, round 1, $0, a stock sack
+       └──►  PLAY AGAIN  =  a brand new run, round 1, $0, a stock bag
 ```
 
 A run is currently open-ended: there is no boss round and no "you win" — you play until a
@@ -129,7 +129,7 @@ dictionary — about 175,000 English words. An invalid word flashes red and **co
 nothing**: no move, no penalty. *(`rejectedWordsCostMoves` — off)*
 
 **When a word is accepted**, its tiles demolish, everything above them falls straight down,
-and new tiles drop from the top to fill the gaps — for as long as the sack has tiles left to
+and new tiles drop from the top to fill the gaps — for as long as the bag has tiles left to
 give.
 
 **Tiles in motion can't be grabbed.** A tile has to settle before it will respond to a drag,
@@ -160,12 +160,13 @@ letters are worth. Whether long words should pay a premium is a live tuning ques
 ## 4. Tiles
 
 A tile is **a letter, a base score, and any modifiers it carries** — and that identity belongs
-to the tile itself, not to the letter. Two E's in your sack can be worth different amounts,
+to the tile itself, not to the letter. Two E's in your bag can be worth different amounts,
 and only one of them may be gilded. This is what makes upgrading a *specific* tile meaningful.
 
 **The catalog** *(`LetterSet_Scrabble.asset`)* defines every letter that can exist, what it's
-worth, and how many of it are in a full sack. It's a Scrabble distribution: 26 letters, **98
-tiles**, twelve E's, one Q, one Z.
+worth, and how common it is. It's the Scrabble distribution — vowel-heavy, one Q, one Z — but
+those numbers are a **ratio, not a count**: the bag is built by sharing them out over however
+many tiles the bag is meant to hold (see §6).
 
 ### Modifiers
 
@@ -241,22 +242,43 @@ A **run** is a sequence of rounds. It starts fresh from the main menu, and it en
 time you fail a round. Everything you earn and upgrade lives for exactly one run — **nothing
 carries between runs**, and there's no meta-progression.
 
-### Your sack of tiles
+### Your tile bag
 
-You own a sack of **98 tiles** — one full Scrabble set *(`sackCopies` = 1)*.
+You own a bag of **52 tiles** *(`tileBagSize`)* — about half a Scrabble set, mixed in
+Scrabble's proportions.
 
 - Rounds draw from it **without replacement**. Once your E's are gone, no more E's arrive this
   round.
-- **The opening board is paid for out of the sack** — 25 cells means a round starts having
-  already spent a quarter of it.
-- **The full sack comes back at the start of every round.** Playing tiles doesn't lose them;
-  the sack belongs to the run, not the round.
+- **The opening board is paid for out of the bag** — 25 cells means a round starts having
+  already spent nearly half of it, with 27 tiles held back to refill with.
+- **The full bag comes back at the start of every round.** Playing tiles doesn't lose them;
+  the bag belongs to the run, not the round.
 - When it runs dry, tiles stop falling and the board plays down toward empty.
-- **Upgrades change the sack itself.** That's why a tile you gild in round 1 keeps coming back.
+- **Upgrades change the bag itself.** That's why a tile you gild in round 1 keeps coming back.
 
-🎯 The sack is the run's real character sheet, and the reason the shop matters. Making the
-sack *smaller* (fewer, better tiles) or *bigger* is an obvious future upgrade axis — neither
-exists yet.
+**How the mix is decided.** The letter catalog's weights are a *ratio*, and the bag size is a
+separate number; the bag is built by sharing the ratio out over that many tiles, **with a
+floor of at least one of every letter**. At 98 that reproduces Scrabble exactly. At 52 the
+floor is what bends it: J K Q X Z can't halve, so they take five tiles where their share says
+two and a half, and the common letters pay the difference.
+
+| | A | E | I | O | U | N R T | D L S | G | J K Q X Z |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| Scrabble (98) | 9 | 12 | 9 | 8 | 4 | 6 | 4 | 3 | 1 each |
+| **Wordrift (52)** | **5** | **6** | **5** | **4** | **2** | **3** | **2** | **1** | **1 each** |
+
+That holds the vowel share at 42% — the same as a real Scrabble bag — which is why the size
+is 52 and not a flat 49. A true half would have dropped it to 39% and played noticeably drier.
+
+⚠️ **The bag, not the move counter, is now what usually ends a round.** 52 tiles is at most
+~16 three-letter words, against a 20-word allowance — so most rounds will end on *out of
+tiles* rather than *out of moves*. That's a real shift in what the round is about, and one
+Inspector field either way: raise `tileBagSize` to make moves matter again, or lower `moves`
+to make the allowance bite first.
+
+🎯 The bag is the run's real character sheet, and the reason the shop matters. Making it
+*smaller* (fewer, better tiles) or *bigger* is an obvious future upgrade axis — `tileBagSize`
+is exactly the number such an upgrade would turn, but nothing turns it yet.
 
 ### Rounds and targets
 
@@ -279,13 +301,13 @@ unused words rather than playing them out.
 |---|---|---|
 | ✅ **Cleared** | Target reached | Paid, then the shop. Run continues. |
 | ❌ **Out of moves** | 20 words used, target missed | **Run over.** |
-| ❌ **Out of tiles** | Sack empty *and* too few tiles left on the board to make any word | **Run over.** |
+| ❌ **Out of tiles** | Bag empty *and* too few tiles left on the board to make any word | **Run over.** |
 
 That last one exists so a round can't stall forever with moves left and nothing to spend them
 on. ❓ The softer version — tiles remain but no word can be made from them — isn't handled;
 today you'd burn moves on rejects to escape it.
 
-**PLAY AGAIN starts a completely new run**: round 1, a stock sack, $0.
+**PLAY AGAIN starts a completely new run**: round 1, a stock bag, $0.
 
 ---
 
@@ -335,7 +357,7 @@ sale. **CONTINUE** starts the next round.
 
 🚧 **The stock is always the same four multipliers** — 2L, 3L, 2W, 3W — at the prices in §4.
 
-🚧 **An upgrade lands on a random tile from your sack.** The tile is rolled when the shop opens
+🚧 **An upgrade lands on a random tile from your bag.** The tile is rolled when the shop opens
 and shown on the button, so you can see what you're buying:
 
 ```
@@ -363,7 +385,7 @@ during play.
 
 🚧 **There's no reroll, no skip, and nothing else to spend on.** Unspent money simply carries.
 
-❓ The real shop's open questions: what else is for sale (bookmarks, tiles, sack upgrades), how
+❓ The real shop's open questions: what else is for sale (bookmarks, tiles, bag upgrades), how
 stock is randomised, whether you choose which tile gets upgraded, and whether you can sell or
 remove tiles.
 
@@ -373,11 +395,11 @@ remove tiles.
 
 | Mode | What it is |
 |---|---|
-| **Rogue Demo** | Everything described in this document. The mode the game is being built around. |
-| **Moves** | A single arcade round — 20 words, endless tiles, no target, no run, no money. Kept as the simplest possible mode, and as proof a mode needs none of the roguelike systems. |
+| **Rogue Demo** | Everything described in this document. The only mode there is. |
 
-*Timed and Overflow modes were cut on 2026-08-25 — this is a roguelike now, not an arcade
-collection.*
+*Timed and Overflow modes were cut on 2026-08-25, and Moves — the last arcade round — on
+2026-08-28. This is a roguelike now, not an arcade collection. The code still has the seam a
+second mode would slot into; there just isn't one.*
 
 ---
 
@@ -393,8 +415,8 @@ collection.*
 | Invalid word costs a move | no | `Mode_RogueDemo.asset` |
 | Move counter turns red at | 3 left | `Mode_RogueDemo.asset` |
 | Round targets | 30 / 45 / 65, then ×1.5 | `Mode_RogueDemo.asset` |
-| Sack size | 98 tiles (1 Scrabble set) | `Mode_RogueDemo.asset` + `LetterSet_Scrabble.asset` |
-| Letter values & counts | Scrabble | `LetterSet_Scrabble.asset` |
+| Tile bag size | 52 tiles (~half a Scrabble set) | `Mode_RogueDemo.asset` |
+| Letter values & mix | Scrabble proportions, floor of 1 each | `LetterSet_Scrabble.asset` |
 | Points per $1 | 10 | `Mode_RogueDemo.asset` |
 | $ per unused move | 1 | `Mode_RogueDemo.asset` |
 | Re-buy price growth | ×1.5 | `Mode_RogueDemo.asset` |
@@ -410,13 +432,13 @@ collection.*
 ### ✅ Built and playable
 
 The board and word-making · scoring with stacking multipliers · the run (rounds, escalating
-targets, a persistent finite sack) · money · bookmarks (three of them, with a scoring pipeline
+targets, a persistent finite tile bag) · money · bookmarks (three of them, with a scoring pipeline
 built to take many more) · a placeholder shop that sells permanent tile upgrades and one
 bookmark a visit.
 
 ### 📋 Decided, not built
 
-- **Sacks with abilities**, boards of varying **size and shape**, and boards where **gravity
+- **Tile bags with abilities**, boards of varying **size and shape**, and boards where **gravity
   flows differently**. All three have seams in the code; no content uses them.
 - **Tile skins as a player-facing thing** — several looks can already share a board, but
   nothing decides which ones a player *has*.
@@ -424,11 +446,11 @@ bookmark a visit.
 ### ❓ Open questions
 
 - **Wild tiles** — a special letter, or a modifier?
-- **Multi-letter tiles** ("QU") — the sack can hold them; nothing can play them.
+- **Multi-letter tiles** ("QU") — the bag can hold them; nothing can play them.
 - **Gravity on a board with holes** — tiles currently fall *past* gaps instead of into them.
 - **How a run ends** — there's no boss round and no victory.
 - **Reproducible runs** — every draw is unseeded, so sharing or replaying a seed isn't possible.
 - **A board that's playable-looking but dead** — full of tiles that spell nothing (see §5).
-- **The HUD** — round, target, sack and money share one line; bookmarks have their own below it.
+- **The HUD** — round, target, bag and money share one line; bookmarks have their own below it.
 - **Bookmark editions** — holographic / negative / foil equivalents are planned, undesigned.
 - **Bookmark feedback** — nothing shows you *which* bookmark just paid out.

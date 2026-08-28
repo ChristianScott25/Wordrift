@@ -2,22 +2,22 @@ using UnityEngine;
 
 /// <summary>
 /// The roguelike round: reach the run's current score target within a fixed
-/// number of words, playing off the run's finite sack of tiles.
+/// number of words, playing off the run's finite bag of tiles.
 ///
 /// The mode is one round's rules; the RUN lives in RunState. The mode finds
 /// the run in Attach (starting one when there isn't one), plays a round
 /// against its target, and in End either sends the session on to the shop
-/// (cleared) or ends the run (failed). The sack belongs to the run — this
+/// (cleared) or ends the run (failed). The bag belongs to the run — this
 /// mode just drains a copy of it for the round.
 ///
 /// The mode doesn't drive the board at all: no clock, no drip. It installs the
-/// sack, then counts moves. Everything else is the shared loop.
+/// bag, then counts moves. Everything else is the shared loop.
 /// </summary>
 public class RogueDemoMode : GameMode
 {
     private readonly RogueDemoModeConfig config;
     private RunState run;
-    private TileSack sack;
+    private TileBag bag;
     private int movesLeft;
 
     // Built once per round: bookmarks can only change in the shop, and Status is
@@ -32,17 +32,17 @@ public class RogueDemoMode : GameMode
 
         // Playing this mode with no run in progress — scene opened directly,
         // fresh from the menu, or restarting after a loss — starts one.
-        // Mid-run, the existing run carries the round number and the sack.
+        // Mid-run, the existing run carries the round number and the bag.
         run = RunState.Current;
         if (run == null || run.Template != config) run = RunState.StartNew(config);
 
         // Attach is the last moment before the opening fill, and the fill
-        // draws from the sack like everything else — so it has to exist by
+        // draws from the bag like everything else — so it has to exist by
         // now. The board resets it before every fill, which refills the copy
-        // from the run's tiles: the full sack returns each round, and anything
+        // from the run's tiles: the full bag returns each round, and anything
         // a shop added is simply in it.
-        sack = new TileSack(run.Sack);
-        board.TileSource = sack;
+        bag = new TileBag(run.TileBag);
+        board.TileSource = bag;
     }
 
     public override void Begin()
@@ -79,18 +79,18 @@ public class RogueDemoMode : GameMode
     private bool TargetReached => session.Score >= run.TargetScore;
 
     /// <summary>
-    /// Nothing left to play with: the sack is empty, so no more tiles are
+    /// Nothing left to play with: the bag is empty, so no more tiles are
     /// coming, and what's on the board can't even reach the minimum word
     /// length.
     ///
     /// Without this the round can lock. Moves only tick down when a word is
-    /// submitted, so a player who runs the sack dry and clears the board keeps
+    /// submitted, so a player who runs the bag dry and clears the board keeps
     /// their remaining moves forever with no way to spend them. Waiting out
     /// Resolving just lets the last clear finish before the panel appears.
     /// </summary>
     private bool OutOfTiles =>
         board != null && !board.Resolving &&
-        sack != null && sack.Remaining == 0 &&
+        bag != null && bag.Remaining == 0 &&
         board.TileCount < config.minWordLength;
 
     public override bool IsRoundOver =>
@@ -114,7 +114,7 @@ public class RogueDemoMode : GameMode
         {
             // The run died with this round. Ending it now is what makes the
             // panel's PLAY AGAIN start over: Restart re-attaches, finds no run,
-            // and builds a fresh one at round 1 with a stock sack.
+            // and builds a fresh one at round 1 with a stock bag.
             RunState.End();
         }
     }
@@ -135,13 +135,13 @@ public class RogueDemoMode : GameMode
         Fraction = config.moves > 0 ? (float)movesLeft / config.moves : 0f,
         Urgent = movesLeft <= config.urgentMoves && !TargetReached,
 
-        // Round, target, sack and money share one string because the HUD has
+        // Round, target, bag and money share one string because the HUD has
         // exactly one spare slot, and it's now four readouts wide — "R2" not
         // "ROUND 2" so it still fits. Money can't change mid-round; it's here
         // so the player can plan the next shop. A real multi-readout HUD is
         // overdue, but it's a HUD job: wire StatusWidget.goalLabel.
         Goal = $"R{run.Round}   {session.Score} / {run.TargetScore}   " +
-               $"SACK {sack.Remaining}   ${run.Money}",
+               $"BAG {bag.Remaining}   ${run.Money}",
 
         // Whatever bookmarks the run is carrying. Drawn on its own HUD line, or
         // dropped entirely if the widget has no label for it.

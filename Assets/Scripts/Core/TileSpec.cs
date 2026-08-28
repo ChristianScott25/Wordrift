@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 
 /// <summary>
-/// One tile as it exists in the run's sack — the identity a tile keeps between
+/// One tile as it exists in the run's tile bag — the identity a tile keeps between
 /// rounds. The Tile MonoBehaviour is just this spec's body on the board for
 /// one round; the spec is what a shop sells, a bookmark upgrades, and a run
 /// remembers.
 ///
 /// A class, not a struct, on purpose: upgrading a specific tile ("gild THIS e")
-/// needs identity, and the sack holds these directly.
+/// needs identity, and the bag holds these directly.
 /// </summary>
 [System.Serializable]
 public class TileSpec

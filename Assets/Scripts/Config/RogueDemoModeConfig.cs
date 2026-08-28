@@ -1,8 +1,7 @@
 using UnityEngine;
-using UnityEngine.Serialization;
 
 /// <summary>
-/// First pass at the roguelike round: no clock, a finite sack of tiles, and a
+/// First pass at the roguelike round: no clock, a finite bag of tiles, and a
 /// score you have to reach inside a fixed number of words. Played as a RUN —
 /// clear the target and the shop leads to the next round, with a higher one.
 ///
@@ -42,14 +41,14 @@ public class RogueDemoModeConfig : ModeConfig
              "growth factor compounds from in that case.")]
     [Min(1)] public int targetScore = 30;
 
-    [Header("Tile sack")]
-    [Tooltip("Full copies of the Letter Set's distribution to pour into the sack " +
-             "at the start of a run. 1 = a single Scrabble bag — 98 tiles, nine " +
-             "A's, one Q. The board's opening fill is paid for out of this, and " +
-             "once it's empty tiles stop falling for the rest of the round. The " +
-             "full sack returns every round.")]
-    [FormerlySerializedAs("bagCopies")]
-    [Min(1)] public int sackCopies = 1;
+    [Header("Tile bag")]
+    [Tooltip("How many tiles a run starts with. The Letter Set's weights are " +
+             "shared out across this total, with at least one of every letter — " +
+             "so 98 is a full Scrabble bag and 52 is about half of one. The " +
+             "board's opening fill is paid for out of this, and once it's empty " +
+             "tiles stop falling for the rest of the round. The full bag returns " +
+             "every round.")]
+    [Min(1)] public int tileBagSize = 52;
 
     [Header("Payout")]
     [Tooltip("Points needed per $1 of the round's payout. 10 = a 60-point round pays $6.")]

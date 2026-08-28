@@ -20,7 +20,8 @@ public interface IRefillPolicy
 
 /// <summary>
 /// Top the board up completely, so no cell is ever empty once things settle.
-/// The default, and what Timed and Moves modes both play on.
+/// The default, and what Rogue Demo plays on — until its bag runs dry, when
+/// there is simply nothing to top up with.
 /// </summary>
 public class FillEveryCell : IRefillPolicy
 {

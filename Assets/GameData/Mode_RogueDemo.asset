@@ -38,7 +38,7 @@ MonoBehaviour:
   roundTargets: 1e0000002d00000041000000
   targetGrowth: 1.5
   targetScore: 30
-  sackCopies: 1
+  tileBagSize: 52
   pointsPerCoin: 10
   coinsPerUnusedMove: 1
   repeatPriceGrowth: 1.5

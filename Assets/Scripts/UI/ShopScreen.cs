@@ -64,14 +64,14 @@ public class ShopScreen : MonoBehaviour
     // TEMPORARY STOCK — this is a placeholder shop, not the design.
     //
     // The real shop's stock has to change constantly, look different, and sell
-    // more than modifiers (bookmarks, tiles, sack upgrades). This version puts
+    // more than modifiers (bookmarks, tiles, tile-bag upgrades). This version puts
     // the mode's four multipliers on the shelf at a fixed price ladder so the
     // whole economy can be played end to end: clear a round, earn, spend, and
     // watch the purchase persist into later rounds.
     //
-    // Also temporary: an upgrade lands on a RANDOM tile from your sack. The
+    // Also temporary: an upgrade lands on a RANDOM tile from your bag. The
     // roll happens up front so the button can show what you're buying — you
-    // never choose it. Choosing needs a sack picker, which belongs to the real
+    // never choose it. Choosing needs a bag picker, which belongs to the real
     // shop.
     // ------------------------------------------------------------------------
     /// <summary>
@@ -91,11 +91,11 @@ public class ShopScreen : MonoBehaviour
         public abstract void Deliver(RunState run);
     }
 
-    /// <summary>A tile upgrade, landing on a random sack tile rolled up front.</summary>
+    /// <summary>A tile upgrade, landing on a random bag tile rolled up front.</summary>
     private class ModifierOffer : Offer
     {
         public TileModifier Modifier;
-        public TileSpec Target;    // the sack tile this purchase would gild
+        public TileSpec Target;    // the bag tile this purchase would gild
         public int TimesBought;    // this visit only — that's what escalates the price
         public float Growth = 1.5f;
         public System.Func<TileSpec> RollTarget;
@@ -169,9 +169,9 @@ public class ShopScreen : MonoBehaviour
             offers.Add(new BookmarkOffer { Bookmark = bookmark, RollBookmark = RollBookmark });
     }
 
-    /// <summary>A random tile out of the run's sack — what the next purchase would land on.</summary>
+    /// <summary>A random tile out of the run's bag — what the next purchase would land on.</summary>
     private TileSpec RollTarget() =>
-        run.Sack.Count == 0 ? null : run.Sack[UnityEngine.Random.Range(0, run.Sack.Count)];
+        run.TileBag.Count == 0 ? null : run.TileBag[UnityEngine.Random.Range(0, run.TileBag.Count)];
 
     /// <summary>
     /// A random bookmark the run doesn't own yet, or null when it owns every one

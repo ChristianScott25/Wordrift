@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// Everything one run remembers between rounds: which round you're on, the
 /// tiles you own, the bookmarks you've bought, and the money you've banked.
-/// Sack abilities will live here too.
+/// Tile-bag abilities will live here too.
 ///
 /// Plain C# held in a static, like ModeSelection, because scene loads wipe
 /// object references. Mutable ON PURPOSE — shops and bookmarks edit this run.
@@ -23,12 +23,12 @@ public class RunState
     public int Round { get; private set; } = 1;
 
     /// <summary>
-    /// The run's tiles. The full sack comes back at the start of every round —
-    /// playing tiles never shrinks it (TileSack drains a copy of this list).
+    /// The run's tiles. The full bag comes back at the start of every round —
+    /// playing tiles never shrinks it (TileBag drains a copy of this list).
     /// Changing THIS list is how shops and bookmarks alter what the player
     /// draws, and the change sticks for the rest of the run.
     /// </summary>
-    public List<TileSpec> Sack { get; } = new();
+    public List<TileSpec> TileBag { get; } = new();
 
     /// <summary>
     /// The bookmarks this run owns, in slot order — which is the order they get
@@ -105,22 +105,17 @@ public class RunState
         Template = template;
         if (template == null || template.letterSet == null)
         {
-            Debug.LogError("Run started with no letter set, so the sack is empty.");
+            Debug.LogError("Run started with no letter set, so the tile bag is empty.");
             return;
         }
 
-        // The LetterSet's spawn weights read as tile counts — LetterSet_Scrabble
-        // sums to Scrabble's 98 — so one asset drives both the arcade modes'
-        // spawn odds and this sack's starting contents.
-        foreach (var entry in template.letterSet.Entries)
-        {
-            if (entry == null || string.IsNullOrEmpty(entry.letter)) continue;
-            int count = Mathf.Max(0, entry.weight) * Mathf.Max(1, template.sackCopies);
-            for (int i = 0; i < count; i++)
-                Sack.Add(LetterSet.CreateSpec(entry));
-        }
+        // The LetterSet decides the MIX; the mode config decides how many tiles
+        // that mix is shared out over. Keeping the two apart is what lets the
+        // bag be resized — by a config tweak now, by an upgrade later — without
+        // anyone re-authoring 26 weights.
+        TileBag.AddRange(template.letterSet.BuildTileBag(template.tileBagSize));
 
-        if (Sack.Count == 0)
-            Debug.LogError($"LetterSet '{template.letterSet.name}' has no positive weights, so the sack is empty.");
+        if (TileBag.Count == 0)
+            Debug.LogError($"LetterSet '{template.letterSet.name}' has no positive weights, so the tile bag is empty.");
     }
 }

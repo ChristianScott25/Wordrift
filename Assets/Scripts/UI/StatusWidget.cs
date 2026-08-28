@@ -3,9 +3,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Shows whatever resource the current mode is spending — seconds in Timed
-/// Mode, moves in Moves Mode. One widget covers every mode, so adding a mode
-/// needs no new HUD work.
+/// Shows whatever resource the current mode is spending — moves in Rogue Demo,
+/// seconds in a timed mode if one ever comes back. One widget covers every
+/// mode, so adding a mode needs no new HUD work.
 /// </summary>
 public class StatusWidget : MonoBehaviour
 {
