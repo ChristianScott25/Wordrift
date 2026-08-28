@@ -15,5 +15,5 @@ MonoBehaviour:
   badgeLabel: 3W
   badgeColor: {r: 0.55, g: 0.08, b: 0.12, a: 1}
   badgeTextColor: {r: 1, g: 1, b: 1, a: 1}
-  spawnChance: 0.01
+  price: 22
   multiplier: 3

@@ -8,8 +8,8 @@ Drag across adjacent letter tiles to spell words. Valid words demolish; tiles fa
 run.** The session never knows what a timer is; if you're about to add
 `if (mode == RogueDemo)` anywhere, add a mode instead. And nothing ever writes
 into an authored asset at runtime: configs and letter sets are read-only
-recipes, and everything a run changes (its sack of tiles, its round number —
-later money and bookmarks) lives on `RunState.Current`, a plain C# static that
+recipes, and everything a run changes (its sack of tiles, its round number, its
+money — later bookmarks) lives on `RunState.Current`, a plain C# static that
 survives scene loads the same way `ModeSelection` does.
 
 ```
@@ -101,14 +101,25 @@ tile's worth can diverge from its letter's), plus baked-on modifiers (a bought
 2L tile keeps its 2L, and one tile can stack several — `TileSpec.AddModifier`
 is how a shop applies an upgrade).
 The flow: menu always ends any stale run; `RogueDemoMode.Attach` finds
-`RunState.Current` or starts one; a cleared round continues to the Shop scene
-(a stub — `ShopScreen` shows what cleared and what's next, its Continue
-advances the round and reloads Game; it also gilds three random sack tiles
-with random modifiers on every visit, marked TEMPORARY in the code, purely so
-upgrades can be seen working before there's anything to buy); a failed round
-ends the run, so the panel's PLAY AGAIN starts a fresh one at round 1. Round targets come from
+`RunState.Current` or starts one; a cleared round pays out and continues to the
+Shop scene (`ShopScreen` shows what cleared, what it paid, and what's for sale;
+its Continue advances the round and reloads Game); a failed round ends the run,
+so the panel's PLAY AGAIN starts a fresh one at round 1. Round targets come from
 `RogueDemoModeConfig.roundTargets` (authored per round, `targetGrowth` compounds
 past the end of the list).
+
+**Money.** `RunState` owns the balance: in through `AddMoney` only, out through
+`TrySpend` only (it refuses rather than going negative), and gone when the run
+is — so there's nothing to persist and no meta-currency to design around. What a
+cleared round pays is `RogueDemoModeConfig.RewardFor(score, movesLeft)`: one
+method on the authored asset, called from `RogueDemoMode.End` before the scene
+change, and the seam for interest or payout bookmarks later. `GameSession`,
+`GameEvents` and everything in Core stay ignorant of currency — the money
+readout rides the `ModeStatus.Goal` string the mode already fills in.
+The shop's *stock* is temporary and banner-marked in the code; the purchase
+plumbing (price on a `TileModifier`, `TrySpend`, `TileSpec.AddModifier`) is not.
+The game's rules and numbers, including which of them are placeholder, live in
+`Wordrift_Encyclopedia.md` — keep it current.
 
 **A different word list** — swap the TextAsset on `GameSession`. Plain text, one
 lowercase word per line.
@@ -127,9 +138,14 @@ lowercase word per line.
   are visible, not the final treatment.
 - **Wild tiles.** Not designed yet: a special `TileSpec.letters` value ("?") or
   a `TileModifier` are both plausible. Decide before building.
-- **The HUD's one spare slot.** Round, target and sack share `ModeStatus.Goal`,
-  one shrunken string. A run HUD (round, money, target, sack) needs a real
-  multi-readout `ModeStatus` and widget.
+- **The HUD's one spare slot.** Round, target, sack AND money now share
+  `ModeStatus.Goal`, one shrunken string four readouts wide — close to
+  overflowing the 400px name label. A run HUD needs a real multi-readout
+  `ModeStatus` and widget; wiring `StatusWidget.goalLabel` to a dedicated label
+  is the cheap interim fix.
+- **Price lives on `TileModifier`.** Fine while the shop only sells modifiers;
+  once it stocks bookmarks, tiles and sack upgrades, price belongs on an *offer*
+  asset rather than on a modifier's identity.
 - **An unplayable board that isn't empty.** A finite-bag mode ends the round when
   the bag is dry and fewer tiles remain than `minWordLength` — provably nothing
   to play. But a board can hold ten tiles that spell nothing, and moves only tick

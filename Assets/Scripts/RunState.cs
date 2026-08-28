@@ -2,8 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Everything one run remembers between rounds: which round you're on and the
-/// tiles you own. Money, bookmarks, and sack abilities will live here too.
+/// Everything one run remembers between rounds: which round you're on, the
+/// tiles you own, and the money you've banked. Bookmarks and sack abilities
+/// will live here too.
 ///
 /// Plain C# held in a static, like ModeSelection, because scene loads wipe
 /// object references. Mutable ON PURPOSE — shops and bookmarks edit this run.
@@ -29,7 +30,39 @@ public class RunState
     /// </summary>
     public List<TileSpec> Sack { get; } = new();
 
+    /// <summary>
+    /// What the run has to spend. Earned by clearing rounds, spent in the shop,
+    /// and gone the moment the run is — money never outlives a run, so there is
+    /// nothing to save to disk and no meta-currency to reason about yet.
+    /// </summary>
+    public int Money { get; private set; }
+
+    /// <summary>What the last cleared round paid, so the shop can say "+$20 EARNED".</summary>
+    public int LastPayout { get; private set; }
+
     public int TargetScore => Template.TargetForRound(Round);
+
+    /// <summary>Pays the run. The only way money comes IN — see RogueDemoModeConfig.RewardFor.</summary>
+    public void AddMoney(int amount)
+    {
+        if (amount <= 0) return;
+        Money += amount;
+        LastPayout = amount;
+    }
+
+    public bool CanAfford(int price) => Money >= price;
+
+    /// <summary>
+    /// Takes money for a purchase, or refuses and changes nothing. The only way
+    /// money goes OUT: there's no setter, so the balance can't go negative and
+    /// every spend is a call site you can find.
+    /// </summary>
+    public bool TrySpend(int price)
+    {
+        if (price < 0 || !CanAfford(price)) return false;
+        Money -= price;
+        return true;
+    }
 
     public static RunState StartNew(RogueDemoModeConfig template)
     {

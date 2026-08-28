@@ -23,6 +23,12 @@ public abstract class TileModifier : ScriptableObject
     [Tooltip("Color of the label text on that circle.")]
     public Color badgeTextColor = Color.white;
 
+    [Header("Shop")]
+    [Tooltip("What one of these costs in the shop. 0 means unpriced — Word Crush > " +
+             "Create Tile Modifier Assets fills a 0 with the default ladder and " +
+             "leaves any number you've tuned alone.")]
+    [Min(0)] public int price = 0;
+
     // The circle sprite itself lives on TileSkin, not here — so swapping the
     // badge treatment is one field on one asset rather than one per modifier.
     //

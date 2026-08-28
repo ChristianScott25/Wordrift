@@ -32,7 +32,7 @@ public class RogueDemoModeConfig : ModeConfig
     [Header("Targets")]
     [Tooltip("Score target for each round of a run, in order — round 1 is the " +
              "first entry. Tune the difficulty curve here.")]
-    public int[] roundTargets = { 60, 90, 130 };
+    public int[] roundTargets = { 30, 45, 65 };
 
     [Tooltip("Once a run outlives the list above, each further round's target " +
              "grows by this factor.")]
@@ -40,7 +40,7 @@ public class RogueDemoModeConfig : ModeConfig
 
     [Tooltip("Fallback target when the list above is empty. Also the base the " +
              "growth factor compounds from in that case.")]
-    [Min(1)] public int targetScore = 60;
+    [Min(1)] public int targetScore = 30;
 
     [Header("Tile sack")]
     [Tooltip("Full copies of the Letter Set's distribution to pour into the sack " +
@@ -50,6 +50,27 @@ public class RogueDemoModeConfig : ModeConfig
              "full sack returns every round.")]
     [FormerlySerializedAs("bagCopies")]
     [Min(1)] public int sackCopies = 1;
+
+    [Header("Payout")]
+    [Tooltip("Points needed per $1 of the round's payout. 10 = a 60-point round pays $6.")]
+    [Min(1)] public int pointsPerCoin = 10;
+
+    [Tooltip("Extra money per move left unspent when the round is cleared. Pays for " +
+             "efficiency, and gives the move counter a second job. 0 turns it off.")]
+    [Min(0)] public int coinsPerUnusedMove = 1;
+
+    [Tooltip("How much an offer's price grows each time you buy it AGAIN in the same " +
+             "shop visit. 1.5 = $5, then $8, then $11. Resets every visit.")]
+    [Min(1f)] public float repeatPriceGrowth = 1.5f;
+
+    /// <summary>
+    /// What clearing a round pays. The seam every later payout idea hangs off —
+    /// interest on savings, a flat per-round purse, bookmarks that pay out — so
+    /// keep the arithmetic here rather than in the mode.
+    /// </summary>
+    public int RewardFor(int score, int movesLeft) =>
+        Mathf.Max(0, score) / Mathf.Max(1, pointsPerCoin) +
+        Mathf.Max(0, movesLeft) * Mathf.Max(0, coinsPerUnusedMove);
 
     /// <summary>The score target for a given 1-based round of a run.</summary>
     public int TargetForRound(int round)

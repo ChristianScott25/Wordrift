@@ -75,6 +75,11 @@ public class RogueDemoMode : GameMode
     {
         if (TargetReached)
         {
+            // Paid before the shop loads, because the shop reads the balance in
+            // Start. movesLeft is already decremented for the winning word, so
+            // clearing on move 6 of 20 correctly banks 14 unused moves.
+            run.AddMoney(config.RewardFor(session.Score, Mathf.Max(0, movesLeft)));
+
             // Cleared: the run continues in the shop, and the panel is skipped.
             // The shop advances the round when the player leaves it, so it can
             // still talk about the round that was just cleared.
@@ -105,9 +110,12 @@ public class RogueDemoMode : GameMode
         Fraction = config.moves > 0 ? (float)movesLeft / config.moves : 0f,
         Urgent = movesLeft <= config.urgentMoves && !TargetReached,
 
-        // Round, target and sack share one string because the HUD has exactly
-        // one spare slot, and it's getting crowded — "R2" not "ROUND 2" so it
-        // still fits. A real multi-readout HUD is due, but it's a HUD job.
-        Goal = $"R{run.Round}   {session.Score} / {run.TargetScore}   SACK {sack.Remaining}",
+        // Round, target, sack and money share one string because the HUD has
+        // exactly one spare slot, and it's now four readouts wide — "R2" not
+        // "ROUND 2" so it still fits. Money can't change mid-round; it's here
+        // so the player can plan the next shop. A real multi-readout HUD is
+        // overdue, but it's a HUD job: wire StatusWidget.goalLabel.
+        Goal = $"R{run.Round}   {session.Score} / {run.TargetScore}   " +
+               $"SACK {sack.Remaining}   ${run.Money}",
     };
 }

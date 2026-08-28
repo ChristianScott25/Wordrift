@@ -7,9 +7,10 @@ using UnityEngine;
 /// because ScriptableObjects can't be authored from the command line.
 ///
 /// Idempotent: the fields that define what a modifier *is* (multiplier, label,
-/// colors) are refreshed every run. There is nothing else on a modifier to
-/// preserve — spawn chances are gone, since modifiers only reach tiles as
-/// upgrades on a TileSpec.
+/// colors) are refreshed every run. Its shop PRICE is different — that's a
+/// balance number a human tunes — so a price is only written when the asset's
+/// is still 0, the same way RogueDemoModeSetup refuses to overwrite tuned
+/// round targets.
 ///
 /// Adding a fifth kind is an Inspector job — Create -> Word Crush -> Tile
 /// Modifier -> ..., set its label and color, add it to a mode's list.
@@ -33,10 +34,10 @@ public static class TileModifierSetup
 
         var modifiers = new List<TileModifier>
         {
-            Letter("DoubleLetter", 2, "2L", LetterBlue),
-            Letter("TripleLetter", 3, "3L", LetterBlueDark),
-            Word("DoubleWord",     2, "2W", WordRed),
-            Word("TripleWord",     3, "3W", WordRedDark),
+            Letter("DoubleLetter", 2, "2L", LetterBlue,     price: 5),
+            Letter("TripleLetter", 3, "3L", LetterBlueDark, price: 9),
+            Word("DoubleWord",     2, "2W", WordRed,        price: 14),
+            Word("TripleWord",     3, "3W", WordRedDark,    price: 22),
         };
 
         int added = AttachToModes(modifiers);
@@ -48,28 +49,33 @@ public static class TileModifierSetup
     }
 
     private static LetterMultiplierModifier Letter(
-        string name, int multiplier, string label, Color color)
+        string name, int multiplier, string label, Color color, int price)
     {
         var asset = CreateOrLoad<LetterMultiplierModifier>(name);
         asset.multiplier = multiplier;
-        Style(asset, label, color);
+        Style(asset, label, color, price);
         return asset;
     }
 
     private static WordMultiplierModifier Word(
-        string name, int multiplier, string label, Color color)
+        string name, int multiplier, string label, Color color, int price)
     {
         var asset = CreateOrLoad<WordMultiplierModifier>(name);
         asset.multiplier = multiplier;
-        Style(asset, label, color);
+        Style(asset, label, color, price);
         return asset;
     }
 
-    private static void Style(TileModifier asset, string label, Color color)
+    private static void Style(TileModifier asset, string label, Color color, int price)
     {
         asset.badgeLabel = label;
         asset.badgeColor = color;
         asset.badgeTextColor = Color.white;
+
+        // Seed only, never re-seed: an unpriced modifier (0) gets the default
+        // ladder, and anything already priced is left as tuned.
+        if (asset.price == 0) asset.price = price;
+
         EditorUtility.SetDirty(asset);
     }
 
