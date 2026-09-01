@@ -19,8 +19,10 @@ public class WordResultWidget : MonoBehaviour
     {
         if (label == null || !result.Accepted) return;
 
-        string multiplier = result.WordMultiplier > 1 ? $"  x{result.WordMultiplier}" : "";
-        label.text = $"{result.Word.ToUpperInvariant()}  +{result.Points}{multiplier}";
+        // Just the word and what it paid. The MECHANISM — which multiplier,
+        // which bookmark — belongs to ScoreTallyWidget; this is the flourish
+        // that says the total landed.
+        label.text = $"{result.Word.ToUpperInvariant()}  +{result.Points}";
 
         if (routine != null) StopCoroutine(routine);
         routine = StartCoroutine(ShowRoutine());

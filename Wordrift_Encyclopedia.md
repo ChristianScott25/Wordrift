@@ -3,7 +3,7 @@
 > **The game, not the code.** How Wordrift is played, what the rules are, and what every
 > number currently is. `ARCHITECTURE.md` explains how it's built — this explains what it *is*.
 
-**Last updated:** 2026-08-28 · tap-to-select with ENTER / DISCARD buttons; the tile bag halved to 52 and renamed from "sack"; Moves mode cut
+**Last updated:** 2026-08-31 · scoring is now POINTS × MULT, shown live and walked through bookmark by bookmark; length drives the multiplier
 **Status:** playable demo in active design — the loop works end to end; the content doesn't exist yet
 
 ### How to read this
@@ -178,23 +178,70 @@ board full of tiles that spell nothing — see §6.
 
 ### How a word is scored
 
-Applied in this order:
+**A score is two numbers that multiply.**
 
-| # | Step | Currently |
-|:--:|---|---|
-| 1 | Each tile's **base score** | Scrabble values — E=1, Q=10 |
-| 2 | That tile's **letter multipliers** (2L, 3L), applied to its own value | stacks in order |
-| 3 | Every **word multiplier** (2W, 3W) on the word, multiplied together | applies to the sum |
-| 4 | **Length bonus** — points per letter past the minimum | **0 — off** |
-| 5 | **Your bookmarks**, each in turn, in the order you bought them | see §5 |
-| 6 | The mode's **score multiplier** | **×1** |
+```
+        POINTS          ×          MULT
+   what the tiles              how long the
+     are worth                  word is
+```
 
-> **Worked example.** `CAT` = C(3) + A(1) + T(1) = **5**.
-> Put a 2L on the C and it's (3×2) + 1 + 1 = **8**.
-> Add a 2W anywhere in that word and it's **16**.
+**POINTS** is each tile's base score put through its own letter multipliers (2L, 3L), summed,
+then multiplied by every word multiplier (2W, 3W) in the word. A 2W is part of what the tiles
+are worth, so it lives on this side.
 
-🎯 Length isn't rewarded yet *(step 4 is 0)*, so a long word is currently only worth what its
-letters are worth. Whether long words should pay a premium is a live tuning question.
+**MULT** comes from **word length**, and nothing else to start with:
+
+| Letters | 3 | 4 | 5 | 6 | 7 | each further letter |
+|---|--:|--:|--:|--:|--:|--:|
+| **Mult** | ×1 | ×1.5 | ×2 | ×2.5 | ×3 | +0.5 |
+
+*(`lengthMultipliers` and `multiplierPerExtraLetter`.)*
+
+🎯 This is the whole reason to reach for a longer word. Five letters is worth double what three
+is before a single tile is upgraded, and because it's the **multiplier** side, length makes
+every points-side upgrade you own worth more too.
+
+**Both numbers are visible while you select**, updating with every tile — so you know exactly
+what a word pays before you commit to it.
+
+### Then your bookmarks, one at a time
+
+When you press ENTER the two numbers are locked in, and each bookmark you own takes its turn
+**in the order you bought them**, pushing one side or the other. Each is called out as it
+lands — `BOOKEND   ×2 MULT` — and the numbers move as you watch.
+
+There are three shapes a bookmark can have, and the difference matters:
+
+| Shape | Example | Note |
+|---|---|---|
+| **+Points** | Deja Vu, +10 | Lands *after* your 2W/3W has already been applied |
+| **+Mult** | Vowel Fanatic, +4 | Additive |
+| **×Mult** | Bookend, ×2 | Multiplies everything the +Mult bookmarks built up |
+
+**This is why bookmark order matters.** `+4 Mult` then `×2 Mult` is not the same as `×2` then
+`+4` — the first doubles the four, the second doesn't. ❓ You can't reorder your bookmarks yet;
+they run in purchase order.
+
+**Finally**, `POINTS × MULT` is the score — always, with nothing applied afterwards. *(The
+mode-wide `scoreMultiplier`, currently ×1, takes its turn as one more step, so what the readout
+multiplies out is exactly what you're paid.)*
+
+> **Worked example.** `EYE` = E(1) + Y(4) + E(1) = **5 points**, three letters so **×1**.
+> Nothing owned: **5**.
+> Now own Vowel Fanatic (2 vowels beats 1 consonant → **+4 Mult**) and Bookend (starts and ends
+> with E → **×2 Mult**), bought in that order:
+>
+> ```
+> 5 × 1                 base
+> 5 × 5     VOWEL FANATIC  +4 MULT
+> 5 × 10    BOOKEND        ×2 MULT     =  50
+> ```
+>
+> Bought in the *other* order it would be `5 × 2` then `5 × 6` = **30**.
+
+🎯 The walk-through only has beats if you own bookmarks, so early rounds resolve instantly and
+the flourish grows as you earn things worth watching.
 
 ---
 
@@ -247,20 +294,24 @@ scores from then on.
 
 | Bookmark | What it does | Price |
 |---|---|--:|
-| **Bookend** | ×2 if the word starts and ends with the same letter | $12 |
-| **Deja Vu** | +10 points for a word you already spelled **this round** | $10 |
-| **Vowel Fanatic** | ×2 if the word has more vowels than consonants | $14 |
+| **Bookend** | **×2 Mult** if the word starts and ends with the same letter | $12 |
+| **Deja Vu** | **+10 Points** for a word you already spelled **this round** | $10 |
+| **Vowel Fanatic** | **+4 Mult** if the word has more vowels than consonants | $14 |
+
+One of each shape, deliberately — Bookend is multiplicative because its condition is rare and
+hard to engineer; Vowel Fanatic is additive because its condition is easy to hit; Deja Vu
+works on the points side entirely.
 
 The rules around them:
 
 - **One of each, at most.** The shop never offers a bookmark you already own, and there's no
   limit on how many different ones you can hold.
-- **They stack.** Bookend and Vowel Fanatic both firing on the same word is **×4** — the same
-  way tile multipliers already multiply together. `EYE` with both is a four-times word.
-- **They fire in the order you bought them.** With these three that changes nothing, because
-  doubling twice is doubling twice either way. It will start to matter the moment a bookmark
-  *adds* to the multiplier instead of multiplying it — that's why the order is fixed and
-  visible rather than arbitrary.
+- **They stack**, and the way they stack depends on their shapes — see the worked example
+  in §3.
+- **They fire in the order you bought them, and the order changes the answer.** Vowel Fanatic
+  before Bookend is `(×1 +4) ×2` = ×10; the other way round it's `(×1 ×2) +4` = ×6. ❓ You
+  can't reorder them yet, so the order you happen to buy in is the order you're stuck with —
+  that wants solving.
 - **Bookmarks die with the run**, like money and tile upgrades.
 
 Details worth knowing:
@@ -270,8 +321,8 @@ Details worth knowing:
 - **Deja Vu counts repeats within a round only** — the list resets when a new round starts.
   Nothing in the game stops you playing the same word twice, so this turns a quirk into a
   tactic: spell `EYE`, then spell it again for +10.
-- 🚧 **Nothing tells you when a bookmark fires.** The score just comes out higher. Feedback in
-  the word popup is an obvious next addition.
+- **Each bookmark is named as it fires.** Pressing ENTER walks the two numbers forward one
+  bookmark at a time — `BOOKEND   ×2 MULT` — rather than jumping to a total.
 
 ❓ **Editions** — Balatro's holographic / negative / foil upgrades applied to a joker — are
 planned but not built. A bookmark you own is already stored as its own object rather than as a
@@ -451,7 +502,7 @@ second mode would slot into; there just isn't one.*
 |---|--:|---|
 | Board | 5 × 5 | `Board_5x5.asset` |
 | Minimum word length | 3 | `Mode_RogueDemo.asset` |
-| Length bonus per extra letter | 0 (off) | `Mode_RogueDemo.asset` |
+| Length multiplier | ×1 / ×1.5 / ×2, then +0.5 a letter | `Mode_RogueDemo.asset` |
 | Score multiplier | ×1 | `Mode_RogueDemo.asset` |
 | Words per round | 20 | `Mode_RogueDemo.asset` |
 | Discards per round | 5 tiles | `Mode_RogueDemo.asset` |
@@ -465,8 +516,10 @@ second mode would slot into; there just isn't one.*
 | Re-buy price growth | ×1.5 | `Mode_RogueDemo.asset` |
 | Modifier prices | 5 / 9 / 14 / 22 | each asset in `GameData/Modifiers/` |
 | Bookmark prices | 12 / 10 / 14 | each asset in `GameData/Bookmarks/` |
-| Deja Vu bonus | +10 | `DejaVu.asset` |
-| Bookend / Vowel Fanatic multiplier | ×2 | their assets in `GameData/Bookmarks/` |
+| Deja Vu bonus | +10 Points | `DejaVu.asset` |
+| Vowel Fanatic bonus | +4 Mult | `VowelFanatic.asset` |
+| Bookend multiplier | ×2 Mult | `Bookend.asset` |
+| Score walk-through pace | 0.45s a step, 0.35s to finish | `ScoreTallyTiming` (code, not an asset) |
 
 ---
 

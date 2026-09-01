@@ -5,18 +5,53 @@ using UnityEngine;
 /// Nothing here knows about Unity scenes or specific game modes.
 /// </summary>
 
+/// <summary>
+/// The two numbers a score is made of, before anything else touches them.
+/// Points is what the tiles are worth; Mult comes from the word's length. This
+/// is what the HUD shows live while tiles are being selected.
+/// </summary>
+public struct ScorePair
+{
+    public int Points;
+    public float Mult;
+
+    /// <summary>
+    /// The 2W/3W factor, which Points has ALREADY been multiplied by. Kept
+    /// because folding it in destroys it — nothing can recover "x3 word" from
+    /// Points alone — and a readout that wants to call it out will need it.
+    /// Nothing reads it yet.
+    /// </summary>
+    public int WordMultiplier;
+
+    public int Total => Mathf.RoundToInt(Points * Mult);
+}
+
 /// <summary>The outcome of one submitted chain.</summary>
 public struct WordResult
 {
     public string Word;
     public bool Accepted;
     public int Points;          // final points awarded (0 when rejected)
-    public int BasePoints;      // letter values before multipliers / bonuses
-    public int WordMultiplier;  // combined multiplier from tile modifiers
-    public int LengthBonus;     // extra points for going past the minimum length
-    public int BookmarkBonus;        // flat points the run's bookmarks added
-    public float BookmarkMultiplier; // combined multiplier they applied (1 = none fired)
+
+    /// <summary>Where the two numbers started, before any bookmark.</summary>
+    public ScorePair Base;
+
+    public int FinalPoints;     // after every bookmark
+    public float FinalMult;     // after every bookmark
+
+    /// <summary>
+    /// What each bookmark did, in order. The HUD plays these back one beat at a
+    /// time — and because it's empty when nothing fired, a run with no bookmarks
+    /// scores instantly with nothing to sit through.
+    /// </summary>
+    public System.Collections.Generic.IReadOnlyList<ScoreStep> Steps;
+
     public int TileCount;
+
+    /// <summary>Did anything intervene, or is this just tiles times length?</summary>
+    public bool HasSteps => StepCount > 0;
+
+    public int StepCount => Steps == null ? 0 : Steps.Count;
 }
 
 /// <summary>
@@ -68,6 +103,14 @@ public struct SelectionState
 
     /// <summary>Tiles the mode will still let you discard this round.</summary>
     public int DiscardsLeft;
+
+    /// <summary>
+    /// What the selection is worth right now, before bookmarks — the pair of
+    /// numbers shown live. Bookmarks are deliberately NOT previewed: seeing
+    /// them fire after you commit is the payoff, and a preview that included
+    /// them would hand you the answer.
+    /// </summary>
+    public ScorePair Preview;
 
     /// <summary>Nothing selected: the action buttons have nothing to act on.</summary>
     public bool IsEmpty => TileCount == 0;

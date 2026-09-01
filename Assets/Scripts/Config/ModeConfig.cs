@@ -22,8 +22,15 @@ public abstract class ModeConfig : ScriptableObject
     [Min(2)] public int minWordLength = 3;
 
     [Header("Scoring")]
-    [Tooltip("Bonus points per letter beyond the minimum word length. 0 = off.")]
-    public int lengthBonusPerExtraLetter = 0;
+    [Tooltip("The base MULTIPLIER by word length — the right-hand number. Entry 0 " +
+             "is a word of Min Word Length, and each entry after it is one letter " +
+             "longer. This is the whole reason to reach for a longer word, so it's " +
+             "the first curve to tune.")]
+    public float[] lengthMultipliers = { 1f, 1.5f, 2f };
+
+    [Tooltip("Once a word outruns the list above, every further letter adds this " +
+             "much to the multiplier.")]
+    [Min(0f)] public float multiplierPerExtraLetter = 0.5f;
 
     [Tooltip("Multiplies the whole word score. Useful for harder variants.")]
     public float scoreMultiplier = 1f;
@@ -47,6 +54,24 @@ public abstract class ModeConfig : ScriptableObject
     [Tooltip("The pool of bookmarks this mode's shop can offer. A run can own each " +
              "at most once, and an empty list simply means no bookmark is for sale.")]
     public List<Bookmark> bookmarks = new();
+
+    /// <summary>
+    /// The base multiplier a word of this many tiles is worth. Below the minimum
+    /// word length it just reads as the first entry — nothing can be submitted
+    /// there anyway, and the live preview still needs a number to show.
+    /// </summary>
+    public float LengthMultiplier(int tileCount)
+    {
+        int index = Mathf.Max(0, tileCount - minWordLength);
+
+        if (lengthMultipliers == null || lengthMultipliers.Length == 0)
+            return 1f + index * multiplierPerExtraLetter;
+
+        if (index < lengthMultipliers.Length) return lengthMultipliers[index];
+
+        float last = lengthMultipliers[lengthMultipliers.Length - 1];
+        return last + (index - (lengthMultipliers.Length - 1)) * multiplierPerExtraLetter;
+    }
 
     /// <summary>Creates the live rule object that runs one round of this mode.</summary>
     public abstract GameMode CreateMode();

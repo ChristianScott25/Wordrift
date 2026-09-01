@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: Bookend
   m_EditorClassIdentifier: Assembly-CSharp::BookendBookmark
   displayName: Bookend
-  description: Doubles the word if it starts and ends with the same letter.
+  description: x2 Mult if the word starts and ends with the same letter.
   price: 12
   multiplier: 2

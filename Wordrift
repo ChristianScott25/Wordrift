@@ -11,3 +11,4 @@ Ideas:
 
 Needed:
 - Check board for viable words after ever score so that if there are no possible words the round or game ends
+	- Actually should I do this? Maybe I make some way to discard tiles

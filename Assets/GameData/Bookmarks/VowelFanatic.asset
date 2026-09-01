@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: VowelFanatic
   m_EditorClassIdentifier: Assembly-CSharp::VowelFanaticBookmark
   displayName: Vowel Fanatic
-  description: Doubles the word if it has more vowels than consonants. Y is a consonant.
+  description: +4 Mult if the word has more vowels than consonants. Y is a consonant.
   price: 14
-  multiplier: 2
+  multiplierBonus: 4
   vowels: aeiou

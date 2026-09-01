@@ -44,6 +44,10 @@ public class GameSession : MonoBehaviour
     private string bestWord = "";
     private int bestWordPoints;
 
+    // True while a scored word is being walked through on the HUD. The board
+    // hasn't cleared yet and input is off; the round must not end mid-tally.
+    private bool tallying;
+
     // Every word accepted this round. Bookmarks read it to spot a repeat, so it
     // has to be cleared per round and written AFTER the word has been scored.
     private readonly HashSet<string> wordsThisRound = new();
@@ -89,6 +93,7 @@ public class GameSession : MonoBehaviour
     public void StartRound()
     {
         leavingScene = false;
+        tallying = false;
         Score = 0;
         wordsFound = 0;
         bestWord = "";
@@ -125,7 +130,9 @@ public class GameSession : MonoBehaviour
         mode.Tick(Time.deltaTime);
         GameEvents.RaiseStatusChanged(mode.Status);
 
-        if (mode.IsRoundOver) EndRound();
+        // Not while a word is still being tallied — the move is already spent,
+        // so this would otherwise cut the last word's score off mid-count.
+        if (!tallying && mode.IsRoundOver) EndRound();
     }
 
     private void EndRound()
@@ -169,6 +176,10 @@ public class GameSession : MonoBehaviour
             CanSubmit = IsPlaying && chain.Count > 0 && IsValidWord(word),
             CanDiscard = IsPlaying && mode.CanDiscard(chain.Count),
             DiscardsLeft = mode.DiscardsLeft,
+
+            // The same first stage the real score uses, so the preview can't
+            // drift from what pressing ENTER actually pays.
+            Preview = scorer.Base(chain),
         });
     }
 
@@ -235,7 +246,11 @@ public class GameSession : MonoBehaviour
         // The mode supplies the scoring hooks; the session doesn't know what
         // they are. wordsThisRound is passed BEFORE this word joins it.
         var result = scorer.Evaluate(chain, word, wordsThisRound, mode.Bookmarks);
-        Score += result.Points;
+
+        // End-of-round bookkeeping only — none of this is on screen, so it can
+        // land immediately. Anything the HUD SHOWS (the score, the mode's
+        // resource) is applied at the end of the walk-through instead, so the
+        // readouts all move together rather than the score lagging the moves.
         wordsFound++;
         wordsThisRound.Add(word);
         if (result.Points > bestWordPoints)
@@ -244,11 +259,33 @@ public class GameSession : MonoBehaviour
             bestWord = word;
         }
 
+        StartCoroutine(ScoreThenClear(chain, result));
+    }
+
+    /// <summary>
+    /// Plays the score out before the board reacts, so nothing moves under the
+    /// numbers. The wait is the HUD's tally: one beat per bookmark that fired,
+    /// which means a run with no bookmarks waits for nothing at all.
+    /// </summary>
+    private IEnumerator ScoreThenClear(IReadOnlyList<Tile> chain, WordResult result)
+    {
+        // Input is off and the round can't end for the duration, so deferring
+        // the word's effects can't be observed or exploited — nothing can be
+        // submitted twice, and IsRoundOver is suppressed in Update.
+        tallying = true;
+        chainController.InputEnabled = false;
+
+        GameEvents.RaiseWordSubmitted(result);
+        yield return new WaitForSeconds(ScoreTallyTiming.For(result.StepCount));
+
+        Score += result.Points;
         mode.OnWordAccepted(result);
+        GameEvents.RaiseScoreChanged(Score);
         board.RemoveTiles(chain);
 
-        GameEvents.RaiseScoreChanged(Score);
-        GameEvents.RaiseWordSubmitted(result);
+        tallying = false;
+        if (IsPlaying) chainController.InputEnabled = true;
+
         GameEvents.RaiseStatusChanged(mode.Status);
         RaiseSelection();
 

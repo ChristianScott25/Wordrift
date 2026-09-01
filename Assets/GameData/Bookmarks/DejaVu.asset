@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: DejaVu
   m_EditorClassIdentifier: Assembly-CSharp::DejaVuBookmark
   displayName: Deja Vu
-  description: +10 points for a word you already spelled this round.
+  description: +10 Points for a word you already spelled this round.
   price: 10
   bonusPoints: 10

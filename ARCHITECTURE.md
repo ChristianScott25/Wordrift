@@ -30,9 +30,17 @@ HUD's buttons (`WordActionsWidget`). The gap between the two is what makes disca
 possible at all, so don't collapse it back into a submit-on-release.
 
 Everything a widget needs to draw those buttons arrives in one `SelectionState`, published by
-the session: the word, the tile count, and the two *decisions* `CanSubmit` / `CanDiscard`.
-Widgets obey those flags rather than re-deriving them, which is what keeps a button from
-offering something the session would refuse.
+the session: the word, the tile count, the two *decisions* `CanSubmit` / `CanDiscard`, and the
+live `ScorePair` preview. Widgets obey those rather than re-deriving them, which is what keeps
+a button from offering something the session would refuse — and a preview from disagreeing
+with the score.
+
+**Scoring is two numbers.** `ScoreCalculator.Base` gives `Points × Mult` — tiles (through their
+own 2L/3L and 2W/3W) times a multiplier from word length. That pair is what the HUD shows live.
+`Evaluate` runs the run's bookmarks over it in slot order, each recording a `ScoreStep`, and the
+HUD replays those steps one beat at a time after ENTER. A bookmark can add points, add mult, or
+multiply mult; the additive and multiplicative forms don't commute, which is what makes the
+order bookmarks sit in a real decision.
 
 ## Layout
 

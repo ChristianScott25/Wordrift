@@ -1,9 +1,13 @@
 using UnityEngine;
 
 /// <summary>
-/// Flat bonus for a word you already spelled this round. Repeats are legal —
+/// Flat POINTS for a word you already spelled this round. Repeats are legal —
 /// nothing in the game stops you playing the same word twice — so this turns
 /// that into a strategy rather than a quirk.
+///
+/// The points-side one of the three. It lands AFTER the word's 2W/3W has already
+/// been folded into Points, so it's a steady trickle rather than something a
+/// tile multiplier can amplify.
 /// </summary>
 [CreateAssetMenu(fileName = "DejaVu", menuName = "Word Crush/Bookmark/Deja Vu")]
 public class DejaVuBookmark : Bookmark
@@ -13,6 +17,6 @@ public class DejaVuBookmark : Bookmark
     public override void OnWordScored(ScoringContext ctx)
     {
         if (!ctx.IsRepeat) return;
-        ctx.Points += bonusPoints;
+        ctx.AddPoints(bonusPoints, displayName);
     }
 }

@@ -30,18 +30,18 @@ public static class BookmarkSetup
 
         var bookend = CreateOrLoad<BookendBookmark>("Bookend");
         bookend.multiplier = 2f;
-        Describe(bookend, "Bookend", "Doubles the word if it starts and ends with the same letter.", price: 12);
+        Describe(bookend, "Bookend", "x2 Mult if the word starts and ends with the same letter.", price: 12);
         bookmarks.Add(bookend);
 
         var dejaVu = CreateOrLoad<DejaVuBookmark>("DejaVu");
         dejaVu.bonusPoints = 10;
-        Describe(dejaVu, "Deja Vu", "+10 points for a word you already spelled this round.", price: 10);
+        Describe(dejaVu, "Deja Vu", "+10 Points for a word you already spelled this round.", price: 10);
         bookmarks.Add(dejaVu);
 
         var vowels = CreateOrLoad<VowelFanaticBookmark>("VowelFanatic");
-        vowels.multiplier = 2f;
+        vowels.multiplierBonus = 4f;
         vowels.vowels = "aeiou";
-        Describe(vowels, "Vowel Fanatic", "Doubles the word if it has more vowels than consonants. Y is a consonant.", price: 14);
+        Describe(vowels, "Vowel Fanatic", "+4 Mult if the word has more vowels than consonants. Y is a consonant.", price: 14);
         bookmarks.Add(vowels);
 
         int added = AttachToModes(bookmarks);
