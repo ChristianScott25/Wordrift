@@ -58,6 +58,37 @@ Balatro's boss blinds warp one rule for one round. `IGravityRule` / `IRefillPoli
 swapping them still affects the opening fill. "The board is a diamond this round", "nothing
 refills", "tiles fall sideways" cost almost nothing structurally.
 
+**Discussed 2026-08-31, DEFERRED by Christian — "sounds like a big change, record it but save
+it for later."** Not started; the notes below are the state of the conversation, not a plan.
+
+This came up as *the run has no ending* — the biggest structural hole left. Today you play
+until a target beats you, so **every run ends in failure**, and nothing built during a run has
+a destination. It also blocks tuning: targets are `30 / 45 / 65` then ×1.5 forever, so "is
+round 6 too hard?" has no answer while there's no round 8 to aim at.
+
+The questions that need his call before anything is built:
+
+- **How long is a run, and what shape?** A flat list of N rounds with every third a boss, or
+  Balatro's antes-as-groups where the boss pays more and the shop follows it? This decides how
+  much economy a run has — at roughly 7 shop visits you can afford 8–12 purchases, about one
+  coherent build.
+- **What does a boss round DO?** The interesting answers are rule twists, not bigger numbers:
+  a board with holes, no refill so you play the board down, a bag with no vowels, a minimum
+  word length of 5. Which of those sound *fun* matters more than any of the engineering.
+- **What happens when you win?** Stop on a victory screen, or continue into endless with the
+  targets compounding, as Balatro does?
+
+Two findings that surfaced in the same conversation and belong with it:
+
+- **The payout is dominated by unused moves.** Clearing round 1 with 16 of 20 moves left pays
+  ~$3 from score and **$16 from unused moves** — so the game pays you to clear *fast* and pays
+  you almost nothing for a big word. That's backwards for a game built around watching a score
+  cascade. It's a `RogueDemoModeConfig.RewardFor` change, but it's entangled with run length,
+  so it waits for this.
+- **Bookmark order now changes the score and the player can't reorder them.** Since scoring
+  became Points × Mult (2026-08-31), a `+4 Mult` bought before a `×2 Mult` is worth far more
+  than the reverse — and the shop decides the order. Small to fix, genuinely a gap.
+
 ### Word length tiers are hand types
 
 Pair / Flush / Full House → 3-letter / 4-letter / 5-letter / 6+. Balatro's Planet cards

@@ -42,6 +42,10 @@ public class ShopScreen : MonoBehaviour
     private readonly List<Offer> offers = new();
     private RunState run;
 
+    // The run's shop stream, taken once and kept: asking RunState again would
+    // restart the sequence and re-roll the same offers every purchase.
+    private Rng rng;
+
     private void Start()
     {
         run = RunState.Current;
@@ -52,6 +56,8 @@ public class ShopScreen : MonoBehaviour
             SceneManager.LoadScene(menuSceneName);
             return;
         }
+
+        rng = run.StreamFor(RunState.ShopStream);
 
         if (headline != null) headline.text = $"ROUND {run.Round} CLEARED";
         if (detail != null) detail.text = $"NEXT TARGET   {run.Template.TargetForRound(run.Round + 1)}";
@@ -171,7 +177,7 @@ public class ShopScreen : MonoBehaviour
 
     /// <summary>A random tile out of the run's bag — what the next purchase would land on.</summary>
     private TileSpec RollTarget() =>
-        run.TileBag.Count == 0 ? null : run.TileBag[UnityEngine.Random.Range(0, run.TileBag.Count)];
+        run.TileBag.Count == 0 ? null : run.TileBag[rng.Range(0, run.TileBag.Count)];
 
     /// <summary>
     /// A random bookmark the run doesn't own yet, or null when it owns every one
@@ -186,7 +192,7 @@ public class ShopScreen : MonoBehaviour
         foreach (var bookmark in pool)
             if (bookmark != null && !run.Owns(bookmark)) available.Add(bookmark);
 
-        return available.Count == 0 ? null : available[UnityEngine.Random.Range(0, available.Count)];
+        return available.Count == 0 ? null : available[rng.Range(0, available.Count)];
     }
 
     /// <summary>Wired to a buy button, one per row index.</summary>

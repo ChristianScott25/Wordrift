@@ -62,6 +62,7 @@ public static class WordCrushSetup
         BoardBackgroundSetup.SetUp();
         WordActionsSetup.Run();
         ScoreTallySetup.Run();
+        SeedWidgetSetup.Run();
         RegisterScenes();
 
         AssetDatabase.SaveAssets();

@@ -113,6 +113,14 @@ before every full fill, and `Reset` re-copies from the stock — so a replay (an
 every round of a run) starts on a full bag, and tiles a shop added to the
 stock are simply in it. `RogueDemoMode` is the worked example.
 
+**Randomness.** Every roll in a run comes from `Rng` — SplitMix64 written out in our own code,
+because `UnityEngine.Random` is a global any code can perturb and `System.Random` isn't stable
+across .NET runtimes. `RunState` holds an 8-character `SeedCode` and vends independent streams
+by name and round (`StreamFor(RunState.BagStream)`). Independence is the point: a change to how
+often one system rolls can't shift another's draws, so recorded seeds survive code changes.
+Core stays run-ignorant — `TileBag` is handed its stream in `GameMode.Attach`, like every other
+policy.
+
 **The run.** `RunState.StartNew(config)` builds the bag with
 `LetterSet.BuildTileBag(config.tileBagSize)` and holds it as `List<TileSpec>`.
 The split there is load-bearing: the `LetterSet`'s weights are a **ratio**, the

@@ -42,7 +42,10 @@ public class RogueDemoMode : GameMode
         // now. The board resets it before every fill, which refills the copy
         // from the run's tiles: the full bag returns each round, and anything
         // a shop added is simply in it.
-        bag = new TileBag(run.TileBag);
+        // The bag draws from the run's seed, keyed to this round — so a seed
+        // deals the same tiles, and this round's deal doesn't depend on how
+        // many tiles were drawn in the rounds before it.
+        bag = new TileBag(run.TileBag, run.StreamFor(RunState.BagStream));
         board.TileSource = bag;
     }
 

@@ -41,8 +41,17 @@ public interface ITileSource
 public class EndlessTiles : ITileSource
 {
     private readonly LetterSet letters;
+    private readonly Rng rng;
 
-    public EndlessTiles(LetterSet letters) => this.letters = letters;
+    public EndlessTiles(LetterSet letters, Rng rng = null)
+    {
+        this.letters = letters;
+
+        // Unseeded when nobody supplied one: this is the fallback source, used
+        // when the Game scene is played on its own with no run to take a seed
+        // from. Nothing about that case needs reproducing.
+        this.rng = rng ?? Rng.Unseeded();
+    }
 
     public int Remaining => -1;
 
@@ -51,7 +60,7 @@ public class EndlessTiles : ITileSource
     public bool TryDraw(out TileSpec tile)
     {
         tile = null;
-        var entry = letters == null ? null : letters.Draw();
+        var entry = letters == null ? null : letters.Draw(rng);
         if (entry == null) return false;
         tile = LetterSet.CreateSpec(entry);
         return true;
@@ -76,10 +85,20 @@ public class TileBag : ITileSource
 {
     private readonly IReadOnlyList<TileSpec> stock;
     private readonly List<TileSpec> remaining = new();
+    private readonly Rng rng;
 
-    public TileBag(IReadOnlyList<TileSpec> stock)
+    /// <param name="rng">
+    /// The run's bag stream, so a seed deals the same tiles. REQUIRED, with no
+    /// unseeded default on purpose: a bag that silently stopped being
+    /// reproducible would look exactly like one that still was, and the whole
+    /// point of seeding is being able to trust it.
+    /// </param>
+    public TileBag(IReadOnlyList<TileSpec> stock, Rng rng)
     {
         this.stock = stock;
+        this.rng = rng;
+        if (rng == null)
+            Debug.LogError("TileBag was given no Rng — this round's draw is not reproducible.");
         Reset();
     }
 
@@ -108,7 +127,7 @@ public class TileBag : ITileSource
         tile = null;
         if (remaining.Count == 0) return false;
 
-        int index = Random.Range(0, remaining.Count);
+        int index = rng == null ? 0 : rng.Range(0, remaining.Count);
         tile = remaining[index];
 
         // Swap-remove: position in the bag means nothing, and RemoveAt would

@@ -3,8 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// Everything one run remembers between rounds: which round you're on, the
-/// tiles you own, the bookmarks you've bought, and the money you've banked.
-/// Tile-bag abilities will live here too.
+/// tiles you own, the bookmarks you've bought, the money you've banked, and the
+/// seed every roll in the run comes from. Tile-bag abilities will live here too.
 ///
 /// Plain C# held in a static, like ModeSelection, because scene loads wipe
 /// object references. Mutable ON PURPOSE — shops and bookmarks edit this run.
@@ -22,6 +22,21 @@ public class RunState
     /// <summary>1-based: round 1 is the first. Advanced by the shop's Continue.</summary>
     public int Round { get; private set; } = 1;
 
+    // ---- Randomness ----------------------------------------------------
+    // Every roll in a run comes from here, so a run can be replayed exactly.
+    // The code is the authority, not a number: it's what the player reads off
+    // the screen and — once there's a menu for it — types back in, so the code
+    // that produced a run is literally the code that reproduces it.
+
+    /// <summary>The run's seed, as the player sees it. Eight readable characters.</summary>
+    public string SeedCode { get; private set; }
+
+    /// <summary>Which tiles come out of the bag.</summary>
+    public const string BagStream = "bag";
+
+    /// <summary>What the shop offers, and which tile an upgrade lands on.</summary>
+    public const string ShopStream = "shop";
+
     /// <summary>
     /// The run's tiles. The full bag comes back at the start of every round —
     /// playing tiles never shrinks it (TileBag drains a copy of this list).
@@ -37,6 +52,17 @@ public class RunState
     /// when there's a reason for one.
     /// </summary>
     public List<BookmarkSpec> Bookmarks { get; } = new();
+
+    /// <summary>
+    /// A generator for one purpose, this round. Streams are independent by
+    /// name AND by round, which buys two things worth having: a change to how
+    /// often the shop rolls can never shift the tiles drawn from the bag, and
+    /// round 3 deals the same bag regardless of what happened in rounds 1 and 2
+    /// — so a round can be reproduced without replaying the ones before it.
+    ///
+    /// Take one per purpose and keep it; asking twice restarts the sequence.
+    /// </summary>
+    public Rng StreamFor(string streamName) => Rng.Stream(SeedCode, streamName, Round);
 
     /// <summary>Already owned? The shop never offers a duplicate.</summary>
     public bool Owns(Bookmark bookmark)
@@ -103,6 +129,11 @@ public class RunState
     private RunState(RogueDemoModeConfig template)
     {
         Template = template;
+
+        // A fresh seed per run. Losing and pressing PLAY AGAIN starts a NEW
+        // run, so it gets a new one — replaying a seed will be something the
+        // player asks for deliberately, once there's somewhere to type it.
+        SeedCode = Rng.NewSeedCode();
         if (template == null || template.letterSet == null)
         {
             Debug.LogError("Run started with no letter set, so the tile bag is empty.");

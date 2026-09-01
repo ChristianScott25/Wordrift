@@ -363,9 +363,8 @@ public class Board : MonoBehaviour
     }
 
     /// <summary>
-    /// The look for the next tile. The font is fixed for the round; the skin is
-    /// a weighted draw, mirroring how LetterSet draws letters, so a mode can mix
-    /// tile types on one board. A null skin leaves the prefab's own art.
+    /// The look for the next tile. Both parts are fixed for the round — a null
+    /// skin leaves the prefab's own art.
     /// </summary>
     private TileLook NextLook() => new TileLook
     {
@@ -373,26 +372,14 @@ public class Board : MonoBehaviour
         LetterFont = letterFont,
     };
 
-    private TileSkin PickSkin()
-    {
-        if (skins == null || skins.Count == 0) return null;
-
-        int total = 0;
-        foreach (var skin in skins)
-            if (skin != null) total += Mathf.Max(0, skin.weight);
-
-        // Every weight zeroed out is a config mistake, not a reason to draw nothing.
-        if (total <= 0) return skins.FirstOrDefault(s => s != null);
-
-        int roll = Random.Range(0, total);
-        foreach (var skin in skins)
-        {
-            if (skin == null) continue;
-            roll -= Mathf.Max(0, skin.weight);
-            if (roll < 0) return skin;
-        }
-        return skins.FirstOrDefault(s => s != null);
-    }
+    /// <summary>
+    /// The first skin the mode lists. Deliberately NOT a random draw: skins are
+    /// heading toward being something the player chooses, not something the
+    /// board rolls, so there's no randomness here to seed or to reason about.
+    /// The list stays a list because a chooser will need one.
+    /// </summary>
+    private TileSkin PickSkin() =>
+        skins == null ? null : skins.FirstOrDefault(s => s != null);
 
     /// <summary>Attaches every modifier the spec carries — a tile can have several.</summary>
     private static void ApplySpecModifiers(Tile tile, TileSpec spec)

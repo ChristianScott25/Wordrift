@@ -3,7 +3,7 @@
 > **The game, not the code.** How Wordrift is played, what the rules are, and what every
 > number currently is. `ARCHITECTURE.md` explains how it's built — this explains what it *is*.
 
-**Last updated:** 2026-08-31 · scoring is now POINTS × MULT, shown live and walked through bookmark by bookmark; length drives the multiplier
+**Last updated:** 2026-08-31 · every run now has a seed, shown bottom-left; scoring is POINTS × MULT, walked through bookmark by bookmark
 **Status:** playable demo in active design — the loop works end to end; the content doesn't exist yet
 
 ### How to read this
@@ -372,6 +372,22 @@ to make the allowance bite first.
 *smaller* (fewer, better tiles) or *bigger* is an obvious future upgrade axis — `tileBagSize`
 is exactly the number such an upgrade would turn, but nothing turns it yet.
 
+### Your seed
+
+Every run has one — eight characters, shown small in the bottom-left corner of the board and
+the shop. It decides everything the game rolls: the order tiles come out of the bag, what the
+shop offers, which tile an upgrade lands on.
+
+- **It's fixed for the whole run.** Losing and starting again gives you a new one.
+- **Each round deals independently.** Round 3's tiles are the same for a given seed however
+  rounds 1 and 2 went, so a single round can be reproduced on its own.
+- **Your choices aren't part of it.** Two runs on one seed diverge the moment you buy something
+  different, because a purchase changes what there is to draw from.
+
+🎯 It's there so a board can be reported and reproduced exactly — "seed 4K7PQW2M, round 3" — and
+so two balance changes can be compared on identical tiles instead of by feel. ❓ There's nowhere
+to type a seed in yet, so it's a developer tool for now rather than something you can share.
+
 ### Rounds and targets
 
 Each round: reach the target within **20 words** *(`moves`)*.
@@ -516,6 +532,7 @@ second mode would slot into; there just isn't one.*
 | Re-buy price growth | ×1.5 | `Mode_RogueDemo.asset` |
 | Modifier prices | 5 / 9 / 14 / 22 | each asset in `GameData/Modifiers/` |
 | Bookmark prices | 12 / 10 / 14 | each asset in `GameData/Bookmarks/` |
+| Seed length | 8 characters | `Rng` (code, not an asset) |
 | Deja Vu bonus | +10 Points | `DejaVu.asset` |
 | Vowel Fanatic bonus | +4 Mult | `VowelFanatic.asset` |
 | Bookend multiplier | ×2 Mult | `Bookend.asset` |
@@ -545,8 +562,14 @@ bookmark a visit.
 - **Wild tiles** — a special letter, or a modifier?
 - **Multi-letter tiles** ("QU") — the bag can hold them; nothing can play them.
 - **Gravity on a board with holes** — tiles currently fall *past* gaps instead of into them.
-- **How a run ends** — there's no boss round and no victory.
-- **Reproducible runs** — every draw is unseeded, so sharing or replaying a seed isn't possible.
+- **How a run ends** — there's no boss round and no victory, so every run ends in failure.
+  Discussed and deliberately deferred on 2026-08-31; the open questions (run length, what a
+  boss round does, whether winning stops the run) are written up in `ROGUELIKE-IDEAS.md`.
+- **Bookmark order can't be changed.** It now affects your score (§3), but the shop decides it.
+- **Payouts reward speed, not scoring.** Unused moves pay far more than points do — clearing
+  fast beats clearing big. Tied to the run-length question above.
+- **Entering a seed** — every run has one and shows it, but there's nowhere to type one in yet,
+  so a run can be reported and reproduced by a developer but not replayed by a player.
 - **A board that's playable-looking but dead** — full of tiles that spell nothing (see §5).
 - **The HUD** — round, target, bag and money share one line; bookmarks have their own below it.
 - **Bookmark editions** — holographic / negative / foil equivalents are planned, undesigned.

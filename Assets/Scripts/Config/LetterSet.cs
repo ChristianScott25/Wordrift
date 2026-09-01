@@ -173,11 +173,23 @@ public class LetterSet : ScriptableObject
         return bag;
     }
 
-    /// <summary>Draws a random catalog row using the weighted distribution.</summary>
-    public Entry Draw()
+    /// <summary>
+    /// Draws a random catalog row using the weighted distribution. The generator
+    /// is passed in rather than taken from a global, so a run's draws belong to
+    /// its own seed and nothing else can perturb them.
+    /// </summary>
+    public Entry Draw(Rng rng)
     {
         EnsureBuilt();
-        int roll = Random.Range(0, Mathf.Max(1, totalWeight));
+        if (rng == null)
+        {
+            // A programming error, not a config one — every source builds its
+            // own generator. Silence here would look like an empty letter set.
+            Debug.LogError($"LetterSet '{name}' was asked to draw with no Rng.", this);
+            return null;
+        }
+
+        int roll = rng.Range(0, Mathf.Max(1, totalWeight));
         foreach (var entry in entries)
         {
             roll -= Mathf.Max(0, entry.weight);

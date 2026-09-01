@@ -6,9 +6,11 @@ using UnityEngine;
 /// carry light text without anything else in the project knowing.
 ///
 /// Letters are text now, not art, which is what makes this cheap: a new look is
-/// one asset and one sprite, not 26 sprites. Modes hold a list of these, so
-/// several looks can be in play on the same board at once — see
-/// ModeConfig.tileSkins and Board.PickSkin.
+/// one asset and one sprite, not 26 sprites. Modes hold a LIST of these and the
+/// board takes the first — skins are heading toward being something the player
+/// chooses, not something the board rolls, so the old per-skin spawn `weight`
+/// was removed on 2026-08-31 along with the roll that read it. The list stays a
+/// list because a chooser will need one.
 /// </summary>
 [CreateAssetMenu(fileName = "TileSkin", menuName = "Word Crush/Tile Skin")]
 public class TileSkin : ScriptableObject
@@ -30,8 +32,4 @@ public class TileSkin : ScriptableObject
              "keep it white. Swap this to change the badge treatment for every " +
              "modifier at once. Empty = the label draws with no circle behind it.")]
     public Sprite badgeSprite;
-
-    [Tooltip("Relative chance of a spawning tile taking this skin, when a mode " +
-             "lists more than one. Same idea as a letter's spawn weight.")]
-    [Min(0)] public int weight = 1;
 }
