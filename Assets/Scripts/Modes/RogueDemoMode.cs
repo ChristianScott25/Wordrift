@@ -18,6 +18,11 @@ public class RogueDemoMode : GameMode
     private readonly RogueDemoModeConfig config;
     private RunState run;
     private TileBag bag;
+
+    // The bag's stream, kept rather than just handed over: saving a round has to
+    // record how far into it the round had drawn, and restoring one has to wind
+    // a fresh one forward to match.
+    private Rng bagRng;
     private int movesLeft;
     private int discardsLeft;
 
@@ -45,7 +50,8 @@ public class RogueDemoMode : GameMode
         // The bag draws from the run's seed, keyed to this round — so a seed
         // deals the same tiles, and this round's deal doesn't depend on how
         // many tiles were drawn in the rounds before it.
-        bag = new TileBag(run.TileBag, run.StreamFor(RunState.BagStream));
+        bagRng = run.StreamFor(RunState.BagStream);
+        bag = new TileBag(run.TileBag, bagRng);
         board.TileSource = bag;
     }
 
@@ -81,6 +87,54 @@ public class RogueDemoMode : GameMode
             names.Append(owned.Name.ToUpperInvariant());
         }
         return names.ToString();
+    }
+
+    /// <summary>
+    /// The move counter, the discard allowance, and how far into the bag this
+    /// round has already got. The bag is saved as INDICES into the run's tiles
+    /// (see RunState.TileIndex) — a tile's identity is which entry of the bag it
+    /// is, so that's the only thing that survives a save meaningfully.
+    /// </summary>
+    public override void CaptureRound(RoundSnapshot into)
+    {
+        into.movesLeft = movesLeft;
+        into.discardsLeft = discardsLeft;
+        into.bagDraws = bagRng == null ? 0 : bagRng.Draws;
+
+        if (run == null || bag == null) return;
+
+        // Order is part of the answer, not just membership: TryDraw indexes into
+        // the bag, so the same stream over a reordered bag deals differently.
+        var index = run.TileIndex();
+        foreach (var tile in bag.RemainingTiles)
+            if (index.TryGetValue(tile, out int i)) into.bagRemaining.Add(i);
+    }
+
+    public override void RestoreRound(RoundSnapshot from)
+    {
+        movesLeft = from.movesLeft;
+        discardsLeft = from.discardsLeft;
+
+        if (run == null || bag == null) return;
+
+        // Board.Build has already dealt an opening hand out of this bag; the
+        // saved round's draw replaces it wholesale. Tiles in neither the restored
+        // bag nor the restored board are the ones already played or discarded —
+        // gone for this round, back next round, exactly as if they'd just been played.
+        var tiles = new System.Collections.Generic.List<TileSpec>(from.bagRemaining.Count);
+        foreach (int i in from.bagRemaining)
+        {
+            var tile = run.TileAt(i);
+            if (tile != null) tiles.Add(tile);
+        }
+
+        // A fresh stream starts over, and Board.Build has just spent an arbitrary
+        // number of its draws on an opening hand that's about to be thrown away.
+        // Winding a new one forward to the saved position is what makes the tile
+        // that falls next the tile that WOULD have fallen next.
+        bagRng = run.StreamFor(RunState.BagStream);
+        bagRng.Skip(from.bagDraws);
+        bag.RestoreRemaining(tiles, bagRng);
     }
 
     public override void OnWordAccepted(WordResult result) => movesLeft--;

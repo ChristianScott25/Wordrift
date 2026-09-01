@@ -418,6 +418,28 @@ round. Whether five is enough to unstick a genuinely dead board is untested.
 
 **PLAY AGAIN starts a completely new run**: round 1, a stock bag, $0.
 
+### Picking up where you left off
+
+**Your run saves itself.** You are never asked, and there is no save button. Close the app —
+or have the phone close it for you — and the main menu shows **CONTINUE** when you come back.
+
+- **It resumes exactly, not approximately.** The same board, the same tiles left in the bag, the
+  same score, moves and discards. Quit mid-round and you come back mid-round.
+- **Quit in the shop and you come back to the shop**, with the same money and the same things on
+  the shelf. Anything you already bought is not offered again.
+- **It saves after every word, after every discard, and after every purchase.** The one thing you
+  can lose is a word you played in the split second before the app died — the tiles were still
+  falling, so that word is replayed rather than half-saved.
+- **NEW RUN throws it away.** That's what the button means, which is why it no longer says PLAY.
+  A run you lose is thrown away too — there's nothing to continue.
+
+🚧 **TEMPORARY:** the save is also thrown away whenever the game's numbers are re-tuned — change
+the bag size, the move count or a round target while a run is saved and CONTINUE simply stops
+appearing. That's a development rule, not a game rule: it exists so a run in progress can't
+quietly keep playing by yesterday's numbers, and it will go away once the numbers stop moving.
+
+❓ There is one save slot and no way to name, browse, or export a run.
+
 ---
 
 ## 7. Money
@@ -548,7 +570,7 @@ The board, tap-or-drag selection and the ENTER / DISCARD buttons · scoring with
 multipliers · the run (rounds, escalating
 targets, a persistent finite tile bag) · money · bookmarks (three of them, with a scoring pipeline
 built to take many more) · a placeholder shop that sells permanent tile upgrades and one
-bookmark a visit.
+bookmark a visit · runs that save and resume themselves (§6).
 
 ### 📋 Decided, not built
 
@@ -574,3 +596,5 @@ bookmark a visit.
 - **The HUD** — round, target, bag and money share one line; bookmarks have their own below it.
 - **Bookmark editions** — holographic / negative / foil equivalents are planned, undesigned.
 - **Bookmark feedback** — nothing shows you *which* bookmark just paid out.
+- **Save-scumming** — killing the app mid-round rewinds one word. Balatro has the same hole; it
+  hasn't been decided whether it's worth closing.

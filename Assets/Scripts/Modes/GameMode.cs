@@ -88,6 +88,24 @@ public abstract class GameMode
     /// </summary>
     public virtual System.Collections.Generic.IReadOnlyList<BookmarkSpec> Bookmarks => null;
 
+    /// <summary>
+    /// Writes this mode's round state into a save, and reads it back out. The
+    /// session saves and restores everything it owns itself (score, board, words
+    /// found); this is for whatever the RULES own — a move counter, a discard
+    /// allowance, how far into the bag the round has got.
+    ///
+    /// THE STANDING RULE: a resource a mode adds has to be captured here, or it
+    /// silently resets when the player resumes. A restored round with a full move
+    /// counter still looks like a working round, which is what makes it a quiet bug.
+    ///
+    /// RestoreRound runs immediately AFTER Begin, so it overwrites the fresh
+    /// allowance Begin just handed out.
+    /// </summary>
+    public virtual void CaptureRound(RoundSnapshot into) { }
+
+    /// <summary>See CaptureRound.</summary>
+    public virtual void RestoreRound(RoundSnapshot from) { }
+
     /// <summary>What the HUD should display for this mode's resource.</summary>
     public abstract ModeStatus Status { get; }
 

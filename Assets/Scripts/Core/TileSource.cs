@@ -85,7 +85,10 @@ public class TileBag : ITileSource
 {
     private readonly IReadOnlyList<TileSpec> stock;
     private readonly List<TileSpec> remaining = new();
-    private readonly Rng rng;
+
+    // Not readonly, because restoring a saved round replaces it — see
+    // RestoreRemaining, where replacing it is the whole point.
+    private Rng rng;
 
     /// <param name="rng">
     /// The run's bag stream, so a seed deals the same tiles. REQUIRED, with no
@@ -107,6 +110,13 @@ public class TileBag : ITileSource
     /// <summary>Tiles in a full bag — the denominator for anything showing how much is left.</summary>
     public int Capacity { get; private set; }
 
+    /// <summary>
+    /// What's still undrawn, for saving a round mid-play. Order means nothing —
+    /// TryDraw picks at random and swap-removes — so this is a set that happens
+    /// to be a list, and nothing may read it as a queue.
+    /// </summary>
+    public IReadOnlyList<TileSpec> RemainingTiles => remaining;
+
     public void Reset()
     {
         remaining.Clear();
@@ -114,6 +124,33 @@ public class TileBag : ITileSource
         Capacity = remaining.Count;
         if (Capacity == 0)
             Debug.LogError("TileBag was given an empty stock, so no tiles will spawn.");
+    }
+
+    /// <summary>
+    /// Replaces what's left in the bag wholesale, without touching the stock.
+    /// For a resumed round: the tiles already dealt this round were dealt in a
+    /// previous session, so the bag has to come back part-drained rather than
+    /// full. Capacity is left where Reset put it, since it describes a FULL bag.
+    ///
+    /// The tiles handed in must be instances from the stock list, not copies —
+    /// see RunState.TileBag: a tile's identity is which entry of the run's bag
+    /// it is, and an upgrade bought later lands on that instance. Their ORDER
+    /// matters as well: TryDraw indexes into this list, so the same stream over
+    /// a differently-ordered bag deals different tiles.
+    ///
+    /// The stream comes back with it, and deliberately in the SAME call. Half a
+    /// restore — the right tiles drawn by a stream sitting somewhere else — is a
+    /// bag that looks perfectly correct and deals the wrong things, so the two
+    /// aren't offered separately.
+    /// </summary>
+    public void RestoreRemaining(IEnumerable<TileSpec> tiles, Rng stream)
+    {
+        remaining.Clear();
+        if (tiles != null) remaining.AddRange(tiles);
+
+        rng = stream;
+        if (stream == null)
+            Debug.LogError("TileBag was restored with no Rng — this round's draw is not reproducible.");
     }
 
     /// <summary>

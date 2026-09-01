@@ -75,4 +75,47 @@ public abstract class ModeConfig : ScriptableObject
 
     /// <summary>Creates the live rule object that runs one round of this mode.</summary>
     public abstract GameMode CreateMode();
+
+    // ---- Save compatibility ------------------------------------------------
+
+    /// <summary>
+    /// A stamp of every authored value a run depends on. A saved run records it,
+    /// and a resumed run is DISCARDED when it no longer matches — so tuning a
+    /// number in the Inspector can never leave a run in progress quietly playing
+    /// by the old numbers.
+    ///
+    /// Built from JsonUtility rather than a hand-written list of fields on
+    /// purpose: JsonUtility serializes every serialized field of the real runtime
+    /// type, subclass fields included, so a new tunable is covered the day it's
+    /// added and there is no list to forget to update.
+    ///
+    /// Referenced assets are stamped too, since a modifier's price or a letter's
+    /// weight is just as much a tuning knob. Not covered: swapping a TileSkin or
+    /// a font, neither of which changes what the game does.
+    /// </summary>
+    public virtual string Fingerprint() =>
+        Stamp(this) + Stamp(letterSet) + Stamp(boardShape) +
+        StampAll(tileModifiers) + StampAll(bookmarks);
+
+    /// <summary>One asset's serialized values, with reference identity removed.</summary>
+    protected static string Stamp(Object asset)
+    {
+        if (asset == null) return "~";
+
+        // Object references serialize as {"instanceID":12345}, and instance IDs
+        // are assigned per session — leaving them in would make the fingerprint
+        // differ on every launch and throw away every save.
+        return InstanceIds.Replace(JsonUtility.ToJson(asset), "\"instanceID\":0");
+    }
+
+    protected static string StampAll<T>(List<T> assets) where T : Object
+    {
+        if (assets == null) return "~";
+        var stamped = new System.Text.StringBuilder();
+        foreach (var asset in assets) stamped.Append(Stamp(asset));
+        return stamped.ToString();
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex InstanceIds =
+        new System.Text.RegularExpressions.Regex("\"instanceID\":-?[0-9]+");
 }

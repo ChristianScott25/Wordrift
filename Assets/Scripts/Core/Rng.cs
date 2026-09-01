@@ -60,8 +60,12 @@ public sealed class Rng
     /// FNV-1a. Written out rather than using string.GetHashCode, which is
     /// RANDOMISED PER PROCESS on modern .NET — the same seed code would hash
     /// differently every launch, which would quietly defeat the whole feature.
+    ///
+    /// Public because the save file leans on the same property: a fingerprint
+    /// hashed at save time has to compare equal when it's hashed again on the
+    /// next launch (see ModeConfig.Fingerprint).
     /// </summary>
-    private static ulong Hash(string text)
+    public static ulong Hash(string text)
     {
         ulong hash = 14695981039346656037UL;
         for (int i = 0; i < text.Length; i++)
@@ -72,8 +76,27 @@ public sealed class Rng
         return hash;
     }
 
+    /// <summary>
+    /// How many values this generator has produced. What a saved stream records
+    /// so it can be wound back to where it was — see Skip.
+    /// </summary>
+    public int Draws { get; private set; }
+
+    /// <summary>
+    /// Throws away the next `count` values. Restoring a saved stream means
+    /// re-deriving it from the seed (which starts it over) and then fast-
+    /// forwarding past everything it had already produced, so the roll after a
+    /// resume is the roll that would have come next.
+    /// </summary>
+    public void Skip(int count)
+    {
+        for (int i = 0; i < count; i++) Next();
+    }
+
     private ulong Next()
     {
+        Draws++;
+
         // SplitMix64.
         unchecked
         {

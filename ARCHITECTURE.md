@@ -50,9 +50,13 @@ order bookmarks sit in a real decision.
 | `Scripts/Modes` | `GameMode` + one class per mode | Core, Config, GameSession, RunState |
 | `Scripts/Config` | ScriptableObjects: LetterSet, board shapes, mode configs | Core |
 | `Scripts/UI` | HUD widgets, each listening to `GameEvents` | Core |
-| `Editor/` | Six scaffold scripts; `WordCrushSetup.cs` regenerates assets/prefabs/scene | everything |
+| `Scripts/Save` | `RunSaveData` (the file's shape) and `RunSave` (the only code that touches disk) | nothing |
+| `Editor/` | Scaffold scripts; `WordCrushSetup.cs` regenerates assets/prefabs/scene | everything |
 
 Core never references Modes or UI. That's what keeps modes cheap to add.
+`Scripts/Save` references nothing at all — it's DTOs and a file — so the layer that
+depends on it (`RunState`, `GameSession`, `GameMode`, `ShopScreen`) is the layer that
+already knows what a run is.
 
 ## Where things live
 
@@ -75,6 +79,23 @@ read from there, never duplicated. A mode whose round flows somewhere other
 than the game-over panel calls `session.ContinueTo(scene)` from its `End()`
 override — that skips the panel (RogueDemo's cleared round goes to the shop
 this way).
+
+**Anything a run or a round remembers** — put it in `RunState` (run-scoped) or on
+the `GameMode` (round-scoped), and then **capture it**, or it silently resets the
+next time the player continues. Run-level state goes in `RunState.Capture` /
+`RunState.Resume`; a mode's own resources go in `GameMode.CaptureRound` /
+`RestoreRound`, which `RogueDemoMode` implements for its moves, discards and bag.
+The failure mode is quiet — a resumed run with one counter reset still looks like
+a working run — which is why it's a rule and not a reminder.
+
+Two things make the saving work, and neither is obvious:
+
+- **A tile's identity is its index in `RunState.TileBag`.** The bag is serialized once
+  by value; the board and the drawn-down bag are lists of indices into it. That's how a
+  shop upgrade bought before a save still lands on the same tile after one.
+- **The save is only ever written with the board at rest.** Clearing a word leaves holes
+  in the columns for `settleDelay`, and a snapshot taken there restores a board with
+  permanent gaps. `GameSession` therefore queues a save and flushes it from `Update`.
 
 **A new HUD element** — a MonoBehaviour that subscribes to a `GameEvents` event
 in `OnEnable` and unsubscribes in `OnDisable`. Drop it on the HUD Canvas. The

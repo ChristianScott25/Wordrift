@@ -162,6 +162,31 @@ public class Board : MonoBehaviour
         tiles.Clear();
     }
 
+    /// <summary>
+    /// Rebuilds the board from an exact layout — every cell that isn't listed is
+    /// left empty, and nothing is drawn from the tile source. This is how a saved
+    /// round comes back: the tiles it names were dealt in an earlier session, so
+    /// re-dealing them is precisely what must not happen.
+    ///
+    /// Cells the shape doesn't have are skipped rather than placed, so a board
+    /// that changed shape under a save degrades instead of throwing.
+    /// </summary>
+    public void Restore(IReadOnlyDictionary<Vector2Int, TileSpec> layout)
+    {
+        StopAllCoroutines();
+        Busy = false;
+        resolving = 0;
+        ClearTiles();
+        if (layout == null) return;
+
+        foreach (var placement in layout)
+        {
+            if (!cells.Contains(placement.Key)) continue;
+            Vector3 target = CellToWorld(placement.Key);
+            PlaceTile(placement.Key, placement.Value, target, target);
+        }
+    }
+
     public Vector3 CellToWorld(Vector2Int cell) =>
         transform.position + new Vector3(cell.x * cellSize, cell.y * cellSize, 0f);
 
@@ -344,6 +369,17 @@ public class Board : MonoBehaviour
     private Tile SpawnTile(Vector2Int cell, Vector3 startPos, Vector3 targetPos)
     {
         if (TileSource == null || !TileSource.TryDraw(out TileSpec spec)) return null;
+        return PlaceTile(cell, spec, startPos, targetPos);
+    }
+
+    /// <summary>
+    /// Puts one specific spec on one specific cell, drawing nothing. The half of
+    /// spawning that doesn't involve the tile source — which is what a restored
+    /// board needs, since the tiles it puts back were drawn in a previous session.
+    /// </summary>
+    private Tile PlaceTile(Vector2Int cell, TileSpec spec, Vector3 startPos, Vector3 targetPos)
+    {
+        if (spec == null) return null;
 
         // Multi-letter specs ("qu") aren't playable yet — Tile, the chain, and
         // scoring all speak single characters — so only the first letter plays.

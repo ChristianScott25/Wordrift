@@ -62,8 +62,37 @@ public class ShopScreen : MonoBehaviour
         if (headline != null) headline.text = $"ROUND {run.Round} CLEARED";
         if (detail != null) detail.text = $"NEXT TARGET   {run.Template.TargetForRound(run.Round + 1)}";
 
-        StockShelves();
+        // A visit that was interrupted comes back as it was — the same shelf at
+        // the same prices, minus whatever was bought. Restocking would re-roll
+        // it, and a bookmark already bought would be back on offer.
+        var saved = RunState.TakePendingShop();
+        if (saved != null && saved.captured) RestockFrom(saved); else StockShelves();
+
         Refresh();
+        Save();
+    }
+
+    /// <summary>
+    /// Writes the run out with the shelf as it stands. Called on arriving (the
+    /// payout is already banked by then) and after every purchase, so closing the
+    /// app in a shop loses nothing.
+    /// </summary>
+    private void Save()
+    {
+        if (run == null) return;
+
+        var data = run.Capture(SaveLocation.Shop);
+        var snapshot = new ShopSnapshot
+        {
+            captured = true,
+            rngDraws = rng == null ? 0 : rng.Draws,
+        };
+
+        var index = run.TileIndex();
+        foreach (var offer in offers) snapshot.offers.Add(offer.Capture(index));
+
+        data.shopState = snapshot;
+        RunSave.Write(data);
     }
 
     // ------------------------------------------------------------------------
@@ -95,6 +124,13 @@ public class ShopScreen : MonoBehaviour
 
         /// <summary>Applies the purchase to the run. Money has already been taken.</summary>
         public abstract void Deliver(RunState run);
+
+        /// <summary>
+        /// This row, written down. Stock is SAVED rather than re-derived from the
+        /// seed: the shop's roll order changes whenever its code does, and a
+        /// saved shelf must not depend on that.
+        /// </summary>
+        public abstract ShopOfferData Capture(Dictionary<TileSpec, int> tileIndex);
     }
 
     /// <summary>A tile upgrade, landing on a random bag tile rolled up front.</summary>
@@ -118,6 +154,14 @@ public class ShopScreen : MonoBehaviour
             TimesBought++;
             Target = RollTarget();   // the next one lands on a different tile
         }
+
+        public override ShopOfferData Capture(Dictionary<TileSpec, int> tileIndex) => new ShopOfferData
+        {
+            kind = ShopOfferData.Modifier,
+            assetName = Modifier == null ? "" : Modifier.name,
+            targetTile = Target != null && tileIndex.TryGetValue(Target, out int i) ? i : -1,
+            timesBought = TimesBought,
+        };
     }
 
     /// <summary>
@@ -138,6 +182,15 @@ public class ShopScreen : MonoBehaviour
             run.AddBookmark(Bookmark);
             Bookmark = RollBookmark();   // may be null: that's "sold out", not an error
         }
+
+        public override ShopOfferData Capture(Dictionary<TileSpec, int> tileIndex) => new ShopOfferData
+        {
+            kind = ShopOfferData.Bookmark,
+
+            // Null here is the whole point: it means the run already owns every
+            // bookmark, and the row must stay gone after a resume.
+            assetName = Bookmark == null ? "" : Bookmark.name,
+        };
     }
 
     private void StockShelves()
@@ -175,6 +228,60 @@ public class ShopScreen : MonoBehaviour
             offers.Add(new BookmarkOffer { Bookmark = bookmark, RollBookmark = RollBookmark });
     }
 
+    /// <summary>
+    /// Rebuilds the shelf exactly as it was saved, and winds the shop's stream
+    /// forward past the rolls it had already made — a restored stream restarts
+    /// from the seed, so without the skip the next re-roll would repeat one the
+    /// player has already seen.
+    ///
+    /// An offer naming an asset that's since vanished is dropped rather than
+    /// guessed at; a shelf one row short is a much smaller problem than a shop
+    /// that throws.
+    /// </summary>
+    private void RestockFrom(ShopSnapshot saved)
+    {
+        offers.Clear();
+        rng.Skip(saved.rngDraws);
+
+        int shelfSpace = rows == null ? 0 : rows.Length;
+        foreach (var entry in saved.offers)
+        {
+            if (offers.Count >= shelfSpace) break;
+
+            if (entry.kind == ShopOfferData.Bookmark)
+            {
+                offers.Add(new BookmarkOffer
+                {
+                    // Deliberately allowed to be null — that's a sold-out row,
+                    // which InStock reports and Refresh hides.
+                    Bookmark = FindByName(run.Template.bookmarks, entry.assetName),
+                    RollBookmark = RollBookmark,
+                });
+                continue;
+            }
+
+            var modifier = FindByName(run.Template.tileModifiers, entry.assetName);
+            if (modifier == null) continue;
+
+            offers.Add(new ModifierOffer
+            {
+                Modifier = modifier,
+                Target = run.TileAt(entry.targetTile) ?? RollTarget(),
+                TimesBought = entry.timesBought,
+                Growth = Mathf.Max(1f, run.Template.repeatPriceGrowth),
+                RollTarget = RollTarget,
+            });
+        }
+    }
+
+    private static T FindByName<T>(List<T> pool, string assetName) where T : UnityEngine.Object
+    {
+        if (pool == null || string.IsNullOrEmpty(assetName)) return null;
+        foreach (var asset in pool)
+            if (asset != null && asset.name == assetName) return asset;
+        return null;
+    }
+
     /// <summary>A random tile out of the run's bag — what the next purchase would land on.</summary>
     private TileSpec RollTarget() =>
         run.TileBag.Count == 0 ? null : run.TileBag[rng.Range(0, run.TileBag.Count)];
@@ -209,6 +316,7 @@ public class ShopScreen : MonoBehaviour
 
         offer.Deliver(run);
         Refresh();
+        Save();
     }
 
     private void Refresh()

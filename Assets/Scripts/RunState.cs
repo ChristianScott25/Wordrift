@@ -121,14 +121,199 @@ public class RunState
         return Current;
     }
 
-    /// <summary>The run is over — lost, or abandoned from the main menu.</summary>
-    public static void End() => Current = null;
+    /// <summary>
+    /// The run is over — lost, or abandoned from the main menu. Deleting the save
+    /// is part of ending it rather than a separate call, so a dead run can never
+    /// be resumed from a file somebody forgot to clean up.
+    /// </summary>
+    public static void End()
+    {
+        Current = null;
+        pendingRound = null;
+        pendingShop = null;
+        RunSave.Delete();
+    }
 
     public void AdvanceRound() => Round++;
+
+    // ---- Saving and resuming ------------------------------------------------
+    //
+    // THE STANDING RULE: state added to this class has to be captured below and
+    // restored in Resume, or it silently resets when the player continues. See
+    // RunSaveData — the failure mode is quiet, because a run with a reset counter
+    // still looks like a working run.
+
+    /// <summary>
+    /// The round or shop snapshot a resumed run hasn't consumed yet. Statics for
+    /// the same reason ModeSelection is one: the scene load that carries the
+    /// player back to where they were wipes every object reference on the way.
+    /// Taken ONCE, by whichever screen loads.
+    /// </summary>
+    private static RoundSnapshot pendingRound;
+
+    /// <summary>See pendingRound. Consumed by ShopScreen.</summary>
+    private static ShopSnapshot pendingShop;
+
+    public static RoundSnapshot TakePendingRound()
+    {
+        var pending = pendingRound;
+        pendingRound = null;
+        return pending;
+    }
+
+    public static ShopSnapshot TakePendingShop()
+    {
+        var pending = pendingShop;
+        pendingShop = null;
+        return pending;
+    }
+
+    /// <summary>
+    /// Everything the RUN remembers, ready for a screen to add its own state to
+    /// and hand to RunSave. The round and shop halves are filled in by whoever
+    /// is on screen — this only knows the run.
+    /// </summary>
+    public RunSaveData Capture(SaveLocation location)
+    {
+        var data = new RunSaveData
+        {
+            modeConfigName = Template == null ? "" : Template.name,
+            configFingerprint = fingerprint,
+            seedCode = SeedCode,
+            round = Round,
+            money = Money,
+            lastPayout = LastPayout,
+            location = location,
+        };
+
+        foreach (var tile in TileBag)
+        {
+            var entry = new TileSpecData { letters = tile.letters, baseScore = tile.baseScore };
+            if (tile.modifiers != null)
+                foreach (var modifier in tile.modifiers)
+                    if (modifier != null) entry.modifiers.Add(modifier.name);
+            data.tileBag.Add(entry);
+        }
+
+        foreach (var owned in Bookmarks)
+            if (owned?.bookmark != null) data.bookmarks.Add(owned.bookmark.name);
+
+        return data;
+    }
+
+    /// <summary>
+    /// Which entry of the bag each tile is. A tile's identity IS its position in
+    /// this list — that's what lets the board and the drawn-down bag be saved as
+    /// indices, and what makes a shop upgrade land on the same tile after a
+    /// resume. Built fresh per save; the bag is small and it can't go stale.
+    /// </summary>
+    public Dictionary<TileSpec, int> TileIndex()
+    {
+        var index = new Dictionary<TileSpec, int>(TileBag.Count);
+        for (int i = 0; i < TileBag.Count; i++) index[TileBag[i]] = i;
+        return index;
+    }
+
+    /// <summary>The bag entry at this index, or null when a save names one that isn't there.</summary>
+    public TileSpec TileAt(int index) =>
+        index >= 0 && index < TileBag.Count ? TileBag[index] : null;
+
+    /// <summary>
+    /// Could this save be picked up on this template as it is currently tuned?
+    /// The menu asks before it offers CONTINUE and Resume asks again before it
+    /// acts, so the button can never offer something the resume would refuse —
+    /// the same reason SelectionState publishes decisions rather than facts.
+    ///
+    /// False is the normal answer, not an error: it covers a save for another
+    /// mode and a save made before an Inspector tweak alike.
+    /// </summary>
+    public static bool CanResume(ModeConfig template, RunSaveData data) =>
+        template != null && data != null &&
+        template.name == data.modeConfigName &&
+        FingerprintOf(template) == data.configFingerprint;
+
+    /// <summary>
+    /// Rebuilds a run from a save, or returns null when the save doesn't fit this
+    /// template. A run that quietly ignored a retuned number would be worse than
+    /// one that's gone — see CanResume.
+    /// </summary>
+    public static RunState Resume(RogueDemoModeConfig template, RunSaveData data)
+    {
+        if (!CanResume(template, data))
+        {
+            Debug.Log("Saved run doesn't match this mode as it's currently tuned — discarding it.");
+            return null;
+        }
+
+        var run = new RunState(template, data);
+        Current = run;
+        pendingRound = data.location == SaveLocation.Game ? data.roundState : null;
+        pendingShop = data.location == SaveLocation.Shop ? data.shopState : null;
+        return run;
+    }
+
+    private static string FingerprintOf(ModeConfig template) =>
+        template == null ? "" : Rng.Hash(template.Fingerprint()).ToString("x16");
+
+    // Taken once, when the run starts. Building it walks the whole config and
+    // every asset it points at, and Capture runs after every single word — a
+    // couple of dozen kilobytes of throwaway strings per move is not worth
+    // paying for a value that cannot change while the run is being played. In
+    // the editor a mid-play tweak isn't picked up here, which is right: the
+    // fingerprint only ever matters ACROSS sessions, and the next launch
+    // recomputes it and refuses the save exactly as intended.
+    private readonly string fingerprint;
+
+    /// <summary>
+    /// Finds an authored asset a save named, by asset file name, in the pool the
+    /// mode config already lists. Resolving through the config rather than a
+    /// global registry means there is nothing to keep in sync — the cost being
+    /// that an asset a run somehow gained from OUTSIDE the mode's pool couldn't
+    /// come back. Nothing hands one out today.
+    /// </summary>
+    private static T Resolve<T>(List<T> pool, string assetName) where T : Object
+    {
+        if (pool == null || string.IsNullOrEmpty(assetName)) return null;
+        foreach (var asset in pool)
+            if (asset != null && asset.name == assetName) return asset;
+
+        Debug.LogWarning($"Saved run refers to '{assetName}', which isn't in this mode's pool — dropping it.");
+        return null;
+    }
+
+    /// <summary>Rebuilds a run from a save. See Resume, which is the way in.</summary>
+    private RunState(RogueDemoModeConfig template, RunSaveData data)
+    {
+        Template = template;
+        fingerprint = FingerprintOf(template);
+        SeedCode = data.seedCode;
+        Round = Mathf.Max(1, data.round);
+        Money = Mathf.Max(0, data.money);
+        LastPayout = Mathf.Max(0, data.lastPayout);
+
+        // Rebuilt by value, in order: the indices the board and the bag were
+        // saved as only mean anything against this list, so its order is part of
+        // the save format.
+        foreach (var entry in data.tileBag)
+        {
+            var spec = new TileSpec { letters = entry.letters, baseScore = entry.baseScore };
+            if (entry.modifiers != null)
+                foreach (var name in entry.modifiers)
+                    spec.AddModifier(Resolve(template.tileModifiers, name));
+            TileBag.Add(spec);
+        }
+
+        foreach (var name in data.bookmarks)
+        {
+            var bookmark = Resolve(template.bookmarks, name);
+            if (bookmark != null) Bookmarks.Add(new BookmarkSpec(bookmark));
+        }
+    }
 
     private RunState(RogueDemoModeConfig template)
     {
         Template = template;
+        fingerprint = FingerprintOf(template);
 
         // A fresh seed per run. Losing and pressing PLAY AGAIN starts a NEW
         // run, so it gets a new one — replaying a seed will be something the
