@@ -154,7 +154,10 @@ public class GameSession : MonoBehaviour
         }
         board.Restore(layout);
 
-        Score = saved.score;
+        // Clamped on the way in as well as on the way up: an older save could
+        // hold a score written before the overflow was fixed, and resuming a
+        // negative one would keep it negative for the rest of the round.
+        Score = ScoreLimits.Clamp((long)saved.score);
         wordsFound = saved.wordsFound;
         bestWord = saved.bestWord ?? "";
         bestWordPoints = saved.bestWordPoints;
@@ -358,7 +361,7 @@ public class GameSession : MonoBehaviour
         GameEvents.RaiseWordSubmitted(result);
         yield return new WaitForSeconds(ScoreTallyTiming.For(result.StepCount));
 
-        Score += result.Points;
+        Score = ScoreLimits.Clamp((long)Score + result.Points);
         mode.OnWordAccepted(result);
         GameEvents.RaiseScoreChanged(Score);
         board.RemoveTiles(chain);

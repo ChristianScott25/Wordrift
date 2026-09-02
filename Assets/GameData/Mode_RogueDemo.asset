@@ -43,7 +43,7 @@ MonoBehaviour:
   roundTargets: 1e0000002d00000041000000
   targetGrowth: 1.5
   targetScore: 30
-  tileBagSize: 52
+  tileBagSize: 104
   librarians:
   - {fileID: 11400000, guid: 8341f942997904750a1fcd1048323ae3, type: 2}
   - {fileID: 11400000, guid: 9d2ddf13d0e214832b672a18d8a2497c, type: 2}

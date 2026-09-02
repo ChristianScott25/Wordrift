@@ -24,7 +24,8 @@ public struct ScorePair
     /// </summary>
     public int WordMultiplier;
 
-    public int Total => Mathf.RoundToInt(Points * Mult);
+    /// <summary>The two numbers multiplied — saturated, never wrapped. See ScoreLimits.</summary>
+    public int Total => ScoreLimits.Clamp((double)Points * Mult);
 }
 
 /// <summary>The outcome of one submitted chain.</summary>

@@ -40,8 +40,12 @@ public class ScoreCalculator
     /// </summary>
     public ScorePair Base(IReadOnlyList<Tile> chain)
     {
-        int points = 0;
-        int wordMultiplier = 1;
+        // Both running totals are long, and saturated at every step: a tile can
+        // carry any number of modifiers and they compound, so 3W bought enough
+        // times is 3^n — which wraps an int and turns the score NEGATIVE.
+        // See ScoreLimits.
+        long points = 0;
+        long wordMultiplier = 1;
 
         foreach (var tile in chain)
         {
@@ -52,17 +56,22 @@ public class ScoreCalculator
             // happens, and it's the only place letter modifiers are applied.
             // The tile carries its own base worth (TileSpec.baseScore), so a
             // specific tile's value can differ from its letter's usual one.
-            points += TileModifier.ApplyLetterModifiers(tile.LetterPoints, tile.Modifiers);
+            points = ScoreLimits.Clamp(
+                points + TileModifier.ApplyLetterModifiers(tile.LetterPoints, tile.Modifiers));
 
+            // Not floored at 1: a modifier returning 0 zeroing the word is a
+            // legitimate thing to build later, and Clamp already handles a
+            // negative by flooring at 0 rather than wrapping.
             foreach (var modifier in tile.Modifiers)
-                if (modifier != null) wordMultiplier *= modifier.WordMultiplier;
+                if (modifier != null)
+                    wordMultiplier = ScoreLimits.Clamp(wordMultiplier * modifier.WordMultiplier);
         }
 
         return new ScorePair
         {
-            Points = points * wordMultiplier,
-            Mult = config.LengthMultiplier(chain.Count),
-            WordMultiplier = wordMultiplier,
+            Points = ScoreLimits.Clamp(points * wordMultiplier),
+            Mult = ScoreLimits.ClampMult(config.LengthMultiplier(chain.Count)),
+            WordMultiplier = (int)wordMultiplier,
         };
     }
 
@@ -97,7 +106,11 @@ public class ScoreCalculator
         if (!Mathf.Approximately(config.scoreMultiplier, 1f))
             ctx.MultiplyMult(config.scoreMultiplier, config.displayName);
 
-        int total = Mathf.RoundToInt(ctx.Points * ctx.Mult);
+        // double, not float: Points can be a billion and Mult a million, and
+        // float loses the low digits of that long before it overflows. The
+        // clamp is what stops the cast wrapping — a float-to-int conversion out
+        // of range is undefined in C#, and in practice lands on int.MinValue.
+        int total = ScoreLimits.Clamp((double)ctx.Points * ctx.Mult);
 
         return new WordResult
         {

@@ -133,24 +133,49 @@ public class ShopScreen : MonoBehaviour
         public abstract ShopOfferData Capture(Dictionary<TileSpec, int> tileIndex);
     }
 
-    /// <summary>A tile upgrade, landing on a random bag tile rolled up front.</summary>
+    /// <summary>
+    /// A tile upgrade, landing on a random bag tile rolled up front.
+    ///
+    /// A tile can only hold so many modifiers (ModeConfig.maxModifiersPerTile),
+    /// so the roll only ever returns one with room. When the whole bag is full
+    /// it returns null, which is this row's "sold out" — the same state the
+    /// bookmark row uses when every bookmark is owned, handled the same way.
+    /// </summary>
     private class ModifierOffer : Offer
     {
         public TileModifier Modifier;
         public TileSpec Target;    // the bag tile this purchase would gild
         public int TimesBought;    // this visit only — that's what escalates the price
         public float Growth = 1.5f;
+        public int ModifierLimit;  // 0 = no limit
         public System.Func<TileSpec> RollTarget;
 
-        public override bool InStock => Target != null;
-        public override int Price => Mathf.RoundToInt(Modifier.price * Mathf.Pow(Growth, TimesBought));
+        // Both halves matter: no tile to gild, or a tile that's since filled up.
+        // Buy checks this BEFORE taking money, which is what makes Deliver's own
+        // guard unreachable rather than a way to be charged for nothing.
+        public override bool InStock => Target != null && Target.CanAddModifier(ModifierLimit);
+        // Compounding, so it overflows an int given enough re-buys in one
+        // visit — and a wrapped price reads as NEGATIVE, which TrySpend refuses
+        // with no explanation. Saturated instead.
+        public override int Price =>
+            ScoreLimits.Clamp((double)Modifier.price * Mathf.Pow(Growth, TimesBought));
 
         public override string Label =>
             $"{Modifier.badgeLabel} → {Target.letters.ToUpperInvariant()}     ${Price}";
 
         public override void Deliver(RunState run)
         {
-            Target.AddModifier(Modifier);
+            // Unreachable: InStock has already said this tile has room, and Buy
+            // checks it before spending. Loud rather than silent, because by the
+            // time we're here the money is GONE — a quiet return would charge
+            // the player for nothing.
+            if (!Target.AddModifier(Modifier, ModifierLimit))
+            {
+                Debug.LogError($"Bought {Modifier.name} for a tile that couldn't take it — " +
+                               "the player has been charged and given nothing.");
+                return;
+            }
+
             TimesBought++;
             Target = RollTarget();   // the next one lands on a different tile
         }
@@ -217,6 +242,7 @@ public class ShopScreen : MonoBehaviour
                     Modifier = modifier,
                     Target = RollTarget(),
                     Growth = Mathf.Max(1f, run.Template.repeatPriceGrowth),
+                    ModifierLimit = run.Template.maxModifiersPerTile,
                     RollTarget = RollTarget,
                 });
             }
@@ -263,12 +289,19 @@ public class ShopScreen : MonoBehaviour
             var modifier = FindByName(run.Template.tileModifiers, entry.assetName);
             if (modifier == null) continue;
 
+            // A saved target that's since filled up (it can't within one visit,
+            // but a save is not one visit) is re-rolled rather than restored —
+            // otherwise the row would offer a purchase Deliver would refuse.
+            var target = run.TileAt(entry.targetTile);
+            if (target != null && !target.CanAddModifier(run.Template.maxModifiersPerTile)) target = null;
+
             offers.Add(new ModifierOffer
             {
                 Modifier = modifier,
-                Target = run.TileAt(entry.targetTile) ?? RollTarget(),
+                Target = target ?? RollTarget(),
                 TimesBought = entry.timesBought,
                 Growth = Mathf.Max(1f, run.Template.repeatPriceGrowth),
+                ModifierLimit = run.Template.maxModifiersPerTile,
                 RollTarget = RollTarget,
             });
         }
@@ -282,9 +315,25 @@ public class ShopScreen : MonoBehaviour
         return null;
     }
 
-    /// <summary>A random tile out of the run's bag — what the next purchase would land on.</summary>
-    private TileSpec RollTarget() =>
-        run.TileBag.Count == 0 ? null : run.TileBag[rng.Range(0, run.TileBag.Count)];
+    /// <summary>
+    /// A random tile out of the run's bag that still has room for a modifier —
+    /// what the next purchase would land on. Null when every tile is full,
+    /// which reads as "sold out" and takes the row off the shelf.
+    ///
+    /// Deliberately rolls over the ELIGIBLE tiles rather than rolling over the
+    /// whole bag and retrying: a retry loop's draw count depends on how full the
+    /// bag is, and the shop's stream position is saved.
+    /// </summary>
+    private TileSpec RollTarget()
+    {
+        int limit = run.Template.maxModifiersPerTile;
+
+        var available = new List<TileSpec>();
+        foreach (var tile in run.TileBag)
+            if (tile != null && tile.CanAddModifier(limit)) available.Add(tile);
+
+        return available.Count == 0 ? null : available[rng.Range(0, available.Count)];
+    }
 
     /// <summary>
     /// A random bookmark the run doesn't own yet, or null when it owns every one

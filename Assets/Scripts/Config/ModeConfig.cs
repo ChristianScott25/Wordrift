@@ -50,6 +50,13 @@ public abstract class ModeConfig : ScriptableObject
              "shop draws from here). Nothing spawns with these on its own.")]
     public List<TileModifier> tileModifiers = new();
 
+    [Tooltip("How many modifiers one tile may carry. A tile that's full stops " +
+             "being a target the shop can roll, and when NO tile can take another " +
+             "the upgrade rows disappear. It's a display limit as much as a " +
+             "balance one — the badges fan across the top of the tile and there " +
+             "is only so much tile. 0 removes the limit.")]
+    [Min(0)] public int maxModifiersPerTile = 3;
+
     [Header("Bookmarks")]
     [Tooltip("The pool of bookmarks this mode's shop can offer. A run can own each " +
              "at most once, and an empty list simply means no bookmark is for sale.")]

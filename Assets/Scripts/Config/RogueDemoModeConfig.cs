@@ -52,11 +52,11 @@ public class RogueDemoModeConfig : ModeConfig
     [Header("Tile bag")]
     [Tooltip("How many tiles a run starts with. The Letter Set's weights are " +
              "shared out across this total, with at least one of every letter — " +
-             "so 98 is a full Scrabble bag and 52 is about half of one. The " +
+             "so 98 is a full Scrabble bag and 104 is a little over one. The " +
              "board's opening fill is paid for out of this, and once it's empty " +
              "tiles stop falling for the rest of the round. The full bag returns " +
              "every round.")]
-    [Min(1)] public int tileBagSize = 52;
+    [Min(1)] public int tileBagSize = 104;
 
     [Header("Librarians")]
     [Tooltip("The pool of librarians a run can meet. Which one turns up is rolled " +
@@ -91,6 +91,13 @@ public class RogueDemoModeConfig : ModeConfig
              "shop visit. 1.5 = $5, then $8, then $11. Resets every visit.")]
     [Min(1f)] public float repeatPriceGrowth = 1.5f;
 
+    [Tooltip("The most one cleared round may pay, whatever it scored. A ceiling on " +
+             "the payout, not on the score: it stops a runaway round buying out the " +
+             "shop in one visit, and stops a broken one paying a nonsense number. " +
+             "Applied LAST, after the librarian's multiplier — a librarian round " +
+             "that already earned the cap is paid the cap. 0 removes the ceiling.")]
+    [Min(0)] public int maxRoundPayout = 200;
+
     /// <summary>
     /// What clearing a round pays. The seam every later payout idea hangs off —
     /// interest on savings, a flat per-round purse, bookmarks that pay out — so
@@ -104,9 +111,16 @@ public class RogueDemoModeConfig : ModeConfig
     /// </param>
     public int RewardFor(int score, int movesLeft, float payoutMultiplier = 1f)
     {
-        int earned = Mathf.Max(0, score) / Mathf.Max(1, pointsPerCoin) +
-                     Mathf.Max(0, movesLeft) * Mathf.Max(0, coinsPerUnusedMove);
-        return Mathf.RoundToInt(earned * Mathf.Max(0f, payoutMultiplier));
+        // long, then double: score is already saturated at a billion (see
+        // ScoreLimits), and a payout multiplier on top of that overflows an int
+        // long before it overflows either of these.
+        long earned = (long)Mathf.Max(0, score) / Mathf.Max(1, pointsPerCoin) +
+                      (long)Mathf.Max(0, movesLeft) * Mathf.Max(0, coinsPerUnusedMove);
+
+        double paid = earned * (double)Mathf.Max(0f, payoutMultiplier);
+        if (maxRoundPayout > 0 && paid > maxRoundPayout) paid = maxRoundPayout;
+
+        return ScoreLimits.Clamp(paid);
     }
 
     /// <summary>The score target for a given 1-based round of a run.</summary>
@@ -114,14 +128,17 @@ public class RogueDemoModeConfig : ModeConfig
     {
         round = Mathf.Max(1, round);
 
+        // Saturated like every other score number: compounding growth passes
+        // int.MaxValue somewhere around round 60, and an overflowed target
+        // would come back NEGATIVE — which reads as "already cleared".
         if (roundTargets != null && roundTargets.Length > 0)
         {
             if (round <= roundTargets.Length) return roundTargets[round - 1];
             int last = roundTargets[roundTargets.Length - 1];
-            return Mathf.RoundToInt(last * Mathf.Pow(targetGrowth, round - roundTargets.Length));
+            return ScoreLimits.Clamp((double)last * Mathf.Pow(targetGrowth, round - roundTargets.Length));
         }
 
-        return Mathf.RoundToInt(targetScore * Mathf.Pow(targetGrowth, round - 1));
+        return ScoreLimits.Clamp((double)targetScore * Mathf.Pow(targetGrowth, round - 1));
     }
 
     public override GameMode CreateMode() => new RogueDemoMode(this);

@@ -29,17 +29,38 @@ public class TileSpec
 
     [UnityEngine.Tooltip("Modifiers this tile carries permanently, e.g. a bought 2L tile.")]
     // The ONLY way a tile gets a modifier: it's part of the tile, applied by an
-    // upgrade, and a tile can hold several (scoring walks them in order; the
-    // badge currently only shows the last one). Wild tiles are an open design
-    // question — a special letters value ("?") or a modifier — not decided here.
+    // upgrade, and a tile can hold several — scoring walks them in order and the
+    // tile draws one badge each. How MANY it may hold is a mode's rule
+    // (ModeConfig.maxModifiersPerTile), passed in rather than known here: Core
+    // doesn't read configs. Wild tiles are an open design question — a special
+    // letters value ("?") or a modifier — not decided here.
     public List<TileModifier> modifiers;
 
-    /// <summary>Upgrades this tile with another modifier. How a shop will gild an E.</summary>
-    public void AddModifier(TileModifier modifier)
+    /// <summary>How many modifiers this tile carries. 0 for a plain tile.</summary>
+    public int ModifierCount => modifiers == null ? 0 : modifiers.Count;
+
+    /// <summary>
+    /// Is there room for another? The limit arrives as an argument because it
+    /// belongs to the MODE, not to the tile — and 0 means no limit, so a caller
+    /// that has no rule can pass nothing and get the old behaviour.
+    /// </summary>
+    public bool CanAddModifier(int limit = 0) => limit <= 0 || ModifierCount < limit;
+
+    /// <summary>
+    /// Upgrades this tile with another modifier. How the shop gilds an E.
+    ///
+    /// Returns false when the tile is full, and the caller must NOT have taken
+    /// money — the shop only ever offers tiles that pass CanAddModifier, so a
+    /// false here means something upstream is wrong, not that a purchase fell
+    /// through. This is the single place a tile changes, so it's the only honest
+    /// place to enforce the limit.
+    /// </summary>
+    public bool AddModifier(TileModifier modifier, int limit = 0)
     {
-        if (modifier == null) return;
+        if (modifier == null || !CanAddModifier(limit)) return false;
         modifiers ??= new List<TileModifier>();
         modifiers.Add(modifier);
+        return true;
     }
 
     /// <summary>The single character this tile plays as, until multi-letter lands.</summary>

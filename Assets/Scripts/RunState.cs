@@ -159,7 +159,11 @@ public class RunState
     public void AddMoney(int amount)
     {
         if (amount <= 0) return;
-        Money += amount;
+        // Saturating, for the same reason the score is (see ScoreLimits): a
+        // balance that wrapped would go NEGATIVE, and TrySpend would then refuse
+        // everything in the shop with no explanation. Cheap insurance —
+        // RogueDemoModeConfig.maxRoundPayout already bounds what one round pays.
+        Money = (int)System.Math.Min((long)Money + amount, int.MaxValue);
         LastPayout = amount;
     }
 

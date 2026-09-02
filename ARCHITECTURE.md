@@ -219,8 +219,10 @@ lowercase word per line.
   HUD prefabs drop-in with no wiring. Would need revisiting for split-screen or
   simultaneous boards.
 - **Stacked-modifier visuals.** A tile draws one badge per modifier, fanned
-  10% of a badge to the right and over the previous — a first pass so stacks
-  are visible, not the final treatment.
+  right across the top of the tile at `Tile.badgeSpacing`, squeezed closer when
+  they wouldn't otherwise fit inside it. Readable, and bounded by
+  `ModeConfig.maxModifiersPerTile` — but three badges reach most of the way
+  across a tile and sit over the letter, so it isn't the final treatment.
 - **Wild tiles.** Not designed yet: a special `TileSpec.letters` value ("?") or
   a `TileModifier` are both plausible. Decide before building.
 - **The HUD's one spare slot.** Round, target, bag AND money now share

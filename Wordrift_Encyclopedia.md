@@ -3,7 +3,7 @@
 > **The game, not the code.** How Wordrift is played, what the rules are, and what every
 > number currently is. `ARCHITECTURE.md` explains how it's built — this explains what it *is*.
 
-**Last updated:** 2026-08-31 · every run now has a seed, shown bottom-left; scoring is POINTS × MULT, walked through bookmark by bookmark
+**Last updated:** 2026-09-01 · librarians (boss rounds); the tile bag doubled to 104; a round pays at most $200; three modifiers to a tile; scores saturate instead of overflowing
 **Status:** playable demo in active design — the loop works end to end; the content doesn't exist yet
 
 ### How to read this
@@ -44,7 +44,7 @@ spend the money in a shop; go again against a higher number. Miss it once and th
 and you start again from nothing.
 
 The twist that makes it a roguelike rather than a word game with a timer: **you own your
-letters.** A run gives you a bag of 52 tiles, and the shop lets you permanently improve
+letters.** A run gives you a bag of 104 tiles, and the shop lets you permanently improve
 individual tiles inside it. The E you gild in round 1 is the same E that comes back to you in
 round 5.
 
@@ -229,6 +229,13 @@ they run in purchase order.
 mode-wide `scoreMultiplier`, currently ×1, takes its turn as one more step, so what the readout
 multiplies out is exactly what you're paid.)*
 
+**A word can't score more than a billion, and can't score less than nothing.** Multipliers
+stack without limit — nothing stops you buying a fourth 3W onto the same tile — so the numbers
+are held to a ceiling rather than allowed to run off the end of the counter and come back
+*negative*, which is what used to happen. Every intermediate number is capped the same way, so
+the ceiling can be reached but never passed. 🚧 A billion is a safety rail, not a design
+choice: if the game ever genuinely wants Balatro-scale numbers, this is the wall to move.
+
 > **Worked example.** `EYE` = E(1) + Y(4) + E(1) = **5 points**, three letters so **×1**.
 > Nothing owned: **5**.
 > Now own Vowel Fanatic (2 vowels beats 1 consonant → **+4 Mult**) and Bookend (starts and ends
@@ -273,9 +280,13 @@ The rules around them:
 
 - **No tile ever spawns with a modifier.** The only way a tile has one is that you bought it,
   and it lasts the rest of the run.
-- **A tile can carry several.** Letter multipliers stack in order (2L then 3L = ×6); word
-  multipliers all multiply together. A stacked tile draws one badge per modifier, fanned to the
-  right. 🚧 That fan is a first-pass visual, not the final treatment.
+- **A tile can carry up to three** *(`maxModifiersPerTile`)*. Letter multipliers stack in order
+  (2L then 3L = ×6); word multipliers all multiply together, so a tile with 3W 3W 3W is ×27 on
+  every word it appears in. A full tile stops being a target the shop can offer you, and if
+  every tile in your bag fills up the upgrade rows disappear from the shop entirely.
+- **A stacked tile draws one badge per modifier**, fanned right across the top of the tile.
+  🚧 A first-pass visual, not the final treatment — three badges reach most of the way across
+  and sit over the letter.
 - **The number in a tile's corner is always its BASE score.** A 2L on an E still reads "1" —
   the badge is what tells you it doubles. This is deliberate: one number on the tile, one
   meaning.
@@ -338,13 +349,13 @@ carries between runs**, and there's no meta-progression.
 
 ### Your tile bag
 
-You own a bag of **52 tiles** *(`tileBagSize`)* — about half a Scrabble set, mixed in
+You own a bag of **104 tiles** *(`tileBagSize`)* — a little over a Scrabble set, mixed in
 Scrabble's proportions.
 
 - Rounds draw from it **without replacement**. Once your E's are gone, no more E's arrive this
   round.
-- **The opening board is paid for out of the bag** — 25 cells means a round starts having
-  already spent nearly half of it, with 27 tiles held back to refill with.
+- **The opening board is paid for out of the bag** — 25 cells are dealt before your first
+  move, leaving 79 tiles held back to refill with.
 - **The full bag comes back at the start of every round.** Playing tiles doesn't lose them;
   the bag belongs to the run, not the round.
 - When it runs dry, tiles stop falling and the board plays down toward empty.
@@ -352,23 +363,22 @@ Scrabble's proportions.
 
 **How the mix is decided.** The letter catalog's weights are a *ratio*, and the bag size is a
 separate number; the bag is built by sharing the ratio out over that many tiles, **with a
-floor of at least one of every letter**. At 98 that reproduces Scrabble exactly. At 52 the
-floor is what bends it: J K Q X Z can't halve, so they take five tiles where their share says
-two and a half, and the common letters pay the difference.
+floor of at least one of every letter**. At 98 that reproduces Scrabble exactly. Above 98
+the floor stops mattering and the mix simply tracks the ratio.
 
-| | A | E | I | O | U | N R T | D L S | G | J K Q X Z |
-|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| Scrabble (98) | 9 | 12 | 9 | 8 | 4 | 6 | 4 | 3 | 1 each |
-| **Wordrift (52)** | **5** | **6** | **5** | **4** | **2** | **3** | **2** | **1** | **1 each** |
+| | A | E | I | O | U | N | R | T | D L S | G | J K Q X Z |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| Scrabble (98) | 9 | 12 | 9 | 8 | 4 | 6 | 6 | 6 | 4 | 3 | 1 each |
+| **Wordrift (104)** | **10** | **13** | **10** | **9** | **4** | **7** | **7** | **6** | **4** | **3** | **1 each** |
 
-That holds the vowel share at 42% — the same as a real Scrabble bag — which is why the size
-is 52 and not a flat 49. A true half would have dropped it to 39% and played noticeably drier.
+Vowel share: **44%**, against 43% for a real Scrabble bag. Slightly wetter, and the reason is
+the rares — J K Q X Z are pinned at one apiece by the floor, so every extra tile above 98 goes
+to a common letter and the vowels take their share of it.
 
-⚠️ **The bag, not the move counter, is now what usually ends a round.** 52 tiles is at most
-~16 three-letter words, against a 20-word allowance — so most rounds will end on *out of
-tiles* rather than *out of moves*. That's a real shift in what the round is about, and one
-Inspector field either way: raise `tileBagSize` to make moves matter again, or lower `moves`
-to make the allowance bite first.
+⚠️ **Doubling the bag handed the round back to the move counter.** 104 tiles is roughly 34
+three-letter words against a 20-word allowance, so a round now runs out of *moves* well before
+it runs out of *tiles* — the reverse of where the 52-tile bag left it. Running dry is now the
+exception rather than the norm. One Inspector field either way.
 
 🎯 The bag is the run's real character sheet, and the reason the shop matters. Making it
 *smaller* (fewer, better tiles) or *bigger* is an obvious future upgrade axis — `tileBagSize`
@@ -487,6 +497,12 @@ Earned per cleared round, kept for the whole run, spent in the shop.
 > **Worked example.** You clear round 1 with 33 points, on your 4th word of 20.
 > `33 ÷ 10 = $3`, plus `16 unused moves = $16`. **Payout: $19.**
 
+**A round pays at most $200** *(`maxRoundPayout`)*, whatever it scored. The cap is applied
+**last** — after a librarian round's doubling — so a librarian round that already earned $200
+on its own is paid $200, not $400. 🚧 The number is a ceiling put there to stop a runaway
+round buying out the shop in one visit, not a tuned part of the economy; it should end up well
+above anything a fair round can reach, and today it isn't far above one.
+
 What that means in play:
 
 - Because the round ends the moment you hit the target, the *points* half is roughly
@@ -532,10 +548,14 @@ and shown on the button, so you can see what you're buying:
    VOWEL FANATIC    $14     [ BUY ]  ← gone once you own them all
 ```
 
-You never *choose* the tile. After each purchase that row rolls a different one.
+You never *choose* the tile. After each purchase that row rolls a different one — always one
+that still has room for another modifier, so a tile already at its limit of three can't be
+offered to you. **When no tile in your bag can take another, the upgrade rows disappear** the
+same way the bookmark row does once you own them all.
 
-🚧 **Re-buying the same option in one visit costs more each time** — ×1.5, rounded: $5 → $8 →
-$12. Other rows are unaffected, and prices reset on the next visit.
+🚧 **Re-buying the same option in one visit costs more each time** — ×1.5 compounding from the
+base price, rounded: $5 → $8 → $11 → $17. Other rows are unaffected, and prices reset on the
+next visit.
 
 **A fifth row sells one bookmark** — a random one you don't already own, picked when the shop
 opens and fixed for that visit. Buy it and the row rolls a different one. **When you own every
@@ -582,10 +602,12 @@ second mode would slot into; there just isn't one.*
 | Librarian round pays | ×2 | `Mode_RogueDemo.asset` |
 | The Grandiloquent's minimum | 5 letters | `Librarian_Grandiloquent.asset` |
 | The Redactor's discard limit | 0 tiles | `Librarian_Redactor.asset` |
-| Tile bag size | 52 tiles (~half a Scrabble set) | `Mode_RogueDemo.asset` |
+| Tile bag size | 104 tiles (~one Scrabble set) | `Mode_RogueDemo.asset` |
+| Modifiers per tile | 3 (0 = no limit) | `Mode_RogueDemo.asset` |
 | Letter values & mix | Scrabble proportions, floor of 1 each | `LetterSet_Scrabble.asset` |
 | Points per $1 | 10 | `Mode_RogueDemo.asset` |
 | $ per unused move | 1 | `Mode_RogueDemo.asset` |
+| Max payout per round | $200 (0 = no cap) | `Mode_RogueDemo.asset` |
 | Re-buy price growth | ×1.5 | `Mode_RogueDemo.asset` |
 | Modifier prices | 5 / 9 / 14 / 22 | each asset in `GameData/Modifiers/` |
 | Bookmark prices | 12 / 10 / 14 | each asset in `GameData/Bookmarks/` |
@@ -594,6 +616,7 @@ second mode would slot into; there just isn't one.*
 | Vowel Fanatic bonus | +4 Mult | `VowelFanatic.asset` |
 | Bookend multiplier | ×2 Mult | `Bookend.asset` |
 | Score walk-through pace | 0.45s a step, 0.35s to finish | `ScoreTallyTiming` (code, not an asset) |
+| Score ceiling | 1,000,000,000 points, ×1,000,000 mult | `ScoreLimits` (code, not an asset) |
 
 ---
 
@@ -632,6 +655,10 @@ rounds every third round, three of them, paying double (§6).
 - **Bookmark order can't be changed.** It now affects your score (§3), but the shop decides it.
 - **Payouts reward speed, not scoring.** Unused moves pay far more than points do — clearing
   fast beats clearing big. Tied to the run-length question above.
+- **The $200 payout cap is closer than it looks.** A librarian round cleared fast already pays
+  around $70; two doublings of the current numbers would put ordinary rounds against the
+  ceiling, at which point the cap stops being a safety rail and starts being balance. Worth
+  re-checking whenever `pointsPerCoin` or `coinsPerUnusedMove` move.
 - **Entering a seed** — every run has one and shows it, but there's nowhere to type one in yet,
   so a run can be reported and reproduced by a developer but not replayed by a player.
 - **A board that's playable-looking but dead** — full of tiles that spell nothing (see §5).

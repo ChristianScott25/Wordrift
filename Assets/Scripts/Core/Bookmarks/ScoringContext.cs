@@ -58,11 +58,17 @@ public class ScoringContext
     public bool IsRepeat =>
         WordsThisRound != null && Word != null && WordsThisRound.Contains(Word);
 
-    /// <summary>Adds flat points. "DEJA VU  +10 POINTS".</summary>
+    /// <summary>
+    /// Adds flat points. "DEJA VU  +10 POINTS".
+    ///
+    /// Saturated rather than wrapped, and floored at 0 — so a bookmark that
+    /// takes points away can zero a word but never make it worth less than
+    /// nothing. See ScoreLimits.
+    /// </summary>
     public void AddPoints(int amount, string source)
     {
         if (amount == 0) return;
-        Points += amount;
+        Points = ScoreLimits.Clamp((long)Points + amount);
         Record(source, $"{Signed(amount)} POINTS", ScoreSide.Points);
     }
 
@@ -74,7 +80,7 @@ public class ScoringContext
     public void AddMult(float amount, string source)
     {
         if (Mathf.Approximately(amount, 0f)) return;
-        Mult += amount;
+        Mult = ScoreLimits.ClampMult(Mult + amount);
         Record(source, $"{Signed(amount)} MULT", ScoreSide.Mult);
     }
 
@@ -82,7 +88,7 @@ public class ScoringContext
     public void MultiplyMult(float factor, string source)
     {
         if (Mathf.Approximately(factor, 1f)) return;
-        Mult *= factor;
+        Mult = ScoreLimits.ClampMult(Mult * factor);
         Record(source, $"x{Trim(factor)} MULT", ScoreSide.Mult);
     }
 

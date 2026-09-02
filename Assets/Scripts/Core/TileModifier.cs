@@ -36,8 +36,12 @@ public abstract class TileModifier : ScriptableObject
     // on its TileSpec (an upgrade the run applied), never by a random roll at
     // spawn. Which modifiers a mode OFFERS is ModeConfig.tileModifiers' job.
 
-    /// <summary>Applied to this tile's own letter value.</summary>
-    public virtual int ModifyLetterScore(int points) => points;
+    /// <summary>
+    /// Applied to this tile's own letter value. Takes and returns a long because
+    /// a tile can carry any number of these and they compound — 2L twice is x4,
+    /// thirty times is more than an int holds. See ScoreLimits.
+    /// </summary>
+    public virtual long ModifyLetterScore(long points) => points;
 
     /// <summary>Multiplies the score of the whole word this tile is part of.</summary>
     public virtual int WordMultiplier => 1;
@@ -46,12 +50,17 @@ public abstract class TileModifier : ScriptableObject
     /// Runs a letter's value through a tile's modifiers, in order. Shared so the
     /// number printed on a tile and the number ScoreCalculator adds up can't drift
     /// apart — change how letter modifiers stack here and both follow.
+    ///
+    /// Saturated after EVERY modifier, not once at the end: the clamp is what
+    /// guarantees the next multiply has a bounded input, so no product on the
+    /// way through can overflow even a long.
     /// </summary>
-    public static int ApplyLetterModifiers(int points, IReadOnlyList<TileModifier> modifiers)
+    public static long ApplyLetterModifiers(long points, IReadOnlyList<TileModifier> modifiers)
     {
-        if (modifiers == null) return points;
+        if (modifiers == null) return ScoreLimits.Clamp(points);
         for (int i = 0; i < modifiers.Count; i++)
-            if (modifiers[i] != null) points = modifiers[i].ModifyLetterScore(points);
-        return points;
+            if (modifiers[i] != null)
+                points = ScoreLimits.Clamp(modifiers[i].ModifyLetterScore(points));
+        return ScoreLimits.Clamp(points);
     }
 }

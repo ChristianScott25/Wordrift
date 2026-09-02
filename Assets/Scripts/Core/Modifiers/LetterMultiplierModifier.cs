@@ -6,5 +6,5 @@ public class LetterMultiplierModifier : TileModifier
 {
     [Min(1)] public int multiplier = 2;
 
-    public override int ModifyLetterScore(int points) => points * multiplier;
+    public override long ModifyLetterScore(long points) => points * multiplier;
 }

@@ -150,7 +150,10 @@ public class ScoreTallyWidget : MonoBehaviour
             multLabel.text = ScoringContext.Trim(mult);
             multLabel.color = restingColor;
         }
-        if (totalLabel != null) totalLabel.text = Mathf.RoundToInt(points * mult).ToString();
+        // Saturated the same way ScoreCalculator.Evaluate is, and for the same
+        // reason: this is the number the player WATCHES, so a wrapped one here
+        // would show the negative score even when the awarded one was fine.
+        if (totalLabel != null) totalLabel.text = ScoreLimits.Clamp((double)points * mult).ToString();
         if (stepLabel != null) stepLabel.text = step;
     }
 

@@ -63,6 +63,13 @@ public class Tile : MonoBehaviour
              "this is the other way to pull it off the letter.")]
     [Range(0.1f, 0.6f)][SerializeField] private float badgeSize = 0.38f;
 
+    [Tooltip("How far apart stacked badges sit, as a fraction of a badge's own " +
+             "width. 1 = touching but not overlapping; 0.7 leaves each one's " +
+             "label clear of the next. It's a PREFERENCE, not a promise: when " +
+             "the tile can't fit that many at this spacing they close up to " +
+             "whatever does fit, so badges can never hang off the tile.")]
+    [Range(0.1f, 1f)][SerializeField] private float badgeSpacing = 0.7f;
+
     [Tooltip("Nudge the labels toward the camera so they never sort behind the tile art.")]
     [FormerlySerializedAs("scoreDepthOffset")]
     [SerializeField] private float labelDepthOffset = 0.05f;
@@ -108,6 +115,15 @@ public class Tile : MonoBehaviour
     private Vector3 badgeAnchor;
     private float badgeUnit;
     private float spriteUnit = 1f;
+
+    // How far right the LAST badge's centre may sit before its edge leaves the
+    // tile. The fan is squeezed to fit inside this rather than allowed to
+    // overhang, which is why a tile carrying four badges still looks like a tile.
+    private float badgeFanRoom;
+
+    // Distance between badge centres, worked out from how many are actually
+    // being drawn — so it's set in ApplyModifierVisuals, not here.
+    private float badgeStep;
 
     // One circle+label pair per modifier shown. Index 0 is the authored pair
     // from the prefab; the rest are runtime clones of it, made only when a
@@ -215,6 +231,11 @@ public class Tile : MonoBehaviour
             bounds.max.y - badgeMargin - radius,
             0f);
         badgeUnit = badgeSize * spriteSize;
+
+        // Mirror of the anchor: the rightmost centre that keeps a full badge
+        // inside the same margin the first one respects.
+        badgeFanRoom = Mathf.Max(0f, (bounds.max.x - badgeMargin - radius) - badgeAnchor.x);
+
         spriteUnit = spriteSize;
     }
 
@@ -274,9 +295,12 @@ public class Tile : MonoBehaviour
     /// <summary>
     /// Modifiers show up as badges and nothing else — the tile body keeps its
     /// skin color, so a board full of multipliers stays readable. One badge per
-    /// modifier: stacks fan to the right, each 10% of a badge over and past the
-    /// last. A first pass so stacks are at least visible — the real treatment
-    /// is an open design question (see ARCHITECTURE.md).
+    /// modifier, fanned right from the top-left corner.
+    ///
+    /// The fan is spaced at badgeSpacing where that fits and SQUEEZED where it
+    /// doesn't, so the last badge always lands inside the tile however many a
+    /// tile ends up carrying. ModeConfig.maxModifiersPerTile is what keeps that
+    /// number sane — this is the backstop for when it isn't.
     /// </summary>
     private void ApplyModifierVisuals()
     {
@@ -291,6 +315,16 @@ public class Tile : MonoBehaviour
         int shown = 0;
         if (badgeCircles.Count > 0)
         {
+            // Counted before anything is placed: the spacing depends on how many
+            // there are, so the first badge can't be drawn until they're all known.
+            int count = 0;
+            foreach (var modifier in Modifiers)
+                if (modifier != null) count++;
+
+            badgeStep = count > 1
+                ? Mathf.Min(badgeSpacing * badgeUnit, badgeFanRoom / (count - 1))
+                : 0f;
+
             foreach (var modifier in Modifiers)
             {
                 if (modifier == null) continue;
@@ -321,7 +355,7 @@ public class Tile : MonoBehaviour
 
         var circle = badgeCircles[index];
         var text = badgeTexts[index];
-        var center = badgeAnchor + new Vector3(index * 0.1f * badgeUnit, 0f, 0f);
+        var center = badgeAnchor + new Vector3(index * badgeStep, 0f, 0f);
 
         // Each badge sorts two above the previous so its circle clears the
         // previous badge's label.
