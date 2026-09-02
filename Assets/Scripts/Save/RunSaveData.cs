@@ -57,6 +57,19 @@ public class RunSaveData
     /// <summary>Owned bookmarks by asset name, in slot order — which is scoring order.</summary>
     public List<string> bookmarks = new();
 
+    /// <summary>
+    /// The librarian this round is played against, by asset name. Empty on an
+    /// ordinary round, which is most of them.
+    /// </summary>
+    public string librarian = "";
+
+    /// <summary>
+    /// Librarians the run hasn't met yet, by asset name. Without this a resumed
+    /// run would start its no-repeat cycle over — the current round would look
+    /// perfectly right and the next three would be wrong.
+    /// </summary>
+    public List<string> librariansUnseen = new();
+
     /// <summary>The round in progress. Only meaningful when location is Game.</summary>
     public RoundSnapshot roundState;
 

@@ -171,6 +171,8 @@ You may throw away **5 tiles per round** *(`discardsPerRound`)*.
   the bag at the start of the next. Nothing is destroyed permanently.
 - The allowance **refills every round** and never carries over. Unused discards are worth
   nothing — unlike unused moves, which pay $1 each.
+- **A librarian can take it away.** The Redactor's whole rule is that this number is 0 for the
+  round — see §6.
 
 🎯 Discarding is what you do when the board won't give you a word: dump the four consonants
 strangling a corner and let something else fall in. It's also the only partial answer to a
@@ -403,6 +405,30 @@ expected to go long.)*
 **A round ends the instant the target is reached** *(`endOnTargetReached`)*, banking your
 unused words rather than playing them out.
 
+### Librarians
+
+**Every third round, someone is watching.** *(`librarianEveryRounds`)* A librarian round plays
+by one extra rule for that round only, announced on screen the whole time — their name, and
+what they've decided. Clear it and it **pays double** *(`librarianPayoutMultiplier`)*.
+
+| | Their rule | What it does to you |
+|---|---|---|
+| **The Grandiloquent** | Words must be **5 letters or longer** | Your reliable three-letter filler is gone. Every word has to be a real find. |
+| **The Cataloguer** | Every word must be a **different length** from every word before it | One 4-letter word per round, one 5, one 6. Tightens as you go, from both ends. |
+| **The Redactor** | **No discards** | Nothing changes about the scoring; the escape hatch is just shut. A bad board is yours to solve. |
+
+**A word they won't take can't be played at all.** It doesn't score zero and it doesn't cost a
+word — ENTER simply won't light up, and the reason is written under the word you selected
+("Too short — 5 letters or longer"). Nothing is spent finding out.
+
+**Which librarian turns up is part of your seed**, and **none repeats until you've met them
+all.** With three of them that means rounds 3, 6 and 9 are all different, and the cycle starts
+over at round 12 — where the same one *can* immediately reappear, since by then everyone has
+been seen.
+
+❓ Nothing warns you before the round begins — you find out when you get there. ❓ Nothing is
+harder about a librarian round other than the rule: the target is the round's usual target.
+
 ### How a round ends
 
 | Ending | What happened | Result |
@@ -415,6 +441,11 @@ That last one exists so a round can't stall forever with moves left and nothing 
 on. ❓ The softer version — tiles remain but no word can be made from them — still isn't
 *detected*, but it now has an exit: **discard your way out of it** (§3), up to five tiles a
 round. Whether five is enough to unstick a genuinely dead board is untested.
+
+⚠️ **Librarians make that softer version much likelier.** The Grandiloquent will refuse every
+word on a board that can only manage threes and fours, and The Redactor takes the discards
+away. On a librarian round with an empty bag and no legal word left, there is currently no way
+to end the round — see §11.
 
 **PLAY AGAIN starts a completely new run**: round 1, a stock bag, $0.
 
@@ -547,6 +578,10 @@ second mode would slot into; there just isn't one.*
 | Invalid word costs a move | n/a — can't be submitted | `Mode_RogueDemo.asset` |
 | Move counter turns red at | 3 left | `Mode_RogueDemo.asset` |
 | Round targets | 30 / 45 / 65, then ×1.5 | `Mode_RogueDemo.asset` |
+| Librarian every | 3 rounds | `Mode_RogueDemo.asset` |
+| Librarian round pays | ×2 | `Mode_RogueDemo.asset` |
+| The Grandiloquent's minimum | 5 letters | `Librarian_Grandiloquent.asset` |
+| The Redactor's discard limit | 0 tiles | `Librarian_Redactor.asset` |
 | Tile bag size | 52 tiles (~half a Scrabble set) | `Mode_RogueDemo.asset` |
 | Letter values & mix | Scrabble proportions, floor of 1 each | `LetterSet_Scrabble.asset` |
 | Points per $1 | 10 | `Mode_RogueDemo.asset` |
@@ -570,7 +605,8 @@ The board, tap-or-drag selection and the ENTER / DISCARD buttons · scoring with
 multipliers · the run (rounds, escalating
 targets, a persistent finite tile bag) · money · bookmarks (three of them, with a scoring pipeline
 built to take many more) · a placeholder shop that sells permanent tile upgrades and one
-bookmark a visit · runs that save and resume themselves (§6).
+bookmark a visit · runs that save and resume themselves (§6) · **librarians** — rule-warping
+rounds every third round, three of them, paying double (§6).
 
 ### 📋 Decided, not built
 
@@ -584,9 +620,15 @@ bookmark a visit · runs that save and resume themselves (§6).
 - **Wild tiles** — a special letter, or a modifier?
 - **Multi-letter tiles** ("QU") — the bag can hold them; nothing can play them.
 - **Gravity on a board with holes** — tiles currently fall *past* gaps instead of into them.
-- **How a run ends** — there's no boss round and no victory, so every run ends in failure.
-  Discussed and deliberately deferred on 2026-08-31; the open questions (run length, what a
-  boss round does, whether winning stops the run) are written up in `ROGUELIKE-IDEAS.md`.
+- **How a run ends** — librarians now give a run a rhythm, but there's still **no victory**, so
+  every run ends in failure. Run length and whether winning stops the run are still open; the
+  write-up is in `ROGUELIKE-IDEAS.md`.
+- ⚠️ **A librarian round can lock.** If the bag is empty, no legal word is left on the board and
+  the discards are gone (or The Redactor took them), nothing ends the round — moves only tick
+  down when a word is played. The exits on the table are a forfeit button, counting a dead board
+  as a loss, or detecting one. Undecided.
+- **What a librarian is called** — "librarian" is a placeholder noun, held in one config field so
+  it can become exams, critics or anything else without touching the game.
 - **Bookmark order can't be changed.** It now affects your score (§3), but the shop decides it.
 - **Payouts reward speed, not scoring.** Unused moves pay far more than points do — clearing
   fast beats clearing big. Tied to the run-length question above.

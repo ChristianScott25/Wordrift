@@ -45,6 +45,7 @@ public static class WordCrushSetup
         var shape = BuildBoardShape();
         RogueDemoModeSetup.Build(shape, letterSet, modifiers, null);
         TileSkinSetup.Build();
+        LibrarianSetup.Build();
         BuildTilePrefab();
         BuildHudPrefabs();
 
@@ -63,6 +64,7 @@ public static class WordCrushSetup
         WordActionsSetup.Run();
         ScoreTallySetup.Run();
         SeedWidgetSetup.Run();
+        RoundBannerSetup.Run();
         RegisterScenes();
 
         AssetDatabase.SaveAssets();

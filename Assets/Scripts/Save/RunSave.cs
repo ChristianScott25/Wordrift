@@ -17,7 +17,8 @@ public static class RunSave
     /// satisfy. Old saves are DISCARDED, not migrated — during a demo a lost run
     /// is cheaper than a migration path nobody will maintain.
     /// </summary>
-    public const int Version = 1;
+    // v2 (2026-09-01): added the round's librarian and the unseen pool.
+    public const int Version = 2;
 
     private const string FileName = "run.json";
 

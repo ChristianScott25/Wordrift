@@ -69,6 +69,22 @@ public abstract class GameMode
     /// <summary>Tiles were discarded. Spend the allowance here.</summary>
     public virtual void OnTilesDiscarded(int tileCount) { }
 
+    /// <summary>
+    /// Why a real word still can't be played right now, or null when it can —
+    /// the default, and the answer for every mode with no extra word rules.
+    ///
+    /// The session asks once, in RaiseSelection, and publishes the answer as a
+    /// DECISION (SelectionState.CanSubmit plus the reason to show): a widget
+    /// must never ask this itself, or the button and the rule will drift. Only
+    /// ever asked about words the dictionary has already accepted, so a rule
+    /// here is about what the ROUND allows, never about spelling.
+    ///
+    /// Returning a string both refuses the word and supplies the text explaining
+    /// it, because a refusal the player can't account for is a bug they'll report
+    /// as one.
+    /// </summary>
+    public virtual string Refuse(WordCheck check) => null;
+
     /// <summary>The session ends the round as soon as this turns true.</summary>
     public abstract bool IsRoundOver { get; }
 

@@ -37,6 +37,9 @@ public class RunState
     /// <summary>What the shop offers, and which tile an upgrade lands on.</summary>
     public const string ShopStream = "shop";
 
+    /// <summary>Which librarian a run meets on a librarian round.</summary>
+    public const string LibrarianStream = "librarian";
+
     /// <summary>
     /// The run's tiles. The full bag comes back at the start of every round —
     /// playing tiles never shrinks it (TileBag drains a copy of this list).
@@ -79,6 +82,65 @@ public class RunState
         if (bookmark == null || Owns(bookmark)) return false;
         Bookmarks.Add(new BookmarkSpec(bookmark));
         return true;
+    }
+
+    // ---- Librarians ----------------------------------------------------
+
+    /// <summary>
+    /// The librarian this round is played against, or null on an ordinary round.
+    /// Decided when the round number changes and then FIXED — asking again would
+    /// re-roll it, and a rule that changes while you're playing under it isn't a
+    /// rule.
+    /// </summary>
+    public Librarian Librarian { get; private set; }
+
+    /// <summary>
+    /// Librarians this run hasn't met yet. Drawing removes one, and running out
+    /// refills from the pool — so a run sees all of them before it sees any of
+    /// them twice. This is the whole no-repeat rule, and it's why the list is
+    /// run state rather than something derived from the round number.
+    /// </summary>
+    private readonly List<Librarian> librariansUnseen = new();
+
+    /// <summary>
+    /// Draws this round's librarian, or clears it on an ordinary round.
+    ///
+    /// The roll comes off the run's seed keyed to this round, so a seed always
+    /// meets the same librarians in the same order — but WHICH ones are still
+    /// available depends on the rounds before it, which is exactly what the
+    /// no-repeat rule means and exactly why librariansUnseen is saved.
+    ///
+    /// Note what this deliberately allows: when the last librarian is drawn and
+    /// the pool refills, the very next librarian round can draw the same one
+    /// again. Every one has still been seen before any repeats, which is the
+    /// rule as stated; forbidding the seam would need a memory of the last draw,
+    /// and it isn't obviously the better game.
+    /// </summary>
+    private void PickLibrarian()
+    {
+        Librarian = null;
+
+        if (Template == null) return;
+        int every = Template.librarianEveryRounds;
+        if (every <= 0 || Round % every != 0) return;
+
+        if (librariansUnseen.Count == 0) RefillLibrarians();
+        if (librariansUnseen.Count == 0) return;
+
+        // One draw, one throwaway stream. Nothing else takes from this stream,
+        // so there is no position to record — unlike the bag and the shop, this
+        // is answered once per round and then remembered as an answer.
+        int i = StreamFor(LibrarianStream).Range(0, librariansUnseen.Count);
+        Librarian = librariansUnseen[i];
+        librariansUnseen.RemoveAt(i);
+    }
+
+    private void RefillLibrarians()
+    {
+        librariansUnseen.Clear();
+        if (Template?.librarians == null) return;
+        foreach (var librarian in Template.librarians)
+            if (librarian != null) librariansUnseen.Add(librarian);
     }
 
     /// <summary>
@@ -134,7 +196,16 @@ public class RunState
         RunSave.Delete();
     }
 
-    public void AdvanceRound() => Round++;
+    /// <summary>
+    /// Moves the run on a round. Also the moment the next round's librarian is
+    /// decided — the round number is what says whether there is one, so the two
+    /// belong in one act rather than in whoever remembers to ask.
+    /// </summary>
+    public void AdvanceRound()
+    {
+        Round++;
+        PickLibrarian();
+    }
 
     // ---- Saving and resuming ------------------------------------------------
     //
@@ -197,6 +268,13 @@ public class RunState
 
         foreach (var owned in Bookmarks)
             if (owned?.bookmark != null) data.bookmarks.Add(owned.bookmark.name);
+
+        // Both halves, and both are load-bearing: the current one because it's
+        // the round's rule, and the unseen pool because it's the no-repeat rule.
+        // Saving only the first would resume the right round into the wrong run.
+        data.librarian = Librarian == null ? "" : Librarian.name;
+        foreach (var librarian in librariansUnseen)
+            if (librarian != null) data.librariansUnseen.Add(librarian.name);
 
         return data;
     }
@@ -308,6 +386,18 @@ public class RunState
             var bookmark = Resolve(template.bookmarks, name);
             if (bookmark != null) Bookmarks.Add(new BookmarkSpec(bookmark));
         }
+
+        // Read back, never re-rolled. Re-deriving the draw would give the same
+        // answer only while the pool and the roll order both stayed put, and the
+        // pool is exactly the thing a run spends.
+        foreach (var name in data.librariansUnseen)
+        {
+            var librarian = Resolve(template.librarians, name);
+            if (librarian != null) librariansUnseen.Add(librarian);
+        }
+        Librarian = string.IsNullOrEmpty(data.librarian)
+            ? null
+            : Resolve(template.librarians, data.librarian);
     }
 
     private RunState(RogueDemoModeConfig template)
@@ -333,5 +423,10 @@ public class RunState
 
         if (TileBag.Count == 0)
             Debug.LogError($"LetterSet '{template.letterSet.name}' has no positive weights, so the tile bag is empty.");
+
+        // Round 1 normally has no librarian; asking anyway keeps the rule in one
+        // place, so a config that made every round a librarian round would work.
+        RefillLibrarians();
+        PickLibrarian();
     }
 }

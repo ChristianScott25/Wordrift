@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -79,6 +80,15 @@ public struct ModeStatus
     /// for most modes, and simply not drawn if the HUD has no label wired.
     /// </summary>
     public string Extra;
+
+    /// <summary>
+    /// What makes THIS round different, when something does — the librarian's
+    /// name and power today. A separate slot from Extra rather than more text
+    /// crammed into it: Extra is a standing line the mode always shows, and this
+    /// appears only on the rounds that have something to announce, which is what
+    /// lets the HUD give it its own weight. Empty on an ordinary round.
+    /// </summary>
+    public string Banner;
 }
 
 /// <summary>
@@ -98,6 +108,14 @@ public struct SelectionState
     /// <summary>The selection is a word the session would accept.</summary>
     public bool CanSubmit;
 
+    /// <summary>
+    /// Why a word the dictionary knows still can't be played — a librarian's
+    /// rule, in the player's words. Empty when there's nothing to explain, which
+    /// includes every plain non-word: "that isn't a word" needs no caption, and
+    /// captioning it would bury the one message that's actually informative.
+    /// </summary>
+    public string RefusedReason;
+
     /// <summary>The selection can be discarded — non-empty, and within the allowance.</summary>
     public bool CanDiscard;
 
@@ -114,6 +132,33 @@ public struct SelectionState
 
     /// <summary>Nothing selected: the action buttons have nothing to act on.</summary>
     public bool IsEmpty => TileCount == 0;
+}
+
+/// <summary>
+/// A word, and enough of the round around it to judge whether it may be played.
+/// Asked of the mode — and through it of the round's librarian — every time the
+/// selection changes, and once more at the moment of submitting.
+///
+/// Widen this rather than the hook that takes it: a librarian that needs a fact
+/// it can't see here gets a new field, and every existing one keeps compiling.
+/// Same bargain as ScoringContext, for the same reason.
+/// </summary>
+public struct WordCheck
+{
+    /// <summary>The word the selection spells, lowercase. Never null in practice.</summary>
+    public string Word;
+
+    /// <summary>The tiles it's spelled from, in selection order.</summary>
+    public IReadOnlyList<Tile> Tiles;
+
+    /// <summary>
+    /// Words already accepted this round, NOT counting this one. Read it, never
+    /// add to it — this is the session's own set, handed over unwrapped.
+    /// </summary>
+    public IReadOnlyCollection<string> WordsThisRound;
+
+    /// <summary>Letters in the word. The tile count, and the thing most rules ask about.</summary>
+    public int Length => Word == null ? 0 : Word.Length;
 }
 
 /// <summary>Everything the game-over screen needs.</summary>

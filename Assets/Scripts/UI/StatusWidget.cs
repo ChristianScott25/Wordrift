@@ -28,6 +28,7 @@ public class StatusWidget : MonoBehaviour
     [SerializeField] private Color urgentColor = new Color(1f, 0.4f, 0.4f);
 
     private void OnEnable() => GameEvents.StatusChanged += OnStatusChanged;
+
     private void OnDisable() => GameEvents.StatusChanged -= OnStatusChanged;
 
     private void OnStatusChanged(ModeStatus status)

@@ -16,7 +16,11 @@ MonoBehaviour:
   boardShape: {fileID: 11400000, guid: 6e341966805774ebab975c05bfb0cacd, type: 2}
   letterSet: {fileID: 11400000, guid: 6d97dafb14cc54f7a8ae45fe2c470957, type: 2}
   minWordLength: 3
-  lengthBonusPerExtraLetter: 0
+  lengthMultipliers:
+  - 1
+  - 1.5
+  - 2
+  multiplierPerExtraLetter: 0.5
   scoreMultiplier: 1
   tileSkins:
   - {fileID: 11400000, guid: 92229840c2a714561b5ae7a8519bea58, type: 2}
@@ -34,11 +38,19 @@ MonoBehaviour:
   endOnTargetReached: 1
   rejectedWordsCostMoves: 0
   urgentMoves: 3
+  discardsPerRound: 5
   shopSceneName: Shop
   roundTargets: 1e0000002d00000041000000
   targetGrowth: 1.5
   targetScore: 30
   tileBagSize: 52
+  librarians:
+  - {fileID: 11400000, guid: 8341f942997904750a1fcd1048323ae3, type: 2}
+  - {fileID: 11400000, guid: 9d2ddf13d0e214832b672a18d8a2497c, type: 2}
+  - {fileID: 11400000, guid: 1f3aaa8e569614b7497b2acee17d71d4, type: 2}
+  librarianEveryRounds: 3
+  librarianPayoutMultiplier: 2
+  librarianLabel: LIBRARIAN
   pointsPerCoin: 10
   coinsPerUnusedMove: 1
   repeatPriceGrowth: 1.5

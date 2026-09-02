@@ -51,6 +51,7 @@ order bookmarks sit in a real decision.
 | `Scripts/Config` | ScriptableObjects: LetterSet, board shapes, mode configs | Core |
 | `Scripts/UI` | HUD widgets, each listening to `GameEvents` | Core |
 | `Scripts/Save` | `RunSaveData` (the file's shape) and `RunSave` (the only code that touches disk) | nothing |
+| `Scripts/Librarians` | `Librarian` + one class per rule a boss round can warp | Core |
 | `Editor/` | Scaffold scripts; `WordCrushSetup.cs` regenerates assets/prefabs/scene | everything |
 
 Core never references Modes or UI. That's what keeps modes cheap to add.
@@ -96,6 +97,24 @@ Two things make the saving work, and neither is obvious:
 - **The save is only ever written with the board at rest.** Clearing a word leaves holes
   in the columns for `settleDelay`, and a snapshot taken there restores a board with
   permanent gaps. `GameSession` therefore queues a save and flushes it from `Update`.
+
+**A librarian (a boss round)** — subclass `Librarian`, override `PowerText` (its description,
+derived from its own fields so it can't go stale) and whichever of the two hooks it needs:
+`Apply(RoundRules)` to change the round's allowances before it starts, `Refuse(WordCheck)` to
+rule words out while the player is choosing. Create the asset and add it to a mode config's
+`librarians`; the run does the rest — `RunState.PickLibrarian` decides which round gets one and
+draws so that none repeats until all have been seen.
+
+Two rules that aren't obvious:
+
+- **A librarian is a recipe, not a thing with state**, exactly like a `Bookmark`. Anything it
+  needs to know about the round in progress arrives in the `WordCheck` — which is also why
+  `DistinctLengthLibrarian` needs no save support at all: it reads the words already played,
+  and those are in the snapshot already.
+- **Widen `RoundRules` or `WordCheck`; don't add a hook.** Two moments cover a round, and the
+  next lever a librarian wants (the score target, the refill policy, a turn at the
+  `ScoringContext`) is a field on a bundle that already gets passed, not a third signature for
+  every existing librarian to ignore.
 
 **A new HUD element** — a MonoBehaviour that subscribes to a `GameEvents` event
 in `OnEnable` and unsubscribes in `OnDisable`. Drop it on the HUD Canvas. The

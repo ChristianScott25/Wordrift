@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -57,6 +58,27 @@ public class RogueDemoModeConfig : ModeConfig
              "every round.")]
     [Min(1)] public int tileBagSize = 52;
 
+    [Header("Librarians")]
+    [Tooltip("The pool of librarians a run can meet. Which one turns up is rolled " +
+             "from the run's seed, and none repeats until they've all been seen — " +
+             "so the order is part of the seed, not of the list. An empty list " +
+             "simply means no round is ever a librarian round.")]
+    public List<Librarian> librarians = new();
+
+    [Tooltip("How often a librarian turns up: 3 = every third round is one. " +
+             "0 turns them off entirely without emptying the pool.")]
+    [Min(0)] public int librarianEveryRounds = 3;
+
+    [Tooltip("What a cleared librarian round pays, as a multiple of the usual " +
+             "payout. A librarian is free to overwrite this for itself (see " +
+             "RoundRules.PayoutMultiplier), so this is the default rate, not the rule.")]
+    [Min(0f)] public float librarianPayoutMultiplier = 2f;
+
+    [Tooltip("What these ARE CALLED on screen, above the individual name — " +
+             "'LIBRARIAN', 'EXAM', 'CRITIC'. The only place the noun is written " +
+             "down, so renaming them is this field. Blank shows just the name.")]
+    public string librarianLabel = "LIBRARIAN";
+
     [Header("Payout")]
     [Tooltip("Points needed per $1 of the round's payout. 10 = a 60-point round pays $6.")]
     [Min(1)] public int pointsPerCoin = 10;
@@ -74,9 +96,18 @@ public class RogueDemoModeConfig : ModeConfig
     /// interest on savings, a flat per-round purse, bookmarks that pay out — so
     /// keep the arithmetic here rather than in the mode.
     /// </summary>
-    public int RewardFor(int score, int movesLeft) =>
-        Mathf.Max(0, score) / Mathf.Max(1, pointsPerCoin) +
-        Mathf.Max(0, movesLeft) * Mathf.Max(0, coinsPerUnusedMove);
+    /// <param name="payoutMultiplier">
+    /// The round's rate, off RoundRules — 1 for an ordinary round, more for a
+    /// librarian's. It multiplies the whole payout rather than one term of it,
+    /// so "this round pays double" stays true no matter which term later ideas
+    /// (interest, purses) add.
+    /// </param>
+    public int RewardFor(int score, int movesLeft, float payoutMultiplier = 1f)
+    {
+        int earned = Mathf.Max(0, score) / Mathf.Max(1, pointsPerCoin) +
+                     Mathf.Max(0, movesLeft) * Mathf.Max(0, coinsPerUnusedMove);
+        return Mathf.RoundToInt(earned * Mathf.Max(0f, payoutMultiplier));
+    }
 
     /// <summary>The score target for a given 1-based round of a run.</summary>
     public int TargetForRound(int round)
@@ -94,4 +125,14 @@ public class RogueDemoModeConfig : ModeConfig
     }
 
     public override GameMode CreateMode() => new RogueDemoMode(this);
+
+    /// <summary>
+    /// The librarian pool joins the stamp for the same reason the modifier and
+    /// bookmark pools do: a librarian's numbers are tuning knobs, and a run
+    /// resumed against a retuned one would play a round the save doesn't
+    /// describe. The base stamp covers this asset's own fields, but the pool
+    /// arrives there as instance IDs, which are deliberately zeroed — so the
+    /// assets themselves have to be stamped by hand.
+    /// </summary>
+    public override string Fingerprint() => base.Fingerprint() + StampAll(librarians);
 }

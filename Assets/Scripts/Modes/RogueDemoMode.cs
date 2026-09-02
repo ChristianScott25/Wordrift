@@ -26,9 +26,24 @@ public class RogueDemoMode : GameMode
     private int movesLeft;
     private int discardsLeft;
 
+    /// <summary>
+    /// The round's rule-warper, or null on an ordinary round. The RUN decides
+    /// which one and when (see RunState.PickLibrarian) — the mode only plays the
+    /// round it's given, which is what keeps "every third round" a run-level
+    /// rule that a boss-round ordering change won't have to chase through here.
+    /// </summary>
+    private Librarian librarian;
+
+    // This round's allowances after the librarian has had its say. Kept rather
+    // than read back into loose fields because End needs the payout rate off it.
+    private RoundRules rules = new RoundRules();
+
     // Built once per round: bookmarks can only change in the shop, and Status is
     // rebuilt every frame — no reason to re-join the same string 60 times a second.
     private string bookmarkLine = "";
+
+    // Same again for the librarian's name and power, which are fixed for the round.
+    private string librarianBanner = "";
 
     public RogueDemoMode(RogueDemoModeConfig config) => this.config = config;
 
@@ -57,10 +72,32 @@ public class RogueDemoMode : GameMode
 
     public override void Begin()
     {
-        movesLeft = config.moves;
-        discardsLeft = config.discardsPerRound;
+        librarian = run?.Librarian;
+
+        // The round the config describes, offered to the librarian, then read
+        // back. A librarian never sees a raw config value and the mode never
+        // asks whether there is a librarian — the only branch is the payout
+        // rate, which has to be seeded before Apply so a librarian can overrule it.
+        rules = new RoundRules
+        {
+            Moves = config.moves,
+            Discards = config.discardsPerRound,
+            PayoutMultiplier = librarian != null ? config.librarianPayoutMultiplier : 1f,
+        };
+        librarian?.Apply(rules);
+
+        movesLeft = rules.Moves;
+        discardsLeft = rules.Discards;
         bookmarkLine = BuildBookmarkLine();
+        librarianBanner = BuildLibrarianBanner();
     }
+
+    /// <summary>
+    /// The round's extra word rule, if it has one. Straight through to the
+    /// librarian — the mode adds nothing of its own, so a round with none is a
+    /// null check and not a code path.
+    /// </summary>
+    public override string Refuse(WordCheck check) => librarian?.Refuse(check);
 
     /// <summary>
     /// A fresh allowance every round, never carried over — see Begin. Spending
@@ -75,6 +112,23 @@ public class RogueDemoMode : GameMode
     /// <summary>The run's bookmarks, in the order they'll get to score.</summary>
     public override System.Collections.Generic.IReadOnlyList<BookmarkSpec> Bookmarks =>
         run?.Bookmarks;
+
+    /// <summary>
+    /// "LIBRARIAN — THE GRANDILOQUENT" over what it does. Both halves are
+    /// authored (the noun on the config, the name and power on the asset), so
+    /// renaming librarians to exams never touches this method.
+    /// </summary>
+    private string BuildLibrarianBanner()
+    {
+        if (librarian == null) return "";
+
+        string label = string.IsNullOrWhiteSpace(config.librarianLabel)
+            ? librarian.Title.ToUpperInvariant()
+            : $"{config.librarianLabel.ToUpperInvariant()} — {librarian.Title.ToUpperInvariant()}";
+
+        string power = librarian.Power;
+        return string.IsNullOrWhiteSpace(power) ? label : $"{label}\n<size=80%>{power}</size>";
+    }
 
     private string BuildBookmarkLine()
     {
@@ -172,7 +226,8 @@ public class RogueDemoMode : GameMode
             // Paid before the shop loads, because the shop reads the balance in
             // Start. movesLeft is already decremented for the winning word, so
             // clearing on move 6 of 20 correctly banks 14 unused moves.
-            run.AddMoney(config.RewardFor(session.Score, Mathf.Max(0, movesLeft)));
+            run.AddMoney(config.RewardFor(session.Score, Mathf.Max(0, movesLeft),
+                                          rules.PayoutMultiplier));
 
             // Cleared: the run continues in the shop, and the panel is skipped.
             // The shop advances the round when the player leaves it, so it can
@@ -215,5 +270,8 @@ public class RogueDemoMode : GameMode
         // Whatever bookmarks the run is carrying. Drawn on its own HUD line, or
         // dropped entirely if the widget has no label for it.
         Extra = bookmarkLine,
+
+        // Empty on an ordinary round, so the line simply isn't there.
+        Banner = librarianBanner,
     };
 }

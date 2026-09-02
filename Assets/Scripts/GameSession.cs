@@ -229,11 +229,19 @@ public class GameSession : MonoBehaviour
         var chain = chainController.Selection;
         string word = ChainController.WordOf(chain);
 
+        // Two questions, asked in order and never merged: is it a word, and will
+        // this round allow it? The mode is only asked about words the dictionary
+        // already knows, so "that isn't a word" never arrives dressed up as a
+        // rule the player is supposed to understand.
+        bool isWord = chain.Count > 0 && IsValidWord(word);
+        string refused = isWord ? mode.Refuse(CheckFor(chain, word)) : null;
+
         GameEvents.RaiseSelectionChanged(new SelectionState
         {
             Word = word,
             TileCount = chain.Count,
-            CanSubmit = IsPlaying && chain.Count > 0 && IsValidWord(word),
+            CanSubmit = IsPlaying && isWord && refused == null,
+            RefusedReason = refused,
             CanDiscard = IsPlaying && mode.CanDiscard(chain.Count),
             DiscardsLeft = mode.DiscardsLeft,
 
@@ -301,6 +309,17 @@ public class GameSession : MonoBehaviour
             GameEvents.RaiseStatusChanged(mode.Status);
             RaiseSelection();
             if (mode.IsRoundOver) EndRound();
+            return;
+        }
+
+        // Refused by the round's own rule rather than by the dictionary. Like
+        // the branch above this is unreachable through ENTER, which disables
+        // itself — but unlike it, nothing is charged for trying: a librarian
+        // says a word CAN'T be played, which isn't the same as playing a bad one.
+        if (mode.Refuse(CheckFor(chain, word)) != null)
+        {
+            foreach (var tile in chain) tile.FlashInvalid();
+            RaiseSelection();
             return;
         }
 
@@ -458,6 +477,20 @@ public class GameSession : MonoBehaviour
 
     private bool IsValidWord(string word) =>
         word.Length >= Config.minWordLength && validator.Contains(word);
+
+    /// <summary>
+    /// A word plus the round around it, for the mode to judge. wordsThisRound is
+    /// handed over as it stands, which is BEFORE the word being checked joins it
+    /// — the same guarantee ScoringContext makes, and for the same reason: a
+    /// rule about what you've already played must not count the thing you're
+    /// asking about.
+    /// </summary>
+    private WordCheck CheckFor(IReadOnlyList<Tile> chain, string word) => new WordCheck
+    {
+        Word = word,
+        Tiles = chain,
+        WordsThisRound = wordsThisRound,
+    };
 
     /// <summary>Fits the board in view with room above it for the HUD.</summary>
     private void FrameBoard()
