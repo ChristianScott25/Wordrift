@@ -12,12 +12,14 @@ using UnityEngine;
 ///
 /// Two hooks, and they are the two MOMENTS a round has:
 ///
-///   Apply(RoundRules)  — before the round starts. Change the allowances.
-///   Refuse(WordCheck)  — while the player is choosing. Rule words out.
+///   Apply(RoundRules)     — before the round starts. Change the allowances,
+///                            and make any choice the round needs (rules.Rng).
+///   Refuse(WordCheck)     — while the player is choosing. Rule words out.
+///   Score(ScoringContext) — after the bookmarks. Change what a word is worth.
 ///
-/// A third moment is already waiting for the first librarian that needs it: a
-/// turn at the ScoringContext, the same open stage bookmarks use. Add it as a
-/// virtual here when something wants it, rather than growing either hook.
+/// Those are the three moments a round has, and they are all of them. The next
+/// lever a librarian wants is a FIELD on RoundRules or WordCheck, not a fourth
+/// hook for the other librarians to ignore.
 ///
 /// THE NAME IS A COSTUME. "Librarian" is what these are called today and it may
 /// well become exams, or critics, or something else. Nothing user-facing is
@@ -25,7 +27,7 @@ using UnityEngine;
 /// character's name from displayName below. A rename is this file, its three
 /// subclasses, and one Inspector string — not a hunt through the UI.
 /// </summary>
-public abstract class Librarian : ScriptableObject
+public abstract class Librarian : ScriptableObject, IScoreRule
 {
     [Tooltip("What this one is CALLED — 'The Grandiloquent'. Shown on the HUD for " +
              "the whole round. Free to change without touching what it does.")]
@@ -33,8 +35,9 @@ public abstract class Librarian : ScriptableObject
 
     [TextArea]
     [Tooltip("Optional. Overrides the description this librarian writes for itself. " +
-             "Leave it empty and the HUD shows PowerText, which is built from this " +
-             "asset's own numbers and so can never go stale when you retune them.")]
+             "Leave it empty and the HUD shows the one it derives from this asset's " +
+             "own numbers (and from whatever the round rolled, for one that " +
+             "chooses) — which is what stops the text going stale when you retune.")]
     public string powerOverride = "";
 
     /// <summary>
@@ -45,9 +48,24 @@ public abstract class Librarian : ScriptableObject
     /// </summary>
     public abstract string PowerText { get; }
 
-    /// <summary>What the HUD shows: the author's wording if there is one, else its own.</summary>
-    public string Power =>
-        string.IsNullOrWhiteSpace(powerOverride) ? PowerText : powerOverride;
+    /// <summary>
+    /// The same description, for a librarian whose rule isn't known until the
+    /// round rolls it — "The letter E is banned" rather than "a letter is
+    /// banned". The note is whatever Apply wrote into RoundRules.Note.
+    ///
+    /// Overriding this instead of PowerText is what keeps the variable rule and
+    /// the fixed ones the same kind of thing; a librarian that doesn't choose
+    /// anything never sees the note.
+    /// </summary>
+    public virtual string PowerFor(string note) => PowerText;
+
+    /// <summary>
+    /// What the HUD shows: the author's wording if there is one, else its own,
+    /// told what this round chose. A method rather than a property because the
+    /// answer depends on the round — the banner is built once in Begin.
+    /// </summary>
+    public string Power(string note) =>
+        string.IsNullOrWhiteSpace(powerOverride) ? PowerFor(note) : powerOverride;
 
     /// <summary>The name to show, falling back to the asset's file name.</summary>
     public string Title => string.IsNullOrWhiteSpace(displayName) ? name : displayName;
@@ -69,4 +87,15 @@ public abstract class Librarian : ScriptableObject
     /// already accepted, so there's no need to guard against nonsense.
     /// </summary>
     public virtual string Refuse(WordCheck check) => null;
+
+    /// <summary>
+    /// A turn at the score, after every bookmark has had one. Empty by default,
+    /// which is what makes a librarian that only rules words out a one-method
+    /// class.
+    ///
+    /// Go through ctx.AddPoints / MultiplyMult rather than the fields, so the
+    /// walk-through can name you — a librarian that quietly halves a score and
+    /// doesn't appear in the readout is indistinguishable from a bug.
+    /// </summary>
+    public virtual void Score(ScoringContext ctx) { }
 }

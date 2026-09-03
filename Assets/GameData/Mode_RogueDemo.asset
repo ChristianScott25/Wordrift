@@ -30,6 +30,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 728ccfa980b654c07a56408590f52235, type: 2}
   - {fileID: 11400000, guid: 157f5c144f75145678553219bd43dc63, type: 2}
   - {fileID: 11400000, guid: 3e5e91049c5b3404e959e1e8974ffc94, type: 2}
+  maxModifiersPerTile: 3
   bookmarks:
   - {fileID: 11400000, guid: ec1dab9a3f28844b291476291231e9f1, type: 2}
   - {fileID: 11400000, guid: 6a3c724c8ace444d79e51f50b1cea56f, type: 2}
@@ -48,9 +49,15 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 8341f942997904750a1fcd1048323ae3, type: 2}
   - {fileID: 11400000, guid: 9d2ddf13d0e214832b672a18d8a2497c, type: 2}
   - {fileID: 11400000, guid: 1f3aaa8e569614b7497b2acee17d71d4, type: 2}
+  - {fileID: 11400000, guid: 9f8f2c252f6814188b6076df309b503d, type: 2}
+  - {fileID: 11400000, guid: 2c75433a116ae4e9db27dc5a47a1c1cc, type: 2}
+  - {fileID: 11400000, guid: e9a42704c21504cefaff7ace1b5a046c, type: 2}
+  - {fileID: 11400000, guid: 0453411ee0fc942978d05403049d1830, type: 2}
+  - {fileID: 11400000, guid: 39d15647ba86d4e9982c8c7a05637f7a, type: 2}
   librarianEveryRounds: 3
   librarianPayoutMultiplier: 2
   librarianLabel: LIBRARIAN
   pointsPerCoin: 10
   coinsPerUnusedMove: 1
   repeatPriceGrowth: 1.5
+  maxRoundPayout: 200

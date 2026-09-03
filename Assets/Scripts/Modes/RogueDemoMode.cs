@@ -45,6 +45,20 @@ public class RogueDemoMode : GameMode
     // Same again for the librarian's name and power, which are fixed for the round.
     private string librarianBanner = "";
 
+    // What this round's librarian chose for itself, if it chooses anything — the
+    // banned letter, today. Rebuilt in Begin from a round-keyed stream, so it is
+    // the same choice every time this round is entered and there is nothing to
+    // save. Stamped onto every WordCheck on the way past.
+    private string librarianNote = "";
+
+    // What THIS round asks for: the run's target through the librarian's factor.
+    // Held rather than recomputed so the HUD and the win check read one number.
+    //
+    // Starts at MaxValue, not 0, so a round that somehow reached Update without
+    // Begin fails safe — an unset 0 would make "score >= target" true on frame
+    // one and clear the round before a word was played.
+    private int roundTarget = int.MaxValue;
+
     public RogueDemoMode(RogueDemoModeConfig config) => this.config = config;
 
     public override void Attach(GameSession session, Board board)
@@ -83,11 +97,25 @@ public class RogueDemoMode : GameMode
             Moves = config.moves,
             Discards = config.discardsPerRound,
             PayoutMultiplier = librarian != null ? config.librarianPayoutMultiplier : 1f,
+
+            // Taken fresh and drawn from only inside Apply. It's keyed to the
+            // round, so re-entering the round after a save re-derives the same
+            // choice — which is why a librarian's pick needs no save support.
+            Rng = run?.StreamFor(RunState.LibrarianRoundStream),
+            LetterPool = BuildLetterPool(),
         };
         librarian?.Apply(rules);
+        librarianNote = rules.Note ?? "";
 
         movesLeft = rules.Moves;
         discardsLeft = rules.Discards;
+
+        // Computed once, here, for the same reason the payout rate is read off
+        // the rules in End: the librarian has had its say and nothing after this
+        // point should be asking the run for a raw target.
+        roundTarget = run == null
+            ? int.MaxValue
+            : ScoreLimits.Clamp((double)run.TargetScore * rules.TargetMultiplier);
         bookmarkLine = BuildBookmarkLine();
         librarianBanner = BuildLibrarianBanner();
     }
@@ -97,7 +125,23 @@ public class RogueDemoMode : GameMode
     /// librarian — the mode adds nothing of its own, so a round with none is a
     /// null check and not a code path.
     /// </summary>
-    public override string Refuse(WordCheck check) => librarian?.Refuse(check);
+    public override string Refuse(WordCheck check)
+    {
+        if (librarian == null) return null;
+
+        // WordCheck is a struct, so this stamps the mode's copy and nothing
+        // else. It's how the round's choice reaches the librarian without
+        // GameSession — which builds the check — having to know one exists.
+        check.Note = librarianNote;
+        return librarian.Refuse(check);
+    }
+
+    /// <summary>
+    /// The round's turn at the score, after every bookmark. The librarian itself
+    /// — most of them don't override Score, and an unoverridden one costs a
+    /// virtual call per word.
+    /// </summary>
+    public override IScoreRule ScoreRule => librarian == null ? null : librarian;
 
     /// <summary>
     /// A fresh allowance every round, never carried over — see Begin. Spending
@@ -126,8 +170,25 @@ public class RogueDemoMode : GameMode
             ? librarian.Title.ToUpperInvariant()
             : $"{config.librarianLabel.ToUpperInvariant()} — {librarian.Title.ToUpperInvariant()}";
 
-        string power = librarian.Power;
+        string power = librarian.Power(librarianNote);
         return string.IsNullOrWhiteSpace(power) ? label : $"{label}\n<size=80%>{power}</size>";
+    }
+
+    /// <summary>
+    /// Every letter in the run's bag, one entry per TILE — so a librarian
+    /// drawing from it uniformly is really drawing weighted by how common the
+    /// letter is in this particular run. Built from the run's bag rather than
+    /// the letter catalog because the bag is what the player actually owns, and
+    /// the shop has been editing it.
+    /// </summary>
+    private System.Collections.Generic.IReadOnlyList<char> BuildLetterPool()
+    {
+        var letters = new System.Collections.Generic.List<char>();
+        if (run == null) return letters;
+
+        foreach (var tile in run.TileBag)
+            if (tile != null) letters.Add(tile.Letter);
+        return letters;
     }
 
     private string BuildBookmarkLine()
@@ -198,8 +259,9 @@ public class RogueDemoMode : GameMode
         if (config.rejectedWordsCostMoves) movesLeft--;
     }
 
-    // The session owns the score, the run owns the target; this just compares.
-    private bool TargetReached => session.Score >= run.TargetScore;
+    // The session owns the score, the run owns the CURVE; roundTarget is what
+    // this round actually asks for once the librarian has had its say.
+    private bool TargetReached => session.Score >= roundTarget;
 
     /// <summary>
     /// Nothing left to play with: the bag is empty, so no more tiles are
@@ -264,7 +326,7 @@ public class RogueDemoMode : GameMode
         // "ROUND 2" so it still fits. Money can't change mid-round; it's here
         // so the player can plan the next shop. A real multi-readout HUD is
         // overdue, but it's a HUD job: wire StatusWidget.goalLabel.
-        Goal = $"R{run.Round}   {session.Score} / {run.TargetScore}   " +
+        Goal = $"R{run.Round}   {session.Score} / {roundTarget}   " +
                $"BAG {bag.Remaining}   ${run.Money}",
 
         // Whatever bookmarks the run is carrying. Drawn on its own HUD line, or

@@ -112,9 +112,10 @@ Two rules that aren't obvious:
   `DistinctLengthLibrarian` needs no save support at all: it reads the words already played,
   and those are in the snapshot already.
 - **Widen `RoundRules` or `WordCheck`; don't add a hook.** Two moments cover a round, and the
-  next lever a librarian wants (the score target, the refill policy, a turn at the
-  `ScoringContext`) is a field on a bundle that already gets passed, not a third signature for
-  every existing librarian to ignore.
+  next lever a librarian wants is a field on a bundle that already gets passed, not a third
+  signature for every existing librarian to ignore. `RoundRules.TargetMultiplier` was the first
+  of those — The Insatiable triples the round's target and cost one field. The obvious remaining
+  levers are the board's refill policy and a turn at the `ScoringContext`.
 
 **A new HUD element** — a MonoBehaviour that subscribes to a `GameEvents` event
 in `OnEnable` and unsubscribes in `OnDisable`. Drop it on the HUD Canvas. The

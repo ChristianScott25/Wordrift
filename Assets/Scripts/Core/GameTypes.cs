@@ -158,6 +158,14 @@ public struct WordCheck
     /// </summary>
     public IReadOnlyCollection<string> WordsThisRound;
 
+    /// <summary>
+    /// Whatever the round's rule decided for itself when the round began — the
+    /// banned letter, today. Empty for a rule that chooses nothing, which is
+    /// most of them. Stamped by the MODE on its way through, so the session
+    /// never learns that librarians exist.
+    /// </summary>
+    public string Note;
+
     /// <summary>Letters in the word. The tile count, and the thing most rules ask about.</summary>
     public int Length => Word == null ? 0 : Word.Length;
 }

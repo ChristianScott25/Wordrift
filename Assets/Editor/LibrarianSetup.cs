@@ -13,7 +13,7 @@ using UnityEngine;
 /// — so there is nothing here that could undo tuning, and no wording to keep in
 /// step with a value.
 ///
-/// Adding a fourth: subclass Librarian, then either Create -> Word Crush ->
+/// Adding another: subclass Librarian, then either Create -> Word Crush ->
 /// Librarian -> ... in the project window, or add a line below and re-run this.
 /// </summary>
 public static class LibrarianSetup
@@ -41,6 +41,26 @@ public static class LibrarianSetup
         var redactor = CreateOrLoad<DiscardLimitLibrarian>("Librarian_Redactor");
         Name(redactor, "The Redactor");
         librarians.Add(redactor);
+
+        var insatiable = CreateOrLoad<TargetMultiplierLibrarian>("Librarian_Insatiable");
+        Name(insatiable, "The Insatiable");
+        librarians.Add(insatiable);
+
+        var conformist = CreateOrLoad<LockedLengthLibrarian>("Librarian_Conformist");
+        Name(conformist, "The Conformist");
+        librarians.Add(conformist);
+
+        var abridged = CreateOrLoad<NoRepeatedLetterLibrarian>("Librarian_Abridged");
+        Name(abridged, "The Abridged");
+        librarians.Add(abridged);
+
+        var censor = CreateOrLoad<BannedLetterLibrarian>("Librarian_Censor");
+        Name(censor, "The Censor");
+        librarians.Add(censor);
+
+        var critic = CreateOrLoad<ScorePenaltyLibrarian>("Librarian_Critic");
+        Name(critic, "The Critic");
+        librarians.Add(critic);
 
         int added = AttachToModes(librarians);
 

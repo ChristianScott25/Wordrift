@@ -3,7 +3,7 @@
 > **The game, not the code.** How Wordrift is played, what the rules are, and what every
 > number currently is. `ARCHITECTURE.md` explains how it's built — this explains what it *is*.
 
-**Last updated:** 2026-09-01 · librarians (boss rounds); the tile bag doubled to 104; a round pays at most $200; three modifiers to a tile; scores saturate instead of overflowing
+**Last updated:** 2026-09-03 · five more librarians — The Insatiable, The Conformist, The Abridged, The Censor, The Critic — eight in all
 **Status:** playable demo in active design — the loop works end to end; the content doesn't exist yet
 
 ### How to read this
@@ -426,18 +426,39 @@ what they've decided. Clear it and it **pays double** *(`librarianPayoutMultipli
 | **The Grandiloquent** | Words must be **5 letters or longer** | Your reliable three-letter filler is gone. Every word has to be a real find. |
 | **The Cataloguer** | Every word must be a **different length** from every word before it | One 4-letter word per round, one 5, one 6. Tightens as you go, from both ends. |
 | **The Redactor** | **No discards** | Nothing changes about the scoring; the escape hatch is just shut. A bad board is yours to solve. |
+| **The Insatiable** | **Score target ×3** | Nothing about how you play changes — only the bar. The one librarian that asks whether your run is actually scaling. |
+| **The Conformist** | Your **first word sets the length**; every word after it must match | The whole round is decided by one choice made before you know what the board will give you. Open with a three and it's threes all round. |
+| **The Abridged** | No word may use **the same letter twice** | Kills the words you reach for without thinking — doubles, most plurals. The letter is free again in your next word. |
+| **The Censor** | **One letter is banned**, rolled when the round starts and named on screen | Weighted by what's actually in your bag, so it usually takes a letter you were counting on. |
+| **The Critic** | Every word loses **25% of its Points and Mult** | Changes nothing about which words are legal — you play the round exactly as you would have, and come up short. |
 
 **A word they won't take can't be played at all.** It doesn't score zero and it doesn't cost a
 word — ENTER simply won't light up, and the reason is written under the word you selected
 ("Too short — 5 letters or longer"). Nothing is spent finding out.
 
 **Which librarian turns up is part of your seed**, and **none repeats until you've met them
-all.** With three of them that means rounds 3, 6 and 9 are all different, and the cycle starts
-over at round 12 — where the same one *can* immediately reappear, since by then everyone has
+all.** With eight of them that means rounds 3 through 24 are all different, and the cycle starts
+over at round 27 — where the same one *can* immediately reappear, since by then everyone has
 been seen.
 
-❓ Nothing warns you before the round begins — you find out when you get there. ❓ Nothing is
-harder about a librarian round other than the rule: the target is the round's usual target.
+**The Censor's letter is part of the seed too**, and it's drawn from your bag one entry per
+tile — so a banned E is far likelier than a banned Z, which is the whole point. Quit and resume
+a Censor round and it's the same letter; it isn't stored anywhere, it's re-derived.
+
+**The Critic is taken after your bookmarks**, not before — it taxes what you built. It also
+doesn't show in the live POINTS × MULT preview; you see the cut land as its own beat in the
+score walk-through after ENTER, the same way bookmarks do.
+
+📕 **`Librarian_Dictionary.md` has all eight in full** — each one's numbers, how it plays, and
+the details that don't fit a table. The rest of this section is what's true of them all.
+
+**The Cataloguer and The Conformist are exact opposites** — one demands a different length every
+time, the other demands the same length every time. That's deliberate: they teach the same board
+in opposite directions, and a run that has learned to hunt one is worst-prepared for the other.
+
+❓ Nothing warns you before the round begins — you find out when you get there. ⚠️ The shop's
+**NEXT TARGET** line therefore shows the round's *base* target, so an Insatiable round arrives
+asking for three times what the shop just promised.
 
 ### How a round ends
 
@@ -453,9 +474,10 @@ on. ❓ The softer version — tiles remain but no word can be made from them �
 round. Whether five is enough to unstick a genuinely dead board is untested.
 
 ⚠️ **Librarians make that softer version much likelier.** The Grandiloquent will refuse every
-word on a board that can only manage threes and fours, and The Redactor takes the discards
-away. On a librarian round with an empty bag and no legal word left, there is currently no way
-to end the round — see §11.
+word on a board that can only manage threes and fours, The Conformist can lock you to a length
+the board stops offering, The Censor can strike out the letter the board is full of, and The
+Redactor takes away the discards that were the way out. On a librarian round with an empty bag
+and no legal word left, there is currently no way to end the round — see §11.
 
 **PLAY AGAIN starts a completely new run**: round 1, a stock bag, $0.
 
@@ -602,6 +624,8 @@ second mode would slot into; there just isn't one.*
 | Librarian round pays | ×2 | `Mode_RogueDemo.asset` |
 | The Grandiloquent's minimum | 5 letters | `Librarian_Grandiloquent.asset` |
 | The Redactor's discard limit | 0 tiles | `Librarian_Redactor.asset` |
+| The Insatiable's target factor | ×3 | `Librarian_Insatiable.asset` |
+| The Critic's cut | 25% off Points and Mult, floor 1 | `Librarian_Critic.asset` |
 | Tile bag size | 104 tiles (~one Scrabble set) | `Mode_RogueDemo.asset` |
 | Modifiers per tile | 3 (0 = no limit) | `Mode_RogueDemo.asset` |
 | Letter values & mix | Scrabble proportions, floor of 1 each | `LetterSet_Scrabble.asset` |
@@ -629,7 +653,7 @@ multipliers · the run (rounds, escalating
 targets, a persistent finite tile bag) · money · bookmarks (three of them, with a scoring pipeline
 built to take many more) · a placeholder shop that sells permanent tile upgrades and one
 bookmark a visit · runs that save and resume themselves (§6) · **librarians** — rule-warping
-rounds every third round, three of them, paying double (§6).
+rounds every third round, eight of them, paying double (§6).
 
 ### 📋 Decided, not built
 
@@ -652,6 +676,17 @@ rounds every third round, three of them, paying double (§6).
   as a loss, or detecting one. Undecided.
 - **What a librarian is called** — "librarian" is a placeholder noun, held in one config field so
   it can become exams, critics or anything else without touching the game.
+- **The shop promises a target it can't keep.** Its NEXT TARGET line reads the run's curve, but
+  the next round's librarian isn't drawn until you press CONTINUE — so an Insatiable round shows
+  up asking for ×3 what was advertised. Either the librarian gets drawn a round early (which
+  would also let the shop announce *who* is next, Balatro-style), or the line stops claiming to
+  know. Undecided.
+- **Every librarian is a restriction.** All eight take something away; none gives anything back
+  beyond the doubled payout. A librarian that *changes* the game rather than narrowing it — a
+  different board, a different bag, tiles that behave oddly — is the obvious missing shape.
+- **Nothing scales a librarian to the round it lands on.** The Insatiable's ×3 is the same
+  demand on round 3 as on round 30, and The Critic's 25% is flat. Whether a boss should get
+  harder as the run goes on is undecided.
 - **Bookmark order can't be changed.** It now affects your score (§3), but the shop decides it.
 - **Payouts reward speed, not scoring.** Unused moves pay far more than points do — clearing
   fast beats clearing big. Tied to the run-length question above.

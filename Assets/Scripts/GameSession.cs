@@ -328,7 +328,7 @@ public class GameSession : MonoBehaviour
 
         // The mode supplies the scoring hooks; the session doesn't know what
         // they are. wordsThisRound is passed BEFORE this word joins it.
-        var result = scorer.Evaluate(chain, word, wordsThisRound, mode.Bookmarks);
+        var result = scorer.Evaluate(chain, word, wordsThisRound, mode.Bookmarks, mode.ScoreRule);
 
         // End-of-round bookkeeping only — none of this is on screen, so it can
         // land immediately. Anything the HUD SHOWS (the score, the mode's

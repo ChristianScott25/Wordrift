@@ -80,9 +80,15 @@ public class ScoreCalculator
     /// Must NOT contain the word being scored yet.
     /// </param>
     /// <param name="bookmarks">The run's bookmarks in slot order; null for a mode without a run.</param>
+    /// <param name="roundRule">
+    /// The round's own rule, if it has one that touches the score — a librarian,
+    /// today. It goes AFTER the bookmarks on purpose: a round that taxes you
+    /// taxes what you built, not what you started with.
+    /// </param>
     public WordResult Evaluate(IReadOnlyList<Tile> chain, string word,
                                ICollection<string> wordsThisRound = null,
-                               IReadOnlyList<BookmarkSpec> bookmarks = null)
+                               IReadOnlyList<BookmarkSpec> bookmarks = null,
+                               IScoreRule roundRule = null)
     {
         var start = Base(chain);
 
@@ -98,6 +104,11 @@ public class ScoreCalculator
         if (bookmarks != null)
             for (int i = 0; i < bookmarks.Count; i++)
                 bookmarks[i]?.Apply(ctx);   // slot order is the call order
+
+        // The ROUND's turn, after every bookmark and before the mode's own
+        // multiplier. After the bookmarks on purpose: a round that taxes you
+        // taxes what you built.
+        roundRule?.Score(ctx);
 
         // The mode's own multiplier goes through the context like everything
         // else rather than being applied on the way out. That keeps ONE

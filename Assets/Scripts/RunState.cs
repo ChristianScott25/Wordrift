@@ -41,6 +41,15 @@ public class RunState
     public const string LibrarianStream = "librarian";
 
     /// <summary>
+    /// What that librarian then chooses for itself — which letter The Censor
+    /// bans. Separate from LibrarianStream so that adding a choosing librarian
+    /// can't shift which librarian a seed picks, and drawn only in
+    /// RogueDemoMode.Begin: keyed to the round, it re-derives the same answer
+    /// every time the round is entered, which is why nothing about it is saved.
+    /// </summary>
+    public const string LibrarianRoundStream = "librarian-round";
+
+    /// <summary>
     /// The run's tiles. The full bag comes back at the start of every round —
     /// playing tiles never shrinks it (TileBag drains a copy of this list).
     /// Changing THIS list is how shops and bookmarks alter what the player

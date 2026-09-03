@@ -105,6 +105,13 @@ public abstract class GameMode
     public virtual System.Collections.Generic.IReadOnlyList<BookmarkSpec> Bookmarks => null;
 
     /// <summary>
+    /// The round's own turn at a word's score, after the bookmarks. Null for a
+    /// mode whose rounds don't touch scoring, which is the default — the session
+    /// passes it straight through, so Core never learns what it is.
+    /// </summary>
+    public virtual IScoreRule ScoreRule => null;
+
+    /// <summary>
     /// Writes this mode's round state into a save, and reads it back out. The
     /// session saves and restores everything it owns itself (score, board, words
     /// found); this is for whatever the RULES own — a move counter, a discard
