@@ -34,10 +34,6 @@ public static class LibrarianSetup
         Name(grandiloquent, "The Grandiloquent");
         librarians.Add(grandiloquent);
 
-        var cataloguer = CreateOrLoad<DistinctLengthLibrarian>("Librarian_Cataloguer");
-        Name(cataloguer, "The Cataloguer");
-        librarians.Add(cataloguer);
-
         var redactor = CreateOrLoad<DiscardLimitLibrarian>("Librarian_Redactor");
         Name(redactor, "The Redactor");
         librarians.Add(redactor);

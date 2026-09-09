@@ -21,8 +21,20 @@ public class GameSession : MonoBehaviour
     [SerializeField] private Camera sceneCamera;
 
     [Header("Content")]
-    [Tooltip("Plain text, one lowercase word per line. Swap this to change dictionaries.")]
+    [Tooltip("The imported lexicon. Plain text, one lowercase word per line, " +
+             "'#' starts a comment. Kept exactly as imported — swap this whole " +
+             "asset to change dictionaries, and put additions in the extra list.")]
     [SerializeField] private TextAsset wordList;
+
+    [Tooltip("Words the imported list is missing, hand-edited and alphabetical. " +
+             "Optional: with none assigned the game plays on the imported list " +
+             "alone. Unioned with it, so a word in either one counts.")]
+    [SerializeField] private TextAsset extraWordList;
+
+    [Tooltip("Words the game refuses even though the imported list has them — " +
+             "the slurs a 2006 Scrabble lexicon still carries. Applied LAST, " +
+             "so a word here is refused whatever the other two lists say.")]
+    [SerializeField] private TextAsset blockedWordList;
 
     [Tooltip("Used when this scene is played directly. The main menu overrides it.")]
     [SerializeField] private ModeConfig fallbackMode;
@@ -64,7 +76,7 @@ public class GameSession : MonoBehaviour
 
         if (sceneCamera == null) sceneCamera = Camera.main;
 
-        validator = new WordValidator(wordList);
+        validator = new WordValidator(wordList, extraWordList, blockedWordList);
         scorer = new ScoreCalculator(Config);
         mode = Config.CreateMode();
 

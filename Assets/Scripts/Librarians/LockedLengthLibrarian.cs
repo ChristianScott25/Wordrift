@@ -4,12 +4,12 @@ using UnityEngine;
 /// The first word you play sets a length, and every word after it has to match.
 /// Play a three and the whole round is threes.
 ///
-/// The exact inverse of DistinctLengthLibrarian, and stateless for the same
-/// reason: it never has to remember which length was chosen, because under its
-/// own rule every word already played has that length — so ANY of them answers
-/// the question. That matters more than it looks. WordCheck.WordsThisRound is a
-/// SET and has no order, so "the first word" isn't a thing this could read even
-/// if it wanted to; "every word so far agrees" is, and it's the same rule.
+/// Stateless, and it needs no save support: it never has to remember which
+/// length was chosen, because under its own rule every word already played has
+/// that length — so ANY of them answers the question. That matters more than it
+/// looks. WordCheck.WordsThisRound is a SET and has no order, so "the first
+/// word" isn't a thing this could read even if it wanted to; "every word so far
+/// agrees" is, and it's the same rule.
 ///
 /// 🎯 The choice is the first word, and it's made before you know what the board
 /// will give you later — take the long word and you've promised to keep finding

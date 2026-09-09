@@ -47,7 +47,6 @@ MonoBehaviour:
   tileBagSize: 104
   librarians:
   - {fileID: 11400000, guid: 8341f942997904750a1fcd1048323ae3, type: 2}
-  - {fileID: 11400000, guid: 9d2ddf13d0e214832b672a18d8a2497c, type: 2}
   - {fileID: 11400000, guid: 1f3aaa8e569614b7497b2acee17d71d4, type: 2}
   - {fileID: 11400000, guid: 9f8f2c252f6814188b6076df309b503d, type: 2}
   - {fileID: 11400000, guid: 2c75433a116ae4e9db27dc5a47a1c1cc, type: 2}

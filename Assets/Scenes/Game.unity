@@ -466,6 +466,8 @@ MonoBehaviour:
   chainController: {fileID: 673790878}
   sceneCamera: {fileID: 934115278}
   wordList: {fileID: 4900000, guid: f91145ed704864d0fbd132d57bdaf188, type: 3}
+  extraWordList: {fileID: 4900000, guid: 8eec95c6869a240cebd887bf296cfdbe, type: 3}
+  blockedWordList: {fileID: 4900000, guid: 2bbbdcf56871146f7805fd11b779c49a, type: 3}
   fallbackMode: {fileID: 11400000, guid: aad34857138d84029b9289b37b0dbc1f, type: 2}
   paddingAbove: 1.6
   paddingSides: 0.4

@@ -109,7 +109,7 @@ Two rules that aren't obvious:
 
 - **A librarian is a recipe, not a thing with state**, exactly like a `Bookmark`. Anything it
   needs to know about the round in progress arrives in the `WordCheck` — which is also why
-  `DistinctLengthLibrarian` needs no save support at all: it reads the words already played,
+  `LockedLengthLibrarian` needs no save support at all: it reads the words already played,
   and those are in the snapshot already.
 - **Widen `RoundRules` or `WordCheck`; don't add a hook.** Two moments cover a round, and the
   next lever a librarian wants is a field on a bundle that already gets passed, not a third

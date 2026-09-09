@@ -387,6 +387,10 @@ public static class WordCrushSetup
         if (tilePrefab != null) SetRef(board, "tilePrefab", tilePrefab.GetComponent<Tile>());
         SetRef(session, "fallbackMode", Require<RogueDemoModeConfig>($"{DataFolder}/Mode_RogueDemo.asset"));
         SetRef(session, "wordList", Require<TextAsset>("Assets/Resources/wordlist.txt"));
+        SetRef(session, "extraWordList",
+               Require<TextAsset>("Assets/Resources/wordlist-extra.txt"));
+        SetRef(session, "blockedWordList",
+               Require<TextAsset>("Assets/Resources/wordlist-blocked.txt"));
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
@@ -406,6 +410,8 @@ public static class WordCrushSetup
         Check(session, "chainController", missing);
         Check(session, "sceneCamera", missing);
         Check(session, "wordList", missing);
+        Check(session, "extraWordList", missing);
+        Check(session, "blockedWordList", missing);
         Check(session, "fallbackMode", missing);
         Check(chain, "line", missing);
 

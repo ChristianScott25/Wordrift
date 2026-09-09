@@ -7,7 +7,7 @@
 > **Keeping this current is a standing job.** A librarian added, retuned or cut is a change to
 > this file in the same turn as the code — same rule as the Encyclopedia.
 
-**Last updated:** 2026-09-03 · eight librarians
+**Last updated:** 2026-09-08 · seven librarians
 **Status:** the roster is a first pass. Every one of them is a *restriction* (see [Open](#open))
 
 ### How to read this
@@ -28,8 +28,8 @@ old rule. `powerOverride` on any asset replaces the wording if you want to hand-
 
 - **Every third round is a librarian round** *(`librarianEveryRounds`)*, and clearing one
   **pays double** *(`librarianPayoutMultiplier`)*.
-- **Which one turns up is part of the run's seed**, and **none repeats until all eight have been
-  seen.** So rounds 3, 6, 9 … 24 are all different, and the cycle restarts at 27.
+- **Which one turns up is part of the run's seed**, and **none repeats until all seven have been
+  seen.** So rounds 3, 6, 9 … 21 are all different, and the cycle restarts at 24.
 - **A word a librarian won't take can't be played at all.** It doesn't score zero and it doesn't
   cost a move — ENTER simply won't light up, and the librarian's reason is written under the
   selected word. Nothing is spent finding out.
@@ -42,13 +42,12 @@ old rule. `powerOverride` on any asset replaces the wording if you want to hand-
 | | Librarian | In one line | Seam it uses |
 |:--:|---|---|---|
 | 1 | [The Grandiloquent](#1-the-grandiloquent) | Words must be 5+ letters | `Refuse` |
-| 2 | [The Cataloguer](#2-the-cataloguer) | Every word a different length | `Refuse` |
-| 3 | [The Conformist](#3-the-conformist) | Every word the *same* length | `Refuse` |
-| 4 | [The Abridged](#4-the-abridged) | No letter twice in one word | `Refuse` |
-| 5 | [The Censor](#5-the-censor) | One letter banned, rolled per round | `Apply` + `Refuse` |
-| 6 | [The Redactor](#6-the-redactor) | No discards | `Apply` |
-| 7 | [The Insatiable](#7-the-insatiable) | Score target ×3 | `Apply` |
-| 8 | [The Critic](#8-the-critic) | −25% Points and Mult | `Score` |
+| 2 | [The Conformist](#2-the-conformist) | Every word the *same* length | `Refuse` |
+| 3 | [The Abridged](#3-the-abridged) | No letter twice in one word | `Refuse` |
+| 4 | [The Censor](#4-the-censor) | One letter banned, rolled per round | `Apply` + `Refuse` |
+| 5 | [The Redactor](#5-the-redactor) | No discards | `Apply` |
+| 6 | [The Insatiable](#6-the-insatiable) | Score target ×3 | `Apply` |
+| 7 | [The Critic](#7-the-critic) | −25% Points and Mult | `Score` |
 
 ---
 
@@ -67,34 +66,15 @@ point of the length-multiplier curve, so moving it would silently re-price every
 game as well as banning the short ones. The Grandiloquent refuses words; it doesn't redefine
 what a word is worth.
 
-⚠️ The likeliest of all eight to deadlock a round — see [Open](#open).
+⚠️ The likeliest of all seven to deadlock a round — see [Open](#open).
 
 ---
 
-## 2. The Cataloguer
-
-**Every word must be a different length from every word before it.**
-
-Refusal reads: *"Already played a 4-letter word."*
-
-One 3, one 4, one 5, one 6 — and it tightens from both ends as you go. Early words are free;
-by your fourth you are hunting a specific length rather than the best word on the board.
-
-Stateless, and it needs no save support: it reads the words already played this round, which
-are in the round snapshot already.
-
-🎯 It rewards *range*. A run that only ever finds four-letter words scores once here.
-
----
-
-## 3. The Conformist
+## 2. The Conformist
 
 **Your first word sets the length. Every word after it must be that same length.**
 
 Refusal reads: *"Locked to 4-letter words this round."*
-
-The exact inverse of The Cataloguer, and the pair is deliberate — they teach the same board in
-opposite directions, so a run that has learned to hunt one is worst-prepared for the other.
 
 🎯 The whole round is decided by one choice made before you know what the board will give you.
 Open with a three and it's threes all round; open with a six and you have promised to keep
@@ -108,7 +88,7 @@ rule, and it's order-free.
 
 ---
 
-## 4. The Abridged
+## 3. The Abridged
 
 **No word may use the same letter twice.**
 
@@ -126,7 +106,7 @@ The cheapest librarian there is — it doesn't even read the round, only the wor
 
 ---
 
-## 5. The Censor
+## 4. The Censor
 
 **One letter is banned for the round**, rolled when the round starts and **named on screen**:
 *"The letter E may not be used."*
@@ -153,7 +133,7 @@ dead-board problem — see [Open](#open).
 
 ---
 
-## 6. The Redactor
+## 5. The Redactor
 
 **No discards.** *(`discards`, default 0 — `Librarian_Redactor.asset`)*
 
@@ -168,7 +148,7 @@ librarian that most directly removes the answer to the dead-board problem.
 
 ---
 
-## 7. The Insatiable
+## 6. The Insatiable
 
 **Score target ×3.** *(`targetMultiplier`, default 3 — `Librarian_Insatiable.asset`)*
 
@@ -187,7 +167,7 @@ for three times that. Known, undecided — see [Open](#open).
 
 ---
 
-## 8. The Critic
+## 7. The Critic
 
 **Every word loses 25% of its Points and its Mult.** *(`penalty` 0.25, `floor` 1 —
 `Librarian_Critic.asset`)*
@@ -236,13 +216,25 @@ Questions that belong to the roster as a whole rather than to any one librarian.
   stop claiming to know.
 - ❓ **Nothing scales a librarian to the round it lands on.** The Insatiable's ×3 is the same
   demand on round 3 as on round 30, and The Critic's 25% is flat.
-- ❓ **Every one of them is a restriction.** All eight take something away; none gives anything
+- ❓ **Every one of them is a restriction.** All seven take something away; none gives anything
   back beyond the doubled payout. A librarian that *changes* the game rather than narrowing it —
   a different board, a different bag, tiles that behave oddly — is the obvious missing shape.
   `RoundRules` already has room for it; the board's refill policy is the nearest untouched lever.
 - ❓ **"Librarian" is a costume.** The noun lives in one config field *(`librarianLabel`)* and
   each name in its own asset, so the whole cast could become exams, critics or editors without
   touching the game. Nothing about the roster below assumes the library.
+
+## Cut
+
+- **The Cataloguer** — every word had to be a different length from every word before it.
+  **Built, then cut on 2026-09-08 for being far too hard.** On a 5×5 board it tightened from
+  both ends at once: after a 3 and a 5 you were hunting a specific length rather than the best
+  word available, and by the fourth word the board usually couldn't offer one at all — which
+  fed straight into the dead-board lock below. It was the exact inverse of The Conformist, and
+  that pairing was the appeal; the lesson is that "same length every time" is a *choice* the
+  player makes once, while "different length every time" is a constraint that compounds.
+  `DistinctLengthLibrarian` and `Librarian_Cataloguer.asset` are recoverable from git history
+  if a gentler version is ever wanted — a cap on how many lengths it tracks would be the knob.
 
 ## Pitched, not built
 

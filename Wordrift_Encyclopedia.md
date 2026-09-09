@@ -3,7 +3,7 @@
 > **The game, not the code.** How Wordrift is played, what the rules are, and what every
 > number currently is. `ARCHITECTURE.md` explains how it's built — this explains what it *is*.
 
-**Last updated:** 2026-09-03 · five more librarians — The Insatiable, The Conformist, The Abridged, The Censor, The Critic — eight in all
+**Last updated:** 2026-09-08 · new dictionary (178,454 words, plurals finally work) · The Cataloguer cut — seven librarians
 **Status:** playable demo in active design — the loop works end to end; the content doesn't exist yet
 
 ### How to read this
@@ -147,9 +147,24 @@ slides out from under your finger mid-word.
 They appear as soon as anything is selected, and they are the only way to act on it.
 
 **ENTER** plays the selection as a word. It is **disabled unless the selection is a valid
-word** — at least **3 letters** *(`minWordLength`)* and in the dictionary, about 175,000
+word** — at least **3 letters** *(`minWordLength`)* and in the dictionary, about 178,800
 English words. You can no longer submit a bad word at all, so nothing flashes red any more and
 nothing is ever penalised for a wrong guess. *(`rejectedWordsCostMoves` is now unreachable.)*
+
+The dictionary was **replaced on 2026-09-08**. The old one was Webster's Second (1934): it
+knew `aalii` and `abacay` but refused `cats`, `houses`, `plays`, `boxes` — and `words`,
+`tiles` and `points`. Regular plurals and verb endings simply weren't in it. The new one is a
+Scrabble tournament lexicon, so **every inflection works**: if the singular is a word, the
+plural is too. It's frozen in 2006, so a short hand-kept list *(`wordlist-extra.txt`)* carries
+the modern words it never had — `internet`, `selfie`, `emoji`, `podcast`, `wifi`, `zen`. Add
+to that file whenever a word you'd expect to work doesn't.
+
+It also predates the 2020 removal of slurs from tournament word lists, so it arrived with them
+all playable and scorable. **327 words are blocked** *(`wordlist-blocked.txt`)* — slurs and
+profanity — and the block is applied last, so a blocked word is refused whatever the other two
+lists say. Words with an innocent meaning were deliberately kept: `prick`, `tit` (the bird),
+`boob` (a mistake), `slag`, `shag`, `spunk`, `snatch`, `hooker`, `bastard`, `dike`, `queer`,
+`gypsy`, `idiot`, `moron`, `hell`, `damn`.
 
 **DISCARD** throws the selected tiles off the board without scoring them. It shows what it
 would cost and what you have left — `DISCARD 3   5 LEFT` — and is **disabled when you've
@@ -424,7 +439,6 @@ what they've decided. Clear it and it **pays double** *(`librarianPayoutMultipli
 | | Their rule | What it does to you |
 |---|---|---|
 | **The Grandiloquent** | Words must be **5 letters or longer** | Your reliable three-letter filler is gone. Every word has to be a real find. |
-| **The Cataloguer** | Every word must be a **different length** from every word before it | One 4-letter word per round, one 5, one 6. Tightens as you go, from both ends. |
 | **The Redactor** | **No discards** | Nothing changes about the scoring; the escape hatch is just shut. A bad board is yours to solve. |
 | **The Insatiable** | **Score target ×3** | Nothing about how you play changes — only the bar. The one librarian that asks whether your run is actually scaling. |
 | **The Conformist** | Your **first word sets the length**; every word after it must match | The whole round is decided by one choice made before you know what the board will give you. Open with a three and it's threes all round. |
@@ -437,8 +451,8 @@ word — ENTER simply won't light up, and the reason is written under the word y
 ("Too short — 5 letters or longer"). Nothing is spent finding out.
 
 **Which librarian turns up is part of your seed**, and **none repeats until you've met them
-all.** With eight of them that means rounds 3 through 24 are all different, and the cycle starts
-over at round 27 — where the same one *can* immediately reappear, since by then everyone has
+all.** With seven of them that means rounds 3 through 21 are all different, and the cycle starts
+over at round 24 — where the same one *can* immediately reappear, since by then everyone has
 been seen.
 
 **The Censor's letter is part of the seed too**, and it's drawn from your bag one entry per
@@ -449,12 +463,8 @@ a Censor round and it's the same letter; it isn't stored anywhere, it's re-deriv
 doesn't show in the live POINTS × MULT preview; you see the cut land as its own beat in the
 score walk-through after ENTER, the same way bookmarks do.
 
-📕 **`Librarian_Dictionary.md` has all eight in full** — each one's numbers, how it plays, and
+📕 **`Librarian_Dictionary.md` has all seven in full** — each one's numbers, how it plays, and
 the details that don't fit a table. The rest of this section is what's true of them all.
-
-**The Cataloguer and The Conformist are exact opposites** — one demands a different length every
-time, the other demands the same length every time. That's deliberate: they teach the same board
-in opposite directions, and a run that has learned to hunt one is worst-prepared for the other.
 
 ❓ Nothing warns you before the round begins — you find out when you get there. ⚠️ The shop's
 **NEXT TARGET** line therefore shows the round's *base* target, so an Insatiable round arrives
@@ -653,7 +663,7 @@ multipliers · the run (rounds, escalating
 targets, a persistent finite tile bag) · money · bookmarks (three of them, with a scoring pipeline
 built to take many more) · a placeholder shop that sells permanent tile upgrades and one
 bookmark a visit · runs that save and resume themselves (§6) · **librarians** — rule-warping
-rounds every third round, eight of them, paying double (§6).
+rounds every third round, seven of them, paying double (§6).
 
 ### 📋 Decided, not built
 
@@ -681,7 +691,7 @@ rounds every third round, eight of them, paying double (§6).
   up asking for ×3 what was advertised. Either the librarian gets drawn a round early (which
   would also let the shop announce *who* is next, Balatro-style), or the line stops claiming to
   know. Undecided.
-- **Every librarian is a restriction.** All eight take something away; none gives anything back
+- **Every librarian is a restriction.** All seven take something away; none gives anything back
   beyond the doubled payout. A librarian that *changes* the game rather than narrowing it — a
   different board, a different bag, tiles that behave oddly — is the obvious missing shape.
 - **Nothing scales a librarian to the round it lands on.** The Insatiable's ×3 is the same

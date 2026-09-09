@@ -1,0 +1,105 @@
+# Words this game accepts that the main list doesn't have.
+#
+# The main list (wordlist.txt) is an imported Scrabble lexicon, frozen in 2006.
+# It is kept exactly as imported so it can be re-imported or swapped wholesale;
+# this file is OURS, and it is the only one to hand-edit.
+#
+# Rules:
+#   - one lowercase word per line, a-z only, alphabetical
+#   - lines starting with # are comments, blank lines are ignored
+#   - nothing shorter than ModeConfig.minWordLength (3) will ever be asked about
+#   - don't add a word the main list already has: WordValidator logs a warning
+#     naming any redundant entry on load, so check the console after a change
+#
+# Most of these are post-2006 vocabulary. Add anything a playtester was refused
+# and should not have been.
+adware
+athleisure
+babymoon
+bitcoin
+blockchain
+bluetooth
+boba
+bridezilla
+chatbot
+chatbots
+clickbait
+cosplay
+cosplayer
+cosplayers
+crowdfund
+crowdfunding
+cryptocurrency
+dashcam
+edamame
+emoji
+emojis
+frenemy
+geotag
+geotags
+gif
+gifs
+glamping
+gonna
+gotta
+hangry
+hashtag
+hashtags
+influencer
+influencers
+internet
+livestream
+livestreams
+logout
+macaron
+macarons
+malware
+mansplain
+mansplaining
+matcha
+meh
+microplastic
+microplastics
+mochi
+multiverse
+paleo
+paninis
+paywall
+paywalls
+pho
+photobomb
+photobombs
+podcast
+podcaster
+podcasters
+podcasts
+retweet
+retweets
+rewild
+rewilding
+selfie
+selfies
+smartphone
+smartphones
+smartwatch
+spyware
+sriracha
+staycation
+touchscreen
+twerk
+twerked
+twerking
+unfollow
+unfriend
+upcycle
+upcycled
+upcycling
+vlog
+vlogger
+vloggers
+vlogs
+wanna
+wifi
+wiki
+wikis
+zen
