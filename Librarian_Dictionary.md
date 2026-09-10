@@ -7,7 +7,7 @@
 > **Keeping this current is a standing job.** A librarian added, retuned or cut is a change to
 > this file in the same turn as the code — same rule as the Encyclopedia.
 
-**Last updated:** 2026-09-09 · eight librarians
+**Last updated:** 2026-09-09 · eight librarians · the Librarian Lab
 **Status:** the roster is a first pass. Every one of them is a *restriction* (see [Open](#open))
 
 ### How to read this
@@ -23,6 +23,39 @@ Every number lives in that librarian's own asset in `Assets/GameData/Librarians/
 tunable in the Inspector. Each one **writes its own description from those numbers**
 (`Librarian.PowerText`), so retuning a value can never leave the on-screen text describing the
 old rule. `powerOverride` on any asset replaces the wording if you want to hand-write it.
+
+### 🚧 Seeing one without playing for it — the Librarian Lab
+
+**`Word Crush → Librarian Lab`.** A window listing every librarian in the project; **Play** next
+to one forces it onto *every* round and drops you straight into the Game scene at round 1. Use it
+to look at a boss, tune its numbers, and look again — instead of playing to round 3 and taking
+whichever one the seed felt like.
+
+**🚧 It is a test tool and it must never ship.** All of it lives in `Assets/Editor/LibrarianLab.cs`,
+which Unity does not compile into a player, so it *cannot* reach a build. The only trace in game
+code is `RunState.LibrarianOverride` — a static delegate that is null in a build, because that
+editor file is the only thing anywhere that assigns it. **Deleting the lab is that one file, that
+field, and the five-line block in `RunState.PickLibrarian` that reads it.** Nothing else knows it
+exists, and normal play with nothing forced is byte-for-byte the game without it.
+
+Four things it does that a real round doesn't:
+
+- ⚠️ **Playing from it overwrites the saved run.** It opens the Game scene directly, which starts
+  a fresh run at round 1 and saves over `run.json`. There's a *Delete the saved run* button for
+  when you'd rather clear it deliberately.
+- ⚠️ **A librarian that isn't in the mode's `librarians` pool won't survive a CONTINUE.**
+  `RunState.Resume` resolves the round's librarian by asset name against that pool and nothing
+  else, so a brand-new one you haven't run `Create Librarian Assets` for yet resumes as an
+  ordinary round. Testing it fresh works; resuming it doesn't.
+- **Forcing bypasses the no-repeat pool entirely**, so `librariansUnseen` is untouched — a lab run
+  can't disturb the rotation of a real one.
+- **Pressing Play while the game is already running doesn't change the round in progress**, which
+  was set up before you chose. It applies to the next one; the window says so in the console.
+
+The choice is held in `SessionState`, which survives entering play mode (and the domain reload
+that comes with it) but is forgotten when the editor closes — so a forced librarian can't quietly
+outlive the session that asked for it. The status line at the top of the window always says what
+is being forced, and **Stop forcing** puts rounds back to normal.
 
 ### The rules that apply to all of them
 
