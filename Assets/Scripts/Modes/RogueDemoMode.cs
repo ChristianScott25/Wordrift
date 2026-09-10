@@ -71,6 +71,21 @@ public class RogueDemoMode : GameMode
         run = RunState.Current;
         if (run == null || run.Template != config) run = RunState.StartNew(config);
 
+        // The round's rules are settled HERE rather than in Begin, and the
+        // reason is the board: one of the levers a librarian can pull is closing
+        // cells, and the opening fill happens inside Board.Build — which the
+        // session calls the moment Attach returns. A librarian that reshaped the
+        // board in Begin would be reshaping one already full of tiles.
+        //
+        // Nothing is lost by moving it: Attach runs before Begin on every path
+        // there is (scene load and Restart alike), and the round-keyed stream
+        // means the choices come out the same either way.
+        librarian = run?.Librarian;
+        rules = BuildRules();
+        librarian?.Apply(rules);
+        librarianNote = rules.Note ?? "";
+        board.ClosedCells = rules.ClosedCells;
+
         // Attach is the last moment before the opening fill, and the fill
         // draws from the bag like everything else — so it has to exist by
         // now. The board resets it before every fill, which refills the copy
@@ -84,29 +99,42 @@ public class RogueDemoMode : GameMode
         board.TileSource = bag;
     }
 
+    /// <summary>
+    /// The round the config describes, offered to the librarian, then read back.
+    /// A librarian never sees a raw config value and the mode never asks whether
+    /// there is a librarian — the only branch is the payout rate, which has to
+    /// be seeded before Apply so a librarian can overrule it.
+    /// </summary>
+    private RoundRules BuildRules() => new RoundRules
+    {
+        Moves = config.moves,
+        Discards = config.discardsPerRound,
+        PayoutMultiplier = librarian != null ? config.librarianPayoutMultiplier : 1f,
+
+        // Taken fresh and drawn from only inside Apply. It's keyed to the
+        // round, so re-entering the round after a save re-derives the same
+        // choice — which is why a librarian's pick needs no save support.
+        Rng = run?.StreamFor(RunState.LibrarianRoundStream),
+        LetterPool = BuildLetterPool(),
+        BoardCells = BuildBoardCells(),
+    };
+
+    /// <summary>
+    /// Every cell the round would be played on, off the mode's own board shape —
+    /// read here rather than off the Board because the Board hasn't been built
+    /// yet when a librarian needs it, which is the whole point (see Attach).
+    /// </summary>
+    private System.Collections.Generic.IReadOnlyList<Vector2Int> BuildBoardCells()
+    {
+        var cells = new System.Collections.Generic.List<Vector2Int>();
+        if (config.boardShape != null) cells.AddRange(config.boardShape.Cells());
+        return cells;
+    }
+
     public override void Begin()
     {
-        librarian = run?.Librarian;
-
-        // The round the config describes, offered to the librarian, then read
-        // back. A librarian never sees a raw config value and the mode never
-        // asks whether there is a librarian — the only branch is the payout
-        // rate, which has to be seeded before Apply so a librarian can overrule it.
-        rules = new RoundRules
-        {
-            Moves = config.moves,
-            Discards = config.discardsPerRound,
-            PayoutMultiplier = librarian != null ? config.librarianPayoutMultiplier : 1f,
-
-            // Taken fresh and drawn from only inside Apply. It's keyed to the
-            // round, so re-entering the round after a save re-derives the same
-            // choice — which is why a librarian's pick needs no save support.
-            Rng = run?.StreamFor(RunState.LibrarianRoundStream),
-            LetterPool = BuildLetterPool(),
-        };
-        librarian?.Apply(rules);
-        librarianNote = rules.Note ?? "";
-
+        // The rules themselves were settled in Attach — see the note there.
+        // Begin hands out what they say.
         movesLeft = rules.Moves;
         discardsLeft = rules.Discards;
 

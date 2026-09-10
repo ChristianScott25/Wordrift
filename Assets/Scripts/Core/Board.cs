@@ -64,6 +64,22 @@ public class Board : MonoBehaviour
     /// <summary>Every column that exists, left to right.</summary>
     public IEnumerable<int> Columns => columnCells.Keys.OrderBy(x => x);
 
+    /// <summary>
+    /// Cells the shape has that this round doesn't. Subtracted from the shape
+    /// every time the board is laid out, so a closed cell simply isn't part of
+    /// the board: nothing spawns there, nothing can be selected there, and the
+    /// backing isn't drawn under it.
+    ///
+    /// The falling behaviour comes free from ColumnGravity, which compacts each
+    /// column's cells in order — a column that lost its middle cell has one
+    /// fewer slot, so surviving tiles fall straight PAST the gap and stack up
+    /// from the bottom again.
+    ///
+    /// Set it in GameMode.Attach, before Build: that's the only window where it
+    /// still affects the opening fill.
+    /// </summary>
+    public IEnumerable<Vector2Int> ClosedCells { get; set; }
+
     /// <summary>Swap this to change how tiles fall (see IGravityRule).</summary>
     public IGravityRule Gravity { get; set; } = new ColumnGravity();
 
@@ -83,6 +99,12 @@ public class Board : MonoBehaviour
     private readonly Dictionary<int, List<Vector2Int>> columnCells = new();
 
     private HashSet<Vector2Int> cells = new();
+
+    /// <summary>
+    /// The shape this board was built from, kept so ResetBoard can lay the cells
+    /// out again rather than reusing the set Build happened to produce.
+    /// </summary>
+    private IBoardShape shape;
 
     /// <summary>Outstanding resolve passes. A count, since clears can overlap.</summary>
     private int resolving;
@@ -107,12 +129,40 @@ public class Board : MonoBehaviour
 
         skins = availableSkins;
         letterFont = font;
+        this.shape = shape;
+
+        if (!LayOutCells()) return;
+
+        ClearTiles();
+        FillEmptyCells();
+    }
+
+    /// <summary>
+    /// Works out which cells exist — the shape, minus whatever this round has
+    /// closed — and everything that follows from that: the columns, the framing
+    /// size, and the backing.
+    ///
+    /// Run again on ResetBoard rather than only on Build, so a round played with
+    /// holes in the board can't leave them behind for the replay.
+    ///
+    /// Returns false when there's nothing to play on, which is the one case the
+    /// caller has to stop for.
+    /// </summary>
+    private bool LayOutCells()
+    {
+        if (shape == null)
+        {
+            Debug.LogError("Board has no shape to lay out.", this);
+            return false;
+        }
+
         cells = new HashSet<Vector2Int>(shape.Cells());
+        if (ClosedCells != null) cells.ExceptWith(ClosedCells);
 
         if (cells.Count == 0)
         {
             Debug.LogError("Board shape produced no cells.", this);
-            return;
+            return false;
         }
 
         var min = new Vector2Int(cells.Min(c => c.x), cells.Min(c => c.y));
@@ -125,8 +175,7 @@ public class Board : MonoBehaviour
             columnCells[column.Key] = column.OrderBy(c => c.y).ToList();
 
         BuildBackground();
-        ClearTiles();
-        FillEmptyCells();
+        return true;
     }
 
     /// <summary>
@@ -151,6 +200,11 @@ public class Board : MonoBehaviour
         Busy = false;
         resolving = 0;   // the routines that would have decremented it are gone
         TileSource?.Reset();  // a finite bag is whole again for the replay
+
+        // The shape again, not the set of cells the last round left behind: a
+        // librarian may have closed some, and the replay is a different round.
+        if (!LayOutCells()) return;
+
         ClearTiles();
         FillEmptyCells();
     }

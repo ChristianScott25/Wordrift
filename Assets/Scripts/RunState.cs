@@ -130,6 +130,19 @@ public class RunState
         Librarian = null;
 
         if (Template == null) return;
+
+        // 🚧 TEMPORARY — the Librarian Lab (Word Crush > Librarian Lab) forces one
+        // librarian onto every round so a boss can be played without waiting for
+        // round 3. NOTHING IN A BUILD EVER SETS THIS: the only code that assigns
+        // it lives in Assets/Editor, which isn't compiled into a player. Deleting
+        // the lab is deleting that file, this block, and the field below.
+        var forced = LibrarianOverride?.Invoke(Template);
+        if (forced != null)
+        {
+            Librarian = forced;
+            return;
+        }
+
         int every = Template.librarianEveryRounds;
         if (every <= 0 || Round % every != 0) return;
 
@@ -143,6 +156,17 @@ public class RunState
         Librarian = librariansUnseen[i];
         librariansUnseen.RemoveAt(i);
     }
+
+    /// <summary>
+    /// 🚧 TEMPORARY. A test hook for the Librarian Lab: given the run's mode, hand
+    /// back the librarian every round should play against, or null to let the
+    /// ordinary roll happen. Null in a build — the editor is the only thing that
+    /// assigns it, and editor code doesn't ship.
+    ///
+    /// Public rather than internal only because Assembly-CSharp-Editor is a
+    /// separate assembly. Nothing in the game may read or write it.
+    /// </summary>
+    public static System.Func<RogueDemoModeConfig, Librarian> LibrarianOverride;
 
     private void RefillLibrarians()
     {

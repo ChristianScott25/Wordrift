@@ -12,8 +12,9 @@ using UnityEngine;
 ///
 /// Two hooks, and they are the two MOMENTS a round has:
 ///
-///   Apply(RoundRules)     — before the round starts. Change the allowances,
-///                            and make any choice the round needs (rules.Rng).
+///   Apply(RoundRules)     — before the round starts, and before the BOARD is
+///                            built. Change the allowances, close cells, and
+///                            make any choice the round needs (rules.Rng).
 ///   Refuse(WordCheck)     — while the player is choosing. Rule words out.
 ///   Score(ScoringContext) — after the bookmarks. Change what a word is worth.
 ///
@@ -74,6 +75,10 @@ public abstract class Librarian : ScriptableObject, IScoreRule
     /// A turn at the round's allowances, before the round starts. The mode fills
     /// RoundRules in from its config first, so a librarian is always editing the
     /// round that WOULD have been played.
+    ///
+    /// It runs in GameMode.Attach, which is before Board.Build — so the board is
+    /// still a lever here (RoundRules.ClosedCells) and is NOT yet a thing that
+    /// can be inspected. Draw from rules.Rng here and only here.
     /// </summary>
     public virtual void Apply(RoundRules rules) { }
 

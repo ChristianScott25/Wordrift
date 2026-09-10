@@ -58,6 +58,10 @@ public static class LibrarianSetup
         Name(critic, "The Critic");
         librarians.Add(critic);
 
+        var dilapidated = CreateOrLoad<ClosedCellsLibrarian>("Librarian_Dilapidated");
+        Name(dilapidated, "The Dilapidated");
+        librarians.Add(dilapidated);
+
         int added = AttachToModes(librarians);
 
         AssetDatabase.SaveAssets();

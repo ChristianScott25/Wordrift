@@ -5,12 +5,17 @@
 /// came from, and the mode never has to ask whether there is a librarian.
 ///
 /// Mutable and deliberately small. Widen it when a librarian needs a lever the
-/// round already has (the score target, the board's refill policy), rather than
-/// adding a second hook: one bundle means the next librarian is an asset, not a
-/// change to every signature.
+/// round already has (the score target, the board's shape, its refill policy),
+/// rather than adding a second hook: one bundle means the next librarian is an
+/// asset, not a change to every signature.
+///
+/// It is built and handed to the librarian BEFORE THE BOARD IS BUILT — in
+/// GameMode.Attach, not Begin — because closing cells is one of the levers here
+/// and the opening fill happens inside Board.Build. Anything on this class may
+/// therefore assume the board doesn't exist yet.
 ///
 /// Nothing here is saved. It's rebuilt from the config and the round's
-/// librarian in Begin, both of which the save already records — see
+/// librarian in Attach, both of which the save already records — see
 /// RunState.Librarian.
 /// </summary>
 public class RoundRules
@@ -58,6 +63,26 @@ public class RoundRules
     /// per librarian on a class every librarian shares. Not saved — see Rng.
     /// </summary>
     public string Note = "";
+
+    /// <summary>
+    /// Every cell the round WOULD be played on, straight off the mode's board
+    /// shape. Read-only, and only here so a librarian that closes cells has
+    /// something to draw them from — the board itself doesn't exist yet when
+    /// Apply runs, which is precisely why it can still be reshaped.
+    /// </summary>
+    public System.Collections.Generic.IReadOnlyList<UnityEngine.Vector2Int> BoardCells;
+
+    /// <summary>
+    /// Cells this round doesn't have. The board subtracts them from its shape
+    /// before it lays anything out, so a closed cell is a permanent hole: nothing
+    /// spawns there, nothing can be chained through it, and tiles fall straight
+    /// past it (see Board.ClosedCells).
+    ///
+    /// A list to ADD to rather than a set to assign, like TargetMultiplier is a
+    /// factor to multiply into — two librarians closing cells would then stack
+    /// instead of the second one erasing the first.
+    /// </summary>
+    public readonly System.Collections.Generic.List<UnityEngine.Vector2Int> ClosedCells = new();
 
     /// <summary>
     /// What clearing the round pays, as a multiple of the usual payout. The mode

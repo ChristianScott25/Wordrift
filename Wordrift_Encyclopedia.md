@@ -3,7 +3,7 @@
 > **The game, not the code.** How Wordrift is played, what the rules are, and what every
 > number currently is. `ARCHITECTURE.md` explains how it's built — this explains what it *is*.
 
-**Last updated:** 2026-09-08 · new dictionary (178,454 words, plurals finally work) · The Cataloguer cut — seven librarians
+**Last updated:** 2026-09-09 · The Dilapidated added (a librarian that closes board spaces) — eight librarians
 **Status:** playable demo in active design — the loop works end to end; the content doesn't exist yet
 
 ### How to read this
@@ -445,25 +445,37 @@ what they've decided. Clear it and it **pays double** *(`librarianPayoutMultipli
 | **The Abridged** | No word may use **the same letter twice** | Kills the words you reach for without thinking — doubles, most plurals. The letter is free again in your next word. |
 | **The Censor** | **One letter is banned**, rolled when the round starts and named on screen | Weighted by what's actually in your bag, so it usually takes a letter you were counting on. |
 | **The Critic** | Every word loses **25% of its Points and Mult** | Changes nothing about which words are legal — you play the round exactly as you would have, and come up short. |
+| **The Dilapidated** | **Three spaces on the board are closed**, drawn when the round starts | The first librarian that changes the board rather than the rules. You route words around the holes, and tiles fall straight through them. |
 
 **A word they won't take can't be played at all.** It doesn't score zero and it doesn't cost a
 word — ENTER simply won't light up, and the reason is written under the word you selected
 ("Too short — 5 letters or longer"). Nothing is spent finding out.
 
 **Which librarian turns up is part of your seed**, and **none repeats until you've met them
-all.** With seven of them that means rounds 3 through 21 are all different, and the cycle starts
-over at round 24 — where the same one *can* immediately reappear, since by then everyone has
+all.** With eight of them that means rounds 3 through 24 are all different, and the cycle starts
+over at round 27 — where the same one *can* immediately reappear, since by then everyone has
 been seen.
 
 **The Censor's letter is part of the seed too**, and it's drawn from your bag one entry per
 tile — so a banned E is far likelier than a banned Z, which is the whole point. Quit and resume
-a Censor round and it's the same letter; it isn't stored anywhere, it's re-derived.
+a Censor round and it's the same letter; it isn't stored anywhere, it's re-derived. **The
+Dilapidated's holes work exactly the same way** — the same three spaces every time you come back
+to that round.
+
+**The holes can never wall a space off.** They're drawn so that **every remaining space keeps at
+least two neighbours** *(`minNeighbours`)* — otherwise three of them around a corner would strand
+the tile sitting there, where it could never be played or discarded.
+
+**A closed space is closed for the whole round.** Nothing ever spawns in one, and no word can be
+chained through one — two tiles either side of a hole are not neighbours, so you go around. When
+the tiles below a hole are used up, the tiles above it **fall straight through** to fill the
+space below and stop above it once that space is full. The hole never fills.
 
 **The Critic is taken after your bookmarks**, not before — it taxes what you built. It also
 doesn't show in the live POINTS × MULT preview; you see the cut land as its own beat in the
 score walk-through after ENTER, the same way bookmarks do.
 
-📕 **`Librarian_Dictionary.md` has all seven in full** — each one's numbers, how it plays, and
+📕 **`Librarian_Dictionary.md` has all eight in full** — each one's numbers, how it plays, and
 the details that don't fit a table. The rest of this section is what's true of them all.
 
 ❓ Nothing warns you before the round begins — you find out when you get there. ⚠️ The shop's
@@ -485,7 +497,8 @@ round. Whether five is enough to unstick a genuinely dead board is untested.
 
 ⚠️ **Librarians make that softer version much likelier.** The Grandiloquent will refuse every
 word on a board that can only manage threes and fours, The Conformist can lock you to a length
-the board stops offering, The Censor can strike out the letter the board is full of, and The
+the board stops offering, The Censor can strike out the letter the board is full of, The
+Dilapidated cuts the board down to 22 spaces and breaks up the paths between them, and The
 Redactor takes away the discards that were the way out. On a librarian round with an empty bag
 and no legal word left, there is currently no way to end the round — see §11.
 
@@ -636,6 +649,8 @@ second mode would slot into; there just isn't one.*
 | The Redactor's discard limit | 0 tiles | `Librarian_Redactor.asset` |
 | The Insatiable's target factor | ×3 | `Librarian_Insatiable.asset` |
 | The Critic's cut | 25% off Points and Mult, floor 1 | `Librarian_Critic.asset` |
+| The Dilapidated's closed spaces | 3 | `Librarian_Dilapidated.asset` |
+| Neighbours every space keeps | 2 | `Librarian_Dilapidated.asset` |
 | Tile bag size | 104 tiles (~one Scrabble set) | `Mode_RogueDemo.asset` |
 | Modifiers per tile | 3 (0 = no limit) | `Mode_RogueDemo.asset` |
 | Letter values & mix | Scrabble proportions, floor of 1 each | `LetterSet_Scrabble.asset` |
@@ -691,9 +706,14 @@ rounds every third round, seven of them, paying double (§6).
   up asking for ×3 what was advertised. Either the librarian gets drawn a round early (which
   would also let the shop announce *who* is next, Balatro-style), or the line stops claiming to
   know. Undecided.
-- **Every librarian is a restriction.** All seven take something away; none gives anything back
-  beyond the doubled payout. A librarian that *changes* the game rather than narrowing it — a
-  different board, a different bag, tiles that behave oddly — is the obvious missing shape.
+- **Every librarian is a restriction.** All eight take something away; none gives anything back
+  beyond the doubled payout. The Dilapidated is the first that *changes* something rather than
+  forbidding it — but a smaller board is still a board with less on it. One that hands something
+  over, or that plays by a different bag, is still missing.
+- ❓ **How boxed-in should The Dilapidated be allowed to leave a space?** Every space is
+  guaranteed **two** open neighbours *(`minNeighbours`)*, which is what stops one being walled
+  off entirely — but two is still a near-dead corner of the board. Three would push the holes
+  apart and make the round gentler.
 - **Nothing scales a librarian to the round it lands on.** The Insatiable's ×3 is the same
   demand on round 3 as on round 30, and The Critic's 25% is flat. Whether a boss should get
   harder as the run goes on is undecided.

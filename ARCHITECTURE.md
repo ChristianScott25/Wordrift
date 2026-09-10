@@ -100,8 +100,9 @@ Two things make the saving work, and neither is obvious:
 
 **A librarian (a boss round)** — subclass `Librarian`, override `PowerText` (its description,
 derived from its own fields so it can't go stale) and whichever of the two hooks it needs:
-`Apply(RoundRules)` to change the round's allowances before it starts, `Refuse(WordCheck)` to
-rule words out while the player is choosing. Create the asset and add it to a mode config's
+`Apply(RoundRules)` to change the round's allowances — and its board — before it starts,
+`Refuse(WordCheck)` to rule words out while the player is choosing, `Score(ScoringContext)` to
+change what a word is worth. Create the asset and add it to a mode config's
 `librarians`; the run does the rest — `RunState.PickLibrarian` decides which round gets one and
 draws so that none repeats until all have been seen.
 
@@ -111,11 +112,16 @@ Two rules that aren't obvious:
   needs to know about the round in progress arrives in the `WordCheck` — which is also why
   `LockedLengthLibrarian` needs no save support at all: it reads the words already played,
   and those are in the snapshot already.
-- **Widen `RoundRules` or `WordCheck`; don't add a hook.** Two moments cover a round, and the
-  next lever a librarian wants is a field on a bundle that already gets passed, not a third
+- **Widen `RoundRules` or `WordCheck`; don't add a hook.** Three moments cover a round, and the
+  next lever a librarian wants is a field on a bundle that already gets passed, not a fourth
   signature for every existing librarian to ignore. `RoundRules.TargetMultiplier` was the first
-  of those — The Insatiable triples the round's target and cost one field. The obvious remaining
-  levers are the board's refill policy and a turn at the `ScoringContext`.
+  of those — The Insatiable triples the round's target and cost one field; `ClosedCells` was the
+  second, and gave The Dilapidated a board with holes in it. The obvious remaining lever is the
+  board's refill policy.
+- **`Apply` runs in `GameMode.Attach`, before `Board.Build`** — not in `Begin`. Closing cells is
+  one of the levers, and the opening fill happens inside `Build`, so a librarian reshaping the
+  board in `Begin` would be reshaping one already full of tiles. Anything `Apply` needs about the
+  board therefore comes in on `RoundRules` (`BoardCells`), never off the `Board` itself.
 
 **A new HUD element** — a MonoBehaviour that subscribes to a `GameEvents` event
 in `OnEnable` and unsubscribes in `OnDisable`. Drop it on the HUD Canvas. The
@@ -212,10 +218,13 @@ lowercase word per line.
 
 ## Known open questions
 
-- **Gravity through holes.** `ColumnGravity` drops tiles straight down to the
-  lowest empty cell in their column. On a shaped board with holes, tiles fall
-  *past* the holes. Swap `Board.Gravity` for another `IGravityRule` when we
-  decide what should actually happen.
+- **Gravity through holes — answered, for one case.** `ColumnGravity` drops tiles
+  straight down, so on a shaped board they fall *past* a hole to the lowest cell
+  their column still has. The Dilapidated (a librarian that closes three cells)
+  deliberately wants exactly that, so the behaviour is now load-bearing rather
+  than merely undecided. It's still an open question for a permanently shaped
+  board, where "tiles pour out of the bottom of a gap" may not be what's wanted;
+  swap `Board.Gravity` for another `IGravityRule` there rather than changing this one.
 - **`GameEvents` is static.** Fine for one session at a time; it's what makes
   HUD prefabs drop-in with no wiring. Would need revisiting for split-screen or
   simultaneous boards.

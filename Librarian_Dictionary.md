@@ -7,7 +7,7 @@
 > **Keeping this current is a standing job.** A librarian added, retuned or cut is a change to
 > this file in the same turn as the code — same rule as the Encyclopedia.
 
-**Last updated:** 2026-09-08 · seven librarians
+**Last updated:** 2026-09-09 · eight librarians
 **Status:** the roster is a first pass. Every one of them is a *restriction* (see [Open](#open))
 
 ### How to read this
@@ -28,8 +28,8 @@ old rule. `powerOverride` on any asset replaces the wording if you want to hand-
 
 - **Every third round is a librarian round** *(`librarianEveryRounds`)*, and clearing one
   **pays double** *(`librarianPayoutMultiplier`)*.
-- **Which one turns up is part of the run's seed**, and **none repeats until all seven have been
-  seen.** So rounds 3, 6, 9 … 21 are all different, and the cycle restarts at 24.
+- **Which one turns up is part of the run's seed**, and **none repeats until all eight have been
+  seen.** So rounds 3, 6, 9 … 24 are all different, and the cycle restarts at 27.
 - **A word a librarian won't take can't be played at all.** It doesn't score zero and it doesn't
   cost a move — ENTER simply won't light up, and the librarian's reason is written under the
   selected word. Nothing is spent finding out.
@@ -48,6 +48,7 @@ old rule. `powerOverride` on any asset replaces the wording if you want to hand-
 | 5 | [The Redactor](#5-the-redactor) | No discards | `Apply` |
 | 6 | [The Insatiable](#6-the-insatiable) | Score target ×3 | `Apply` |
 | 7 | [The Critic](#7-the-critic) | −25% Points and Mult | `Score` |
+| 8 | [The Dilapidated](#8-the-dilapidated) | 3 board spaces are closed | `Apply` |
 
 ---
 
@@ -197,6 +198,70 @@ exists. Anything else that wants to change what a word is worth uses that same t
 
 ---
 
+## 8. The Dilapidated
+
+**Three spaces on the board are closed for the round**, drawn when the round starts.
+*(`closedCells`, default 3 — `Librarian_Dilapidated.asset`)*
+
+Nothing is refused and nothing is taxed. The board is just smaller, and a different shape:
+22 spaces instead of 25, with three holes somewhere in the middle of them.
+
+🎯 **The first librarian that changes the game instead of narrowing it.** Every other one is a
+rule you have to remember while you play; this one is a board you have to read. The words you
+can see are still legal — they're just not there any more.
+
+Two things it does, and the second is the interesting one:
+
+- **A closed space breaks adjacency.** Tiles either side of a hole are two apart, so they are
+  not neighbours and a chain can't cross. Words route around, which on a 5×5 board is most of
+  the difficulty: the long horizontal runs are the first thing to go.
+- **Tiles fall THROUGH it.** When the space below a hole empties, the tiles above fall straight
+  past the hole to fill it, and stop above the hole once the space below is full. The hole never
+  fills. That isn't special-cased — a closed cell is subtracted from the board's shape, so its
+  column simply has one fewer slot and the ordinary gravity compacts into what's left. It's the
+  answer to the "do tiles fall through holes?" question `ColumnGravity` has been carrying a note
+  about since the board was written.
+
+**It chooses, like The Censor, and the choice is never saved.** The cells are drawn once, in
+`Apply`, from the round-keyed stream — so quitting and resuming the round brings back the same
+three holes with nothing written to disk. Where The Censor writes its letter into `RoundRules.Note`,
+this fills in `RoundRules.ClosedCells`, which the mode hands to the board.
+
+**It is the reason a librarian's `Apply` now runs in `GameMode.Attach` rather than in `Begin`.**
+The opening fill happens inside `Board.Build`, so a librarian that reshaped the board in `Begin`
+would be reshaping one already full of tiles. Everything else about `Apply` is unchanged, and the
+round-keyed stream means the choices come out the same either way.
+
+**The banner doesn't name the cells**, which is why there's no `PowerFor` override — unlike a
+banned letter, the player can see these.
+
+**The holes can't strand a space.** *(`minNeighbours`, default 2)* Left to a plain uniform draw,
+`(1,0)`, `(0,1)` and `(1,1)` would wall `(0,0)` off completely and the tile sitting in it could
+never be played or discarded. So a cell is only closed if **every space next to it keeps at least
+two open neighbours** — which rules out 256 of the 2300 possible triples on a 5×5, edges as well
+as corners.
+
+Two things about how that's done:
+
+- **The candidates are re-derived before every draw**, not filtered once, because closing one
+  space changes which others are still safe to close.
+- **The candidate list is built by walking the board's cells in order and testing membership**,
+  never by iterating the open-cell set. A `HashSet`'s enumeration order isn't guaranteed stable
+  across runtimes, so the second version would deal different holes in the editor and on device
+  from the same seed — the exact class of bug `Rng` exists to prevent.
+
+Adjacency is `Board.AreAdjacent`, the same call the chain uses, so "next to" means the same thing
+to the rule as it does to the player's finger. ⚠️ It counts diagonals; if diagonal chaining were
+ever turned off, this would have to follow it.
+
+Simulated over 20,000 seeds: all three holes always place, no space is ever left with fewer than
+two neighbours, and the board never splits into two regions.
+
+⚠️ It also makes the dead-board lock likelier, for the plainest reason of all: fewer spaces and
+fewer paths between them.
+
+---
+
 ## Open
 
 Questions that belong to the roster as a whole rather than to any one librarian.
@@ -216,10 +281,14 @@ Questions that belong to the roster as a whole rather than to any one librarian.
   stop claiming to know.
 - ❓ **Nothing scales a librarian to the round it lands on.** The Insatiable's ×3 is the same
   demand on round 3 as on round 30, and The Critic's 25% is flat.
-- ❓ **Every one of them is a restriction.** All seven take something away; none gives anything
-  back beyond the doubled payout. A librarian that *changes* the game rather than narrowing it —
-  a different board, a different bag, tiles that behave oddly — is the obvious missing shape.
-  `RoundRules` already has room for it; the board's refill policy is the nearest untouched lever.
+- ❓ **Every one of them is a restriction.** All eight take something away; none gives anything
+  back beyond the doubled payout. The Dilapidated is the first that changes the game rather than
+  forbidding something — but a board with three holes in it is still a board with less on it. One
+  that hands something over, or plays off a different bag, is still missing. `RoundRules` has room
+  for it; the board's refill policy is the nearest untouched lever.
+- ❓ **Does the neighbour rule want to be stricter than 2?** It stops a space being stranded, but
+  a space with exactly two neighbours is still a near-dead corner of the board. 3 would push the
+  holes further apart and make the round gentler; it's one number on the asset.
 - ❓ **"Librarian" is a costume.** The noun lives in one config field *(`librarianLabel`)* and
   each name in its own asset, so the whole cast could become exams, critics or editors without
   touching the game. Nothing about the roster below assumes the library.
@@ -248,6 +317,9 @@ Kept here so they don't get re-invented from scratch:
   long words specifically. Wants the `Score` hook.
 - **The Closed Stacks** — the board never refills. Twenty-five tiles and that's the round. Wants
   `IRefillPolicy` on `RoundRules`, which is the seam that already exists and is unused.
+- **A harder Dilapidated** — the holes MOVE, closing a different set of spaces every few words.
+  The plumbing is nearly all there (`Board.ClosedCells` plus a re-lay-out), but a hole that opens
+  under a tile raises a question this one never has to answer: what happens to the tile.
 
 ---
 
