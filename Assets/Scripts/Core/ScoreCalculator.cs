@@ -96,6 +96,7 @@ public class ScoreCalculator
         {
             Word = word,
             Tiles = chain,
+            MinWordLength = config.minWordLength,
             WordsThisRound = wordsThisRound,
             Points = start.Points,
             Mult = start.Mult,

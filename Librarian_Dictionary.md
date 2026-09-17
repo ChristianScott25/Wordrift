@@ -7,7 +7,7 @@
 > **Keeping this current is a standing job.** A librarian added, retuned or cut is a change to
 > this file in the same turn as the code — same rule as the Encyclopedia.
 
-**Last updated:** 2026-09-09 · eight librarians · the Librarian Lab
+**Last updated:** 2026-09-16 · eight librarians · the Librarian Lab
 **Status:** the roster is a first pass. Every one of them is a *restriction* (see [Open](#open))
 
 ### How to read this
@@ -176,6 +176,11 @@ bad board is yours to solve.
 
 It's a **limit, never a grant** — it takes the minimum of your allowance and its own number, so
 setting it to 3 on a round that only had 2 discards leaves you with 2.
+
+⚠️ **It beats the Second Thoughts checkout**, and that's deliberate. Perks are folded into the
+round's allowances *before* a librarian sees them, so a run that paid $25 for +2 discards every
+round still gets none on this one. The boss beats the shop — which is what makes a boss worth
+dreading and, ⚠️ note, what makes this the librarian most likely to feel like a refund is owed.
 
 ⚠️ Discards are the intended way out of a board that won't spell anything, so this is the
 librarian that most directly removes the answer to the dead-board problem.

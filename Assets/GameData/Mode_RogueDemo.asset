@@ -35,6 +35,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: ec1dab9a3f28844b291476291231e9f1, type: 2}
   - {fileID: 11400000, guid: 6a3c724c8ace444d79e51f50b1cea56f, type: 2}
   - {fileID: 11400000, guid: 88f06e66d4a184746bf51ab65373fe51, type: 2}
+  - {fileID: 11400000, guid: 356fdfd326cee467ca20768fdc8cd5f3, type: 2}
+  - {fileID: 11400000, guid: fc8dc52dae4914ba5b622080e09db056, type: 2}
+  - {fileID: 11400000, guid: f8c6b6fc6a892461ba65dd182a44c20f, type: 2}
   moves: 20
   endOnTargetReached: 1
   rejectedWordsCostMoves: 0
@@ -57,7 +60,13 @@ MonoBehaviour:
   librarianEveryRounds: 3
   librarianPayoutMultiplier: 2
   librarianLabel: LIBRARIAN
+  checkouts:
+  - {fileID: 11400000, guid: d4a11782566574e67b8f3c72d0250708, type: 2}
+  - {fileID: 11400000, guid: b9964fba344d94d68b425a6d09424a7d, type: 2}
+  - {fileID: 11400000, guid: eb78b57d4377c4eab9fe66053a248914, type: 2}
+  - {fileID: 11400000, guid: c8f61a858a2b84dfb8706de6d4aa6f5d, type: 2}
+  - {fileID: 11400000, guid: d54f12bc8630948b385f3b71c3c2876e, type: 2}
   pointsPerCoin: 10
   coinsPerUnusedMove: 1
-  repeatPriceGrowth: 1.5
   maxRoundPayout: 200
+  maxInterest: 25

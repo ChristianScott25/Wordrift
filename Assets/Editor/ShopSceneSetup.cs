@@ -13,10 +13,21 @@ using UnityEngine.UI;
 /// registers it in Build Settings, because a scene can't be authored from a CLI.
 ///
 /// Re-runnable, and it TOPS UP an existing shop: anything the screen needs and
-/// doesn't have (the money readout, the buy rows) is added, and the layout of
-/// the pieces it owns is set. It never deletes a child, never touches text,
-/// colour, or font, and never re-wires a button that already has its listener —
-/// so the rule of thumb is: positions are the generator's, styling is yours.
+/// doesn't have (the money readout, the buy rows, the description panel) is
+/// added, and the layout of the pieces it owns is set. It never deletes a child
+/// and never touches text or colour — so the rule of thumb is: positions are the
+/// generator's, styling is yours.
+///
+/// The one thing that crosses that line is AUTO-SIZE BOUNDS on the offer labels,
+/// re-applied on every run rather than only at creation. They're a property of
+/// the BOX, not of the look: this script decides how wide a row is, and the rows
+/// already in the scene predate the content that outgrew them.
+///
+/// It DOES re-wire the buttons it owns, which it didn't used to. A persistent
+/// listener stores its method by NAME, so renaming the method it points at
+/// leaves a button that looks wired and does nothing when tapped — exactly what
+/// happened when ShopScreen.Buy became Select. See Rewire: it clears before it
+/// adds, so a re-run still ends with exactly one call per button.
 ///
 /// Unlike the Game scene there's no second wiring pass here — everything
 /// ShopScreen points at is an object in the same scene, and those survive the
@@ -30,11 +41,26 @@ public static class ShopSceneSetup
     private static readonly Color AccentColor = new Color(1f, 0.75f, 0.1f);
     private static readonly Color OfferColor = new Color(1f, 1f, 1f, 0.14f);
 
+    // The description panel sits over the shelf, so it has to be opaque enough to
+    // hide it. Darker than the camera's background rather than lighter, so it
+    // reads as something in front rather than as the page changing.
+    private static readonly Color PanelColor = new Color(0.05f, 0.10f, 0.15f, 0.98f);
+    private static readonly Color BackColor = new Color(1f, 1f, 1f, 0.16f);
+
     /// <summary>
-    /// How many buy rows the shop lays out: four tile upgrades and the bookmark.
-    /// The stock behind them is temporary; the row count is just furniture.
+    /// How many buy rows the shop lays out. Taken from ShopScreen rather than
+    /// written down again: the slots have ROLES, and a shelf one row short drops
+    /// the checkout silently. One number, one place.
     /// </summary>
-    private const int OfferRows = 5;
+    private const int OfferRows = ShopScreen.Slots;
+
+    // The shelf, laid out from the top down. Bigger than they were (640x104) —
+    // these are thumb targets on a phone, and they now carry a struck-through
+    // price as well as a name.
+    private const float OfferWidth = 860f;
+    private const float OfferHeight = 136f;
+    private const float OfferTop = 250f;
+    private const float OfferPitch = 152f;
 
     [MenuItem("Word Crush/Create Shop Scene")]
     public static void Create()
@@ -140,10 +166,15 @@ public static class ShopSceneSetup
         var hint = root.Find("Hint");
         if (hint != null)
         {
-            WordCrushSetup.Anchor(hint.gameObject, Center, new Vector2(0f, -520f), new Vector2(1000f, 60f));
+            WordCrushSetup.Anchor(hint.gameObject, Center, new Vector2(0f, -690f), new Vector2(1000f, 60f));
             var hintText = hint.GetComponent<TMP_Text>();
-            if (hintText != null && hintText.text == "nothing for sale yet")
-                hintText.text = "buying the same upgrade again costs more";
+
+            // Each of these was true when it was written and isn't any more.
+            // Matched exactly so anything hand-edited is left alone.
+            if (hintText != null &&
+                (hintText.text == "nothing for sale yet" ||
+                 hintText.text == "buying the same upgrade again costs more"))
+                hintText.text = "one of each, and it's gone";
         }
 
         var buttons = new Button[OfferRows];
@@ -154,20 +185,35 @@ public static class ShopSceneSetup
             var existing = root.Find(name);
             if (existing == null)
             {
-                var made = WordCrushSetup.MakeButton(root, name, "—", Vector2.zero, OfferColor, Color.white);
-                // Only ever wired at creation: adding the listener again on a
-                // re-run would buy twice per click.
-                int index = i;
-                UnityEditor.Events.UnityEventTools.AddIntPersistentListener(
-                    made.onClick, shop.Buy, index);
-                existing = made.transform;
+                existing = WordCrushSetup
+                    .MakeButton(root, name, "—", Vector2.zero, OfferColor, Color.white)
+                    .transform;
                 added++;
             }
 
             buttons[i] = existing.GetComponent<Button>();
             labels[i] = existing.GetComponentInChildren<TMP_Text>();
+
+            // A row reads "LATE FEES AND OTHER STORIES     $32", which wants about
+            // 1020px at the authored 56pt in an 860px button.
+            AutoSize(labels[i], 30f, 56f);
+
+            // These used to call Buy(int), which no longer exists — a tap on a
+            // renamed method is a silent no-op, so this is the one place the
+            // "never re-wire an existing button" rule has to be broken. Clearing
+            // first is what keeps it idempotent.
+            //
+            // Copied out of the loop variable: a `for` loop shares one `i` across
+            // every iteration, so a closure over it would wire all five rows to
+            // whatever it held last.
+            var button = buttons[i];
+            int index = i;
+            Rewire(button, () =>
+                UnityEditor.Events.UnityEventTools.AddIntPersistentListener(
+                    button.onClick, shop.Select, index));
+
             WordCrushSetup.Anchor(existing.gameObject, Center,
-                new Vector2(0f, 280f - i * 120f), new Vector2(640f, 104f));
+                new Vector2(0f, OfferTop - i * OfferPitch), new Vector2(OfferWidth, OfferHeight));
         }
 
         var continueButton = root.Find("ContinueButton");
@@ -179,18 +225,148 @@ public static class ShopSceneSetup
             continueButton = made.transform;
             added++;
         }
-        WordCrushSetup.Anchor(continueButton.gameObject, Center, new Vector2(0f, -400f), new Vector2(560f, 140f));
+        WordCrushSetup.Anchor(continueButton.gameObject, Center, new Vector2(0f, -570f), new Vector2(620f, 150f));
+
+        var panel = EnsureDetailPanel(shop, root, ref added);
 
         WordCrushSetup.SetRef(shop, "headline", headline);
         WordCrushSetup.SetRef(shop, "detail", detail);
         WordCrushSetup.SetRef(shop, "moneyLabel", money);
         WordCrushSetup.SetRef(shop, "bookmarkLabel", bookmarks);
+        WordCrushSetup.SetRef(shop, "continueButton", continueButton.GetComponent<Button>());
+        WordCrushSetup.SetRef(shop, "detailRoot", panel.gameObject);
         WireRows(shop, buttons, labels);
 
         return added;
     }
 
+    /// <summary>
+    /// Replaces a button's persistent listeners with exactly one. Removing from
+    /// the end backwards because each removal reindexes the rest — going forwards
+    /// leaves every other one behind.
+    /// </summary>
+    private static void Rewire(Button button, System.Action addListener)
+    {
+        if (button == null) return;
+
+        for (int i = button.onClick.GetPersistentEventCount() - 1; i >= 0; i--)
+            UnityEditor.Events.UnityEventTools.RemovePersistentListener(button.onClick, i);
+
+        addListener();
+    }
+
+    /// <summary>
+    /// The description a tapped row opens: what it is, what it does, what it
+    /// costs, and BUY / BACK. Built as one parent so ShopScreen can show and hide
+    /// the lot with a single SetActive — it is left ACTIVE here, because the
+    /// screen hides it itself on Start and an inactive object is easy to lose in
+    /// the hierarchy while it's being styled.
+    /// </summary>
+    private static Transform EnsureDetailPanel(ShopScreen shop, Transform root, ref int added)
+    {
+        var panel = root.Find("DetailPanel");
+        if (panel == null)
+        {
+            var go = WordCrushSetup.NewUI("DetailPanel", typeof(Image));
+            go.transform.SetParent(root, false);
+            go.GetComponent<Image>().color = PanelColor;
+            panel = go.transform;
+            added++;
+        }
+        // Sits BELOW the money readout (which spans y 415..525) rather than over
+        // it: the balance is exactly the number you need while deciding whether
+        // to buy, so covering it would be the one thing this panel must not do.
+        // It covers every offer row and the Continue button, which is the point.
+        WordCrushSetup.Anchor(panel.gameObject, Center, new Vector2(0f, -60f), new Vector2(940f, 900f));
+
+        // Laid out top-down inside the panel's 900, with real gaps between the
+        // boxes. An earlier pass had the price box overlapping the body's, which
+        // only looked fine because both texts happen to centre inside theirs.
+        // COLOUR is set once, at creation — that's yours to change. The AUTO-SIZE
+        // BOUNDS are re-applied every run, because they belong to the box this
+        // script draws rather than to the look: "LATE FEES AND OTHER STORIES"
+        // needs about 1010px at 72pt in an 860px box, so a fixed size either
+        // clips the long titles or wastes the short ones.
+        var title = EnsureIn(panel, "DetailTitle", 72, ref added, t => t.color = AccentColor);
+        WordCrushSetup.Anchor(title.gameObject, Center, new Vector2(0f, 350f), new Vector2(860f, 100f));
+        AutoSize(title, 40f, 72f);
+
+        // Same again: a bookmark's description is one line and a tile upgrade's
+        // is five, so the text has to give rather than overflow the box.
+        var body = EnsureIn(panel, "DetailBody", 42, ref added, t =>
+        {
+            t.color = new Color(1f, 1f, 1f, 0.9f);
+            t.fontStyle = TMPro.FontStyles.Normal;
+        });
+        WordCrushSetup.Anchor(body.gameObject, Center, new Vector2(0f, 100f), new Vector2(820f, 340f));
+        AutoSize(body, 28f, 42f);
+
+        var price = EnsureIn(panel, "DetailPrice", 76, ref added, t => t.color = AccentColor);
+        WordCrushSetup.Anchor(price.gameObject, Center, new Vector2(0f, -140f), new Vector2(860f, 90f));
+        AutoSize(price, 44f, 76f);
+
+        var buy = panel.Find("BuyButton");
+        if (buy == null)
+        {
+            buy = WordCrushSetup.MakeButton(panel, "BuyButton", "BUY",
+                Vector2.zero, AccentColor, Color.black).transform;
+            added++;
+        }
+        WordCrushSetup.Anchor(buy.gameObject, Center, new Vector2(0f, -265f), new Vector2(820f, 120f));
+        Rewire(buy.GetComponent<Button>(), () =>
+            UnityEditor.Events.UnityEventTools.AddVoidPersistentListener(
+                buy.GetComponent<Button>().onClick, shop.ConfirmBuy));
+
+        var back = panel.Find("BackButton");
+        if (back == null)
+        {
+            back = WordCrushSetup.MakeButton(panel, "BackButton", "BACK",
+                Vector2.zero, BackColor, Color.white).transform;
+            added++;
+        }
+        WordCrushSetup.Anchor(back.gameObject, Center, new Vector2(0f, -385f), new Vector2(820f, 100f));
+        Rewire(back.GetComponent<Button>(), () =>
+            UnityEditor.Events.UnityEventTools.AddVoidPersistentListener(
+                back.GetComponent<Button>().onClick, shop.Back));
+
+        WordCrushSetup.SetRef(shop, "detailTitle", title);
+        WordCrushSetup.SetRef(shop, "detailBody", body);
+        WordCrushSetup.SetRef(shop, "detailPrice", price);
+        WordCrushSetup.SetRef(shop, "buyButton", buy.GetComponent<Button>());
+        WordCrushSetup.SetRef(shop, "buyLabel", buy.GetComponentInChildren<TMP_Text>());
+
+        return panel;
+    }
+
+    /// <summary>Ensure, but parented somewhere other than the screen's root.</summary>
+    private static TMP_Text EnsureIn(Transform parent, string name, float size,
+                                     ref int added, System.Action<TMP_Text> style)
+    {
+        var existing = parent.Find(name);
+        if (existing != null) return existing.GetComponent<TMP_Text>();
+
+        var text = WordCrushSetup.MakeText(parent, name, size, TextAlignmentOptions.Center);
+        style(text);
+        added++;
+        return text;
+    }
+
     private static Vector2 Center => new Vector2(0.5f, 0.5f);
+
+    /// <summary>
+    /// Lets a label shrink to fit its box. Re-applied on EVERY run, unlike the
+    /// colours and fonts around it, because these bounds describe the box this
+    /// script sized rather than the look someone chose — and because the labels
+    /// that need them were created by an earlier version of this script, so
+    /// styling-on-creation-only would never reach them.
+    /// </summary>
+    private static void AutoSize(TMP_Text label, float min, float max)
+    {
+        if (label == null) return;
+        label.enableAutoSizing = true;
+        label.fontSizeMin = min;
+        label.fontSizeMax = max;
+    }
 
     /// <summary>Finds a text child by name, or makes one and styles it the first time.</summary>
     private static TMP_Text Ensure(Transform root, string name, float size,

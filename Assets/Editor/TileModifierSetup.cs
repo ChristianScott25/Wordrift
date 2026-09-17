@@ -53,7 +53,8 @@ public static class TileModifierSetup
     {
         var asset = CreateOrLoad<LetterMultiplierModifier>(name);
         asset.multiplier = multiplier;
-        Style(asset, label, color, price);
+        Style(asset, label, color, price,
+              $"Multiplies that one tile's letter score by {multiplier}.");
         return asset;
     }
 
@@ -62,15 +63,21 @@ public static class TileModifierSetup
     {
         var asset = CreateOrLoad<WordMultiplierModifier>(name);
         asset.multiplier = multiplier;
-        Style(asset, label, color, price);
+        Style(asset, label, color, price,
+              $"Multiplies the Points of any word this tile is part of by {multiplier}.");
         return asset;
     }
 
-    private static void Style(TileModifier asset, string label, Color color, int price)
+    private static void Style(TileModifier asset, string label, Color color, int price,
+                              string description)
     {
         asset.badgeLabel = label;
         asset.badgeColor = color;
         asset.badgeTextColor = Color.white;
+
+        // Refreshed every run, like the badge: this describes what the modifier
+        // IS, and it's built from the multiplier above so it can't drift from it.
+        asset.description = description;
 
         // Seed only, never re-seed: an unpriced modifier (0) gets the default
         // ladder, and anything already priced is left as tuned.

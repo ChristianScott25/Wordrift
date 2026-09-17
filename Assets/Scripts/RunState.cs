@@ -93,6 +93,72 @@ public class RunState
         return true;
     }
 
+    // ---- Checkouts ------------------------------------------------------
+
+    /// <summary>
+    /// The checkouts this run owns, in the order they were bought. Unlike a
+    /// bookmark there is no per-copy wrapper: you can own each at most once, and
+    /// nothing about your copy can differ from the asset.
+    ///
+    /// The order is recorded and restored, but nothing reads it — perks are
+    /// summed, so they commute. It's kept because the shop lists them and a list
+    /// that reshuffled itself on resume would look like a bug.
+    /// </summary>
+    public List<Checkout> Checkouts { get; } = new();
+
+    /// <summary>
+    /// What those checkouts add up to. REBUILT, never edited in place: every
+    /// change to the list above throws this away and asks every owned checkout
+    /// again. That's what lets a checkout be a plain description of a perk
+    /// instead of something that has to be undone — and it's why Checkout.Apply
+    /// must be idempotent (see the comment there).
+    /// </summary>
+    public RunPerks Perks { get; private set; } = new RunPerks();
+
+    /// <summary>Already owned? The shop never offers a duplicate.</summary>
+    public bool Owns(Checkout checkout) => checkout != null && Checkouts.Contains(checkout);
+
+    /// <summary>Takes ownership of a checkout, refusing a duplicate.</summary>
+    public bool AddCheckout(Checkout checkout)
+    {
+        if (checkout == null || Owns(checkout)) return false;
+        Checkouts.Add(checkout);
+        RebuildPerks();
+        return true;
+    }
+
+    private void RebuildPerks()
+    {
+        Perks = new RunPerks();
+        foreach (var checkout in Checkouts)
+            checkout?.Apply(Perks);
+    }
+
+    /// <summary>
+    /// What a shop row actually costs this run — its list price through whatever
+    /// discount the run has bought. THE one place the discount is applied, so the
+    /// price shown and the price charged cannot drift apart.
+    ///
+    /// Rounded UP, so a discount never quite pays its full percentage on a cheap
+    /// row, and clamped at 90% so a stack of discounts can't reach free — a shop
+    /// that gives things away has stopped being a decision.
+    /// </summary>
+    public int PriceOf(int listPrice)
+    {
+        if (listPrice <= 0) return 0;
+
+        int discount = Mathf.Clamp(Perks.ShopDiscountPercent, 0, 90);
+        if (discount == 0) return listPrice;
+
+        // long, not int: `listPrice * 90` wraps an int above about 24 million,
+        // and a wrapped price comes back NEGATIVE — which TrySpend refuses with
+        // no explanation at all. Nothing is priced near that today, and nothing
+        // in this project is allowed to wrap on the way to a number the player
+        // is charged. See ScoreLimits for the same argument about scores.
+        long discounted = (long)listPrice * (100 - discount);
+        return (int)System.Math.Min((discounted + 99) / 100, int.MaxValue);
+    }
+
     // ---- Librarians ----------------------------------------------------
 
     /// <summary>
@@ -306,6 +372,12 @@ public class RunState
         foreach (var owned in Bookmarks)
             if (owned?.bookmark != null) data.bookmarks.Add(owned.bookmark.name);
 
+        // The checkouts themselves, not the perks they add up to: the perks are
+        // derived, and saving a derived number is how a retuned asset ends up
+        // being ignored by the run that bought it.
+        foreach (var checkout in Checkouts)
+            if (checkout != null) data.checkouts.Add(checkout.name);
+
         // Both halves, and both are load-bearing: the current one because it's
         // the round's rule, and the unseen pool because it's the no-repeat rule.
         // Saving only the first would resume the right round into the wrong run.
@@ -424,6 +496,17 @@ public class RunState
             if (bookmark != null) Bookmarks.Add(new BookmarkSpec(bookmark));
         }
 
+        foreach (var name in data.checkouts)
+        {
+            var checkout = Resolve(template.checkouts, name);
+            if (checkout != null) Checkouts.Add(checkout);
+        }
+
+        // Derived from the list above, so it has to be built AFTER it — a resumed
+        // run with an empty RunPerks is a run that quietly lost every perk it
+        // bought, and it would look exactly like a working one.
+        RebuildPerks();
+
         // Read back, never re-rolled. Re-deriving the draw would give the same
         // answer only while the pool and the roll order both stayed put, and the
         // pool is exactly the thing a run spends.
@@ -460,6 +543,12 @@ public class RunState
 
         if (TileBag.Count == 0)
             Debug.LogError($"LetterSet '{template.letterSet.name}' has no positive weights, so the tile bag is empty.");
+
+        // A no-op today — a fresh run owns no checkouts — and here anyway so that
+        // both constructors end with perks derived from the list rather than one
+        // of them relying on the field initialiser. A mode that ever hands out a
+        // starting checkout would otherwise have it silently do nothing.
+        RebuildPerks();
 
         // Round 1 normally has no librarian; asking anyway keeps the rule in one
         // place, so a config that made every round a librarian round would work.

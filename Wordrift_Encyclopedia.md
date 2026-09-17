@@ -3,7 +3,7 @@
 > **The game, not the code.** How Wordrift is played, what the rules are, and what every
 > number currently is. `ARCHITECTURE.md` explains how it's built — this explains what it *is*.
 
-**Last updated:** 2026-09-09 · The Dilapidated added (a librarian that closes board spaces) — eight librarians
+**Last updated:** 2026-09-16 · the shop rebuilt — five slots, set prices, and **checkouts** (permanent run-wide perks)
 **Status:** playable demo in active design — the loop works end to end; the content doesn't exist yet
 
 ### How to read this
@@ -26,10 +26,11 @@ is named in *(italics)*.
 5. [Bookmarks](#5-bookmarks)
 6. [The run](#6-the-run)
 7. [Money](#7-money)
-8. [The shop](#8-the-shop-)
-9. [Modes](#9-modes)
-10. [Every number, in one place](#10-every-number-in-one-place)
-11. [Built · planned · open](#11-built--planned--open)
+8. [The shop](#8-the-shop)
+9. [Checkouts](#9-checkouts)
+10. [Modes](#10-modes)
+11. [Every number, in one place](#11-every-number-in-one-place)
+12. [Built · planned · open](#12-built--planned--open)
 
 ---
 
@@ -59,9 +60,9 @@ that exists. Every word you take rearranges the board underneath you, so the boa
 next is a consequence of the word you just played — take the long word across the bottom and
 half the grid collapses; take a short one up top and almost nothing moves.
 
-🎯 **The core tension is greed vs. progress.** You have 20 words. A three-letter word is
-always available; a big multiplied one usually isn't yet. Spending a word on something small
-is spending a scarce resource on almost nothing.
+🎯 **The core tension is greed vs. progress.** You have 20 words (§9 can buy you more). A
+three-letter word is always available; a big multiplied one usually isn't yet. Spending a word
+on something small is spending a scarce resource on almost nothing.
 
 ### The round
 
@@ -112,8 +113,10 @@ target beats you. ❓ That ending is undesigned.
 - **Recognition** — spotting a word nobody would find, in a grid that only exists for a second.
 - **Compounding** — a tile or bookmark you bought in round 1 paying off for the rest of the run.
 - **Escalation** — the target curve going up faster than you're comfortable with.
-- 🚧 The shop is still the thinnest part: four tile upgrades and three bookmarks is not yet a
-  space worth exploring. It's the part of the design that most needs to become interesting.
+- **Spending** — a shelf of five things you can afford two of. The shop stocks tile upgrades,
+  bookmarks and checkouts against one wallet, so every visit makes you give something up.
+  🚧 Six bookmarks and five checkouts is a start, not a space worth exploring yet — the
+  content is still the thinnest part of the design.
 
 ---
 
@@ -186,8 +189,10 @@ You may throw away **5 tiles per round** *(`discardsPerRound`)*.
   the bag at the start of the next. Nothing is destroyed permanently.
 - The allowance **refills every round** and never carries over. Unused discards are worth
   nothing — unlike unused moves, which pay $1 each.
-- **A librarian can take it away.** The Redactor's whole rule is that this number is 0 for the
-  round — see §6.
+- **A checkout can raise it, permanently.** Second Thoughts adds 2 tiles to every round for
+  the rest of the run — see §9.
+- **A librarian can take it away**, and it beats the checkout. The Redactor's whole rule is
+  that this number is 0 for the round, whatever you own — see §6.
 
 🎯 Discarding is what you do when the board won't give you a word: dump the four consonants
 strangling a corner and let something else fall in. It's also the only partial answer to a
@@ -323,12 +328,22 @@ scores from then on.
 | Bookmark | What it does | Price |
 |---|---|--:|
 | **Bookend** | **×2 Mult** if the word starts and ends with the same letter | $12 |
+| **Spine** | **×2 Mult** if no letter appears twice in the word | $16 |
 | **Deja Vu** | **+10 Points** for a word you already spelled **this round** | $10 |
 | **Vowel Fanatic** | **+4 Mult** if the word has more vowels than consonants | $14 |
+| **Marginalia** | **+1 Mult** for every letter past the minimum word length | $13 |
+| **Shorthand** | **+4 Mult** on a word of exactly the minimum length | $13 |
 
-One of each shape, deliberately — Bookend is multiplicative because its condition is rare and
-hard to engineer; Vowel Fanatic is additive because its condition is easy to hit; Deja Vu
-works on the points side entirely.
+Every shape is represented, deliberately: Bookend and Spine are multiplicative because their
+conditions are rare and hard to engineer; Vowel Fanatic, Marginalia and Shorthand are additive
+because theirs are easy to hit; Deja Vu works on the points side entirely.
+
+🎯 **Marginalia and Shorthand are opposites, and they share a pool on purpose.** One pays for
+long words, the other only for the shortest legal one — so a shelf offering both is asking
+which game you're playing. Owning both is close to owning neither.
+
+**Spine is The Abridged, sold back to you.** That librarian bans repeated letters for a round;
+this pays you for obeying the same rule forever. The boss is where you learn what it's worth.
 
 The rules around them:
 
@@ -500,7 +515,7 @@ word on a board that can only manage threes and fours, The Conformist can lock y
 the board stops offering, The Censor can strike out the letter the board is full of, The
 Dilapidated cuts the board down to 22 spaces and breaks up the paths between them, and The
 Redactor takes away the discards that were the way out. On a librarian round with an empty bag
-and no legal word left, there is currently no way to end the round — see §11.
+and no legal word left, there is currently no way to end the round — see §12.
 
 **PLAY AGAIN starts a completely new run**: round 1, a stock bag, $0.
 
@@ -511,8 +526,8 @@ or have the phone close it for you — and the main menu shows **CONTINUE** when
 
 - **It resumes exactly, not approximately.** The same board, the same tiles left in the bag, the
   same score, moves and discards. Quit mid-round and you come back mid-round.
-- **Quit in the shop and you come back to the shop**, with the same money and the same things on
-  the shelf. Anything you already bought is not offered again.
+- **Quit in the shop and you come back to the shop**, with the same money and the same shelf at
+  the same prices. Anything you already bought is still there, still reading SOLD.
 - **It saves after every word, after every discard, and after every purchase.** The one thing you
   can lose is a word you played in the split second before the app died — the tiles were still
   falling, so that word is replayed rather than half-saved.
@@ -537,14 +552,23 @@ Earned per cleared round, kept for the whole run, spent in the shop.
 ```
         $1  per 10 points scored        (pointsPerCoin = 10)
    +    $1  per unused move             (coinsPerUnusedMove = 1)
+   ×    the round's rate                (×2 on a librarian round)
+   +    a payout bonus                  (Late Fees and Other Stories: +10%)
+   +    interest on what you're holding (Great Expectations: $1 per $10, max $25)
 ```
 
 > **Worked example.** You clear round 1 with 33 points, on your 4th word of 20.
 > `33 ÷ 10 = $3`, plus `16 unused moves = $16`. **Payout: $19.**
 
+The last two lines only exist if you've bought them (§9). **The bonus is a percentage of what
+the round earned**, so it rides the librarian's multiplier — a doubled round pays a doubled
+bonus. **Interest is not part of what the round earned**, so it lands afterwards and is never
+multiplied.
+
 **A round pays at most $200** *(`maxRoundPayout`)*, whatever it scored. The cap is applied
-**last** — after a librarian round's doubling — so a librarian round that already earned $200
-on its own is paid $200, not $400. 🚧 The number is a ceiling put there to stop a runaway
+**last** — after a librarian round's doubling, after the bonus, and after interest — so a
+librarian round that already earned $200 on its own is paid $200, not $400, and both money
+checkouts quietly stop working at the top end. 🚧 The number is a ceiling put there to stop a runaway
 round buying out the shop in one visit, not a tuned part of the economy; it should end up well
 above anything a fair round can reach, and today it isn't far above one.
 
@@ -561,64 +585,146 @@ What that means in play:
 - Money shows in the round HUD, but it can't change mid-round.
 - Failing pays nothing, and the run's money dies with the run.
 
-One shop visit is roughly **one bookmark or two tile upgrades**, which is the interesting
-part: permanent scoring abilities and better letters compete for exactly the same money.
+One shop visit is roughly **one bookmark or two tile upgrades** — or, for about two rounds'
+worth, **one checkout**. That's the interesting part: better letters, permanent scoring
+abilities and permanent run-wide perks all compete for exactly the same money, on a shelf where
+everything is one purchase only.
 
-❓ No interest, no per-round purse, no sink other than the shop. Interest on savings — Balatro's
-strongest economic hook — is an obvious next candidate.
-
----
-
-## 8. The shop 🚧
-
-Between rounds. It shows the round you cleared, what it paid, the next target, and what's for
-sale. **CONTINUE** starts the next round.
-
-> 🚧 **Everything about the STOCK below is placeholder.** The real shop's stock has to vary
-> between visits, look different, and sell more than modifiers. This version exists only so the
-> economy can be played end to end. The money and purchasing *machinery* around it is real.
-
-🚧 **The stock is always the same four multipliers** — 2L, 3L, 2W, 3W — at the prices in §4.
-
-🚧 **An upgrade lands on a random tile from your bag.** The tile is rolled when the shop opens
-and shown on the button, so you can see what you're buying:
-
-```
-   BOOKMARKS   BOOKEND
-
-   2L → E            $5     [ BUY ]
-   3L → Q            $9     [ BUY ]
-   2W → A           $14     [ BUY ]
-   3W → T           $22       $22    ← greyed out, can't afford
-   VOWEL FANATIC    $14     [ BUY ]  ← gone once you own them all
-```
-
-You never *choose* the tile. After each purchase that row rolls a different one — always one
-that still has room for another modifier, so a tile already at its limit of three can't be
-offered to you. **When no tile in your bag can take another, the upgrade rows disappear** the
-same way the bookmark row does once you own them all.
-
-🚧 **Re-buying the same option in one visit costs more each time** — ×1.5 compounding from the
-base price, rounded: $5 → $8 → $11 → $17. Other rows are unaffected, and prices reset on the
-next visit.
-
-**A fifth row sells one bookmark** — a random one you don't already own, picked when the shop
-opens and fixed for that visit. Buy it and the row rolls a different one. **When you own every
-bookmark the row simply isn't there**, and the shop carries on as normal. Bookmark prices
-never escalate, since you can only buy each one once.
-
-Your owned bookmarks are listed above the shelf, and again on their own line in the round HUD
-during play.
-
-🚧 **There's no reroll, no skip, and nothing else to spend on.** Unspent money simply carries.
-
-❓ The real shop's open questions: what else is for sale (bookmarks, tiles, bag upgrades), how
-stock is randomised, whether you choose which tile gets upgraded, and whether you can sell or
-remove tiles.
+**Interest exists now**, as a checkout rather than a rule — so saving is a *build*, not
+something the game does for you. ❓ Still no per-round purse and no sink other than the shop.
 
 ---
 
-## 9. Modes
+## 8. The shop
+
+Between rounds. It shows the round you cleared, what it paid, the next target, and five things
+for sale. **CONTINUE** starts the next round.
+
+**The shelf is five slots, and each one is stocked once when the shop opens:**
+
+| Slot | What it sells |
+|:--:|---|
+| 1, 2 | **A tile upgrade** — a random badge (2L / 3L / 2W / 3W) for a random tile in your bag |
+| 3, 4 | **A bookmark** you don't own. The two are always different |
+| 5 | **A checkout** you don't own (§9) |
+
+```
+   OWNED   DEJA VU · SENSE AND FRUGALITY
+
+   ┌────────────────────────────────┐
+   │  2L → E                   $4   │
+   ├────────────────────────────────┤
+   │  3W → A             $22   $18  │   ← struck-through: your discount
+   ├────────────────────────────────┤
+   ╎  SPINE                  SOLD   ╎   ← greyed, stays where it is
+   ├────────────────────────────────┤
+   │  MARGINALIA               $11  │
+   ├────────────────────────────────┤
+   │  ONE MORE CHAPTER         $28  │
+   └────────────────────────────────┘
+
+              [ CONTINUE ]
+```
+
+**Tap a row to read what it does.** The shelf is replaced by a description — what it is, what
+it does, what it costs — with **BUY** and **BACK**. Nothing is bought until you press BUY.
+
+🎯 That's the point of the two steps: **a row you can't afford is still worth tapping.** The
+price is dimmed and BUY reads NOT ENOUGH, but you can read the thing and decide whether to save
+for it. The old shop bought on the first tap, so anything you couldn't afford was also
+something you could never find out about.
+
+The rules of the shelf:
+
+- **Prices are set, and everything is one purchase.** Buy a row and it goes grey, reads
+  **SOLD**, and stays exactly where it is. Nothing costs more the second time, because there
+  is no second time.
+- **A row stays put when it sells.** The shelf never re-orders itself mid-visit — your thumb
+  is already moving when the screen updates.
+- **The two upgrade rows always name different tiles.** They can offer the same badge, but
+  never for the same tile: otherwise buying one could fill that tile up and take the *other*
+  row off the shelf without you touching it.
+- **A slot with nothing in it isn't drawn.** Own every bookmark and both bookmark rows are
+  gone; fill every tile in your bag and the upgrade rows go. The shop carries on with what's
+  left rather than back-filling, so the slots keep their meaning.
+- **A new shelf every visit.** Stock doesn't carry over, and nothing you declined comes back
+  except by chance.
+- **Leaving and coming back finds the same shelf**, minus what you bought — the visit is saved
+  the moment you arrive and again after every purchase.
+
+🚧 **An upgrade still lands on a random tile from your bag.** The tile is rolled when the shop
+opens and shown on the button, so you can see what you're buying — but you never *choose* it.
+The description names what that tile already carries, which is the only way to tell a fresh E
+from one you've gilded twice. Choosing needs a bag picker, and that's its own piece of work.
+
+🚧 **The prices are a first pass.** A cleared round 1 pays about $19, so the shelf above is
+roughly "two cheap things, or one permanent one". Nothing here has been balanced against a
+full run.
+
+🚧 **There's no reroll and no skip.** Unspent money simply carries — which is worth something
+now that Great Expectations exists.
+
+❓ Still open: whether you choose which tile gets upgraded, whether you can sell or remove
+tiles from your bag, and whether the shop should ever sell a tile outright.
+
+---
+
+## 9. Checkouts
+
+**A checkout is something you check out of the library and keep.** You buy one in the shop, it
+takes effect immediately, and it lasts for the rest of the run. Balatro's vouchers, named like
+books.
+
+Where a bookmark changes what a *word* scores, a checkout changes the *run* — how many moves
+you get, how much the shop charges, what a cleared round pays. They never touch a word's score.
+
+| Checkout | What it does | Price |
+|---|---|--:|
+| **Sense and Frugality** | Everything in the shop costs **20% less**, rounded up | $30 |
+| **Second Thoughts** | Discard **2 more tiles** every round | $25 |
+| **Late Fees and Other Stories** | Cleared rounds pay **10% more** | $20 |
+| **One More Chapter** | **One more move** every round | $35 |
+| **Great Expectations** | Earn **$1 per $10** you're holding when a round is cleared | $40 |
+
+The rules around them:
+
+- **One of each, at most**, and the shop never offers one you already own. There's no limit on
+  how many different ones you can hold.
+- **They apply the moment you buy them** — including to the rest of the shelf you're standing
+  in front of. Buy Sense and Frugality and the other four rows get cheaper before you've
+  looked away.
+- **They stack additively.** Two sources of a discount would add up, and the total is capped at
+  90% so the shop can never be free.
+- **Checkouts die with the run**, like money, bookmarks and tile upgrades.
+
+Details worth knowing:
+
+- ⚠️ **The Redactor beats Second Thoughts.** That librarian sets the round's discard allowance
+  to a *limit*, so a no-discards round is a no-discards round no matter what you own. The boss
+  beats the shop, which is what a boss is for. The same is true of anything else a librarian
+  lowers.
+- **Great Expectations charges interest on what you walked in with**, not on what the round
+  just paid — so clearing a round never earns interest on its own winnings. It's capped at
+  **$25 a round** *(`maxInterest`)*, which is reached at $250 held.
+- **The $200 round cap is applied last**, after the librarian's multiplier, after Late Fees,
+  and after interest. A round already paying the cap is paid the cap, so both money checkouts
+  quietly stop working at the top end.
+- 🎯 **Sense and Frugality is a bet on how long the run lasts.** It does nothing on its own and
+  pays back over every later visit — the only purchase in the game that compounds. Bought late
+  it's worthless, which is the decision.
+- 🎯 **Great Expectations is the only reason not to spend.** Everything else in the shop
+  rewards emptying your wallet; this is the one thing that makes sitting on it a plan.
+- 🚧 **Late Fees is the weakest of the five right now.** 10% of a $19 round is $1. It scales
+  with the targets and it's the cheapest, but it wants either a higher rate or a lower price
+  once a full run has been played.
+
+❓ **Five is not a tree.** Balatro's vouchers come in tiers where buying one unlocks a stronger
+version. Nothing here unlocks anything, and whether that's the shape this wants is undecided.
+
+---
+
+
+## 10. Modes
 
 | Mode | What it is |
 |---|---|
@@ -630,7 +736,7 @@ second mode would slot into; there just isn't one.*
 
 ---
 
-## 10. Every number, in one place
+## 11. Every number, in one place
 
 | | Value | Lives in |
 |---|--:|---|
@@ -657,28 +763,39 @@ second mode would slot into; there just isn't one.*
 | Points per $1 | 10 | `Mode_RogueDemo.asset` |
 | $ per unused move | 1 | `Mode_RogueDemo.asset` |
 | Max payout per round | $200 (0 = no cap) | `Mode_RogueDemo.asset` |
-| Re-buy price growth | ×1.5 | `Mode_RogueDemo.asset` |
+| Max interest per round | $25 (0 = no cap) | `Mode_RogueDemo.asset` |
+| Shop slots | 2 upgrades · 2 bookmarks · 1 checkout | `ShopScreen` (code, not an asset) |
 | Modifier prices | 5 / 9 / 14 / 22 | each asset in `GameData/Modifiers/` |
-| Bookmark prices | 12 / 10 / 14 | each asset in `GameData/Bookmarks/` |
+| Bookmark prices | 10 / 12 / 13 / 13 / 14 / 16 | each asset in `GameData/Bookmarks/` |
+| Checkout prices | 20 / 25 / 30 / 35 / 40 | each asset in `GameData/Checkouts/` |
+| Shop discount | 20% off, rounded up (cap 90%) | `Checkout_ShopDiscount.asset` |
+| Extra discards | +2 tiles a round | `Checkout_ExtraDiscards.asset` |
+| Extra moves | +1 a round | `Checkout_ExtraMoves.asset` |
+| Payout bonus | +10% | `Checkout_PayoutBonus.asset` |
+| Interest rate | $1 per $10 held | `Checkout_Interest.asset` |
 | Seed length | 8 characters | `Rng` (code, not an asset) |
 | Deja Vu bonus | +10 Points | `DejaVu.asset` |
 | Vowel Fanatic bonus | +4 Mult | `VowelFanatic.asset` |
 | Bookend multiplier | ×2 Mult | `Bookend.asset` |
+| Spine multiplier | ×2 Mult | `Spine.asset` |
+| Marginalia bonus | +1 Mult a letter | `Marginalia.asset` |
+| Shorthand bonus | +4 Mult | `Shorthand.asset` |
 | Score walk-through pace | 0.45s a step, 0.35s to finish | `ScoreTallyTiming` (code, not an asset) |
 | Score ceiling | 1,000,000,000 points, ×1,000,000 mult | `ScoreLimits` (code, not an asset) |
 
 ---
 
-## 11. Built · planned · open
+## 12. Built · planned · open
 
 ### ✅ Built and playable
 
 The board, tap-or-drag selection and the ENTER / DISCARD buttons · scoring with stacking
 multipliers · the run (rounds, escalating
-targets, a persistent finite tile bag) · money · bookmarks (three of them, with a scoring pipeline
-built to take many more) · a placeholder shop that sells permanent tile upgrades and one
-bookmark a visit · runs that save and resume themselves (§6) · **librarians** — rule-warping
-rounds every third round, seven of them, paying double (§6).
+targets, a persistent finite tile bag) · money · bookmarks (six of them, with a scoring pipeline
+built to take many more) · a shop of five slots with set prices, one purchase each, and a
+description you read before you buy (§8) · **checkouts** — five permanent run-wide perks,
+including interest on savings (§9) · runs that save and resume themselves (§6) ·
+**librarians** — rule-warping rounds every third round, eight of them, paying double (§6).
 
 ### 📋 Decided, not built
 
@@ -717,13 +834,23 @@ rounds every third round, seven of them, paying double (§6).
 - **Nothing scales a librarian to the round it lands on.** The Insatiable's ×3 is the same
   demand on round 3 as on round 30, and The Critic's 25% is flat. Whether a boss should get
   harder as the run goes on is undecided.
-- **Bookmark order can't be changed.** It now affects your score (§3), but the shop decides it.
+- **Bookmark order can't be changed.** It now affects your score (§3), but the shop decides it —
+  and with six bookmarks and two on offer a visit, a run will actually hold enough of them for
+  the order to bite.
+- **You still don't choose which tile gets upgraded.** The shop rolls one and shows you what it
+  already carries, which makes the offer readable but not a decision. A bag picker is the fix.
+- **The shop has no reroll and no skip.** Five slots, take it or leave it — so a visit that
+  rolls badly is simply a visit you save through. Whether that's tension or dead time needs
+  playing to find out.
+- **Checkouts don't tier.** Balatro's vouchers unlock stronger versions of themselves; these
+  five are flat. Whether a tree is the right shape here is undecided (§9).
 - **Payouts reward speed, not scoring.** Unused moves pay far more than points do — clearing
   fast beats clearing big. Tied to the run-length question above.
 - **The $200 payout cap is closer than it looks.** A librarian round cleared fast already pays
   around $70; two doublings of the current numbers would put ordinary rounds against the
   ceiling, at which point the cap stops being a safety rail and starts being balance. Worth
-  re-checking whenever `pointsPerCoin` or `coinsPerUnusedMove` move.
+  re-checking whenever `pointsPerCoin` or `coinsPerUnusedMove` move — and note that both money
+  checkouts are applied *under* the cap, so they're the first things it silently eats.
 - **Entering a seed** — every run has one and shows it, but there's nowhere to type one in yet,
   so a run can be reported and reproduced by a developer but not replayed by a player.
 - **A board that's playable-looking but dead** — full of tiles that spell nothing (see §5).

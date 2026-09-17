@@ -52,6 +52,7 @@ order bookmarks sit in a real decision.
 | `Scripts/UI` | HUD widgets, each listening to `GameEvents` | Core |
 | `Scripts/Save` | `RunSaveData` (the file's shape) and `RunSave` (the only code that touches disk) | nothing |
 | `Scripts/Librarians` | `Librarian` + one class per rule a boss round can warp | Core |
+| `Scripts/Checkouts` | `Checkout` + one class per permanent run-wide perk, and `RunPerks` | nothing |
 | `Editor/` | Scaffold scripts; `WordCrushSetup.cs` regenerates assets/prefabs/scene | everything |
 
 Core never references Modes or UI. That's what keeps modes cheap to add.
@@ -122,6 +123,32 @@ Two rules that aren't obvious:
   one of the levers, and the opening fill happens inside `Build`, so a librarian reshaping the
   board in `Begin` would be reshaping one already full of tiles. Anything `Apply` needs about the
   board therefore comes in on `RoundRules` (`BoardCells`), never off the `Board` itself.
+
+**A checkout (a permanent run-wide perk)** — subclass `Checkout`, override
+`PowerText` (derived from its own fields, like a librarian's) and
+`Apply(RunPerks)`, create the asset, add it to a mode config's `checkouts`, and
+add a block to `Assets/Editor/CheckoutSetup.cs`. `RunState` owns which ones a run
+has bought and rebuilds `RunPerks` from that list; whoever needs the number reads
+it off `run.Perks`.
+
+Two rules that aren't obvious:
+
+- **`Apply` must be idempotent and purely declarative.** `RunState` throws the
+  whole `RunPerks` away and rebuilds it after every purchase and again on every
+  resume, so `Apply` runs an unbounded number of times for one purchase. Describe
+  a standing perk; anything that HAPPENS once — adding a tile to the bag, paying
+  out money — belongs in the shop's `Deliver`, not here. This is the one way to
+  write a checkout that is quietly, cumulatively wrong.
+- **Widen `RunPerks`; don't add a hook.** Same bargain `RoundRules` takes. A perk
+  is a field on a bundle that already gets passed, and each one should land in
+  exactly one place: `ExtraMoves` and `ExtraDiscards` in
+  `RogueDemoMode.BuildRules`, the money ones in `RewardFor`, the discount in
+  `RunState.PriceOf`. Two call sites for one perk is two answers.
+
+Note the ordering this buys for free: perks are folded into `RoundRules` *before*
+the librarian sees them, so a librarian that lowers an allowance with `Mathf.Min`
+beats a checkout that raised it — the boss beats the shop, without either one
+knowing the other exists.
 
 **A new HUD element** — a MonoBehaviour that subscribes to a `GameEvents` event
 in `OnEnable` and unsubscribes in `OnDisable`. Drop it on the HUD Canvas. The
@@ -203,13 +230,18 @@ about runs. To add a bookmark: subclass `Bookmark`, create the asset, add it to 
 **Money.** `RunState` owns the balance: in through `AddMoney` only, out through
 `TrySpend` only (it refuses rather than going negative), and gone when the run
 is — so there's nothing to persist and no meta-currency to design around. What a
-cleared round pays is `RogueDemoModeConfig.RewardFor(score, movesLeft)`: one
-method on the authored asset, called from `RogueDemoMode.End` before the scene
-change, and the seam for interest or payout bookmarks later. `GameSession`,
-`GameEvents` and everything in Core stay ignorant of currency — the money
-readout rides the `ModeStatus.Goal` string the mode already fills in.
-The shop's *stock* is temporary and banner-marked in the code; the purchase
-plumbing (price on a `TileModifier`, `TrySpend`, `TileSpec.AddModifier`) is not.
+cleared round pays is `RogueDemoModeConfig.RewardFor(score, movesLeft,
+payoutMultiplier, perks, moneyHeld)`: one method on the authored asset, called
+from `RogueDemoMode.End` before the scene change, and the seam every payout idea
+hangs off — interest and the payout bonus both landed there rather than in the
+mode. `GameSession`, `GameEvents` and everything in Core stay ignorant of
+currency — the money readout rides the `ModeStatus.Goal` string the mode already
+fills in.
+What a shop row COSTS goes through `RunState.PriceOf` and nowhere else, so the
+price shown and the price charged cannot drift apart when a discount is in play.
+The shop's *stock* is rolled in `ShopScreen` against five role-fixed slots; the
+purchase plumbing (price on a `TileModifier` / `Bookmark` / `Checkout`,
+`TrySpend`, `TileSpec.AddModifier`) is deliberately dull.
 The game's rules and numbers, including which of them are placeholder, live in
 `Wordrift_Encyclopedia.md` — keep it current.
 
@@ -240,9 +272,12 @@ lowercase word per line.
   overflowing the 400px name label. A run HUD needs a real multi-readout
   `ModeStatus` and widget; wiring `StatusWidget.goalLabel` to a dedicated label
   is the cheap interim fix.
-- **Price lives on `TileModifier`.** Fine while the shop only sells modifiers;
-  once it stocks bookmarks, tiles and bag upgrades, price belongs on an *offer*
-  asset rather than on a modifier's identity.
+- **Price lives on the thing being sold** — `TileModifier.price`, `Bookmark.price`,
+  `Checkout.price` — rather than on an *offer* asset. Three copies of the same
+  field now, and the shop's `Offer.ListPrice` is the seam that hides it. It holds
+  while everything sold is an asset the run can own; the day the shop sells
+  something that isn't one (a reroll, a bag slot, a tile), price wants moving to
+  an offer asset and `ListPrice` is where that change lands.
 - **An unplayable board that isn't empty.** A finite-bag mode ends the round when
   the bag is dry and fewer tiles remain than `minWordLength` — provably nothing
   to play. But a board can hold ten tiles that spell nothing, and moves only tick

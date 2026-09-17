@@ -11,7 +11,7 @@ using UnityEngine;
 /// refreshed every run, while its PRICE is a balance number, so a price is
 /// written only when the asset's is still 0.
 ///
-/// Adding a fourth is a code + Inspector job — subclass Bookmark, then
+/// Adding another is a code + Inspector job — subclass Bookmark, then
 /// Create -> Word Crush -> Bookmark -> ..., and add it to a mode's list.
 /// </summary>
 public static class BookmarkSetup
@@ -43,6 +43,24 @@ public static class BookmarkSetup
         vowels.vowels = "aeiou";
         Describe(vowels, "Vowel Fanatic", "+4 Mult if the word has more vowels than consonants. Y is a consonant.", price: 14);
         bookmarks.Add(vowels);
+
+        var spine = CreateOrLoad<SpineBookmark>("Spine");
+        spine.multiplier = 2f;
+        Describe(spine, "Spine", "x2 Mult if no letter appears twice in the word.", price: 16);
+        bookmarks.Add(spine);
+
+        // Marginalia and Shorthand are deliberately opposed — one pays for long
+        // words, the other only for the shortest legal one. Owning both is close
+        // to owning neither, which is why they share a pool.
+        var marginalia = CreateOrLoad<MarginaliaBookmark>("Marginalia");
+        marginalia.multPerExtraLetter = 1;
+        Describe(marginalia, "Marginalia", "+1 Mult for every letter past the minimum word length.", price: 13);
+        bookmarks.Add(marginalia);
+
+        var shorthand = CreateOrLoad<ShorthandBookmark>("Shorthand");
+        shorthand.multBonus = 4;
+        Describe(shorthand, "Shorthand", "+4 Mult on a word of exactly the minimum length.", price: 13);
+        bookmarks.Add(shorthand);
 
         int added = AttachToModes(bookmarks);
 

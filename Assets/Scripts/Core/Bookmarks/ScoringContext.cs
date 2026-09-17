@@ -31,6 +31,14 @@ public class ScoringContext
     public IReadOnlyList<Tile> Tiles;
 
     /// <summary>
+    /// The shortest word this mode accepts. Here so a bookmark can talk about
+    /// word length in the mode's terms — "exactly the minimum" and "past the
+    /// minimum" both stop meaning anything the moment minWordLength is tuned, and
+    /// a bookmark carrying its own copy of 3 would quietly describe the old rule.
+    /// </summary>
+    public int MinWordLength;
+
+    /// <summary>
     /// Words already accepted this round, NOT counting this one — so a bookmark
     /// can ask "have they spelled this before?" and get the honest answer.
     /// Read it, never add to it; it's ICollection only because that's the

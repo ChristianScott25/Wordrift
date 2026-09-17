@@ -100,6 +100,18 @@ public class RogueDemoMode : GameMode
     }
 
     /// <summary>
+    /// What the run's checkouts grant, or an empty set when there's no run yet.
+    /// Never cached: a checkout bought in the shop has to be in force on the very
+    /// next round, and RunState rebuilds this whenever the list changes.
+    ///
+    /// The no-run case allocates rather than sharing one static empty instance:
+    /// RunPerks has public mutable fields, so a shared one is a global that any
+    /// future caller could write into by accident. Read once per round from
+    /// BuildRules — the allocation is not worth defending against.
+    /// </summary>
+    private RunPerks Perks => run?.Perks ?? new RunPerks();
+
+    /// <summary>
     /// The round the config describes, offered to the librarian, then read back.
     /// A librarian never sees a raw config value and the mode never asks whether
     /// there is a librarian — the only branch is the payout rate, which has to
@@ -107,8 +119,12 @@ public class RogueDemoMode : GameMode
     /// </summary>
     private RoundRules BuildRules() => new RoundRules
     {
-        Moves = config.moves,
-        Discards = config.discardsPerRound,
+        // The run's checkouts are folded in HERE, before the librarian sees the
+        // rules — so a librarian is always editing the round you'd actually have
+        // played, perks included. The Redactor lowering discards with a Min then
+        // beats a checkout that raised them, which is the right way round.
+        Moves = config.moves + Perks.ExtraMoves,
+        Discards = config.discardsPerRound + Perks.ExtraDiscards,
         PayoutMultiplier = librarian != null ? config.librarianPayoutMultiplier : 1f,
 
         // Taken fresh and drawn from only inside Apply. It's keyed to the
@@ -316,8 +332,10 @@ public class RogueDemoMode : GameMode
             // Paid before the shop loads, because the shop reads the balance in
             // Start. movesLeft is already decremented for the winning word, so
             // clearing on move 6 of 20 correctly banks 14 unused moves.
+            // run.Money is read BEFORE AddMoney, so interest is charged on what
+            // the run walked in with rather than on this round's own winnings.
             run.AddMoney(config.RewardFor(session.Score, Mathf.Max(0, movesLeft),
-                                          rules.PayoutMultiplier));
+                                          rules.PayoutMultiplier, run.Perks, run.Money));
 
             // Cleared: the run continues in the shop, and the panel is skipped.
             // The shop advances the round when the player leaves it, so it can
@@ -346,7 +364,10 @@ public class RogueDemoMode : GameMode
     {
         Label = "MOVES",
         Value = Mathf.Max(0, movesLeft).ToString(),
-        Fraction = config.moves > 0 ? (float)movesLeft / config.moves : 0f,
+        // Against the ROUND's allowance, not the config's: a checkout that grants
+        // extra moves makes those two different numbers, and the config's would
+        // send the bar past full on the first frame.
+        Fraction = rules.Moves > 0 ? (float)movesLeft / rules.Moves : 0f,
         Urgent = movesLeft <= config.urgentMoves && !TargetReached,
 
         // Round, target, bag and money share one string because the HUD has

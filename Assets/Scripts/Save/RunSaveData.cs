@@ -58,6 +58,14 @@ public class RunSaveData
     public List<string> bookmarks = new();
 
     /// <summary>
+    /// Owned checkouts by asset name, in the order they were bought. The perks
+    /// they grant are NOT saved — they're rebuilt from this list on resume, so a
+    /// checkout retuned between sessions takes effect rather than being ignored
+    /// by the run that bought it.
+    /// </summary>
+    public List<string> checkouts = new();
+
+    /// <summary>
     /// The librarian this round is played against, by asset name. Empty on an
     /// ordinary round, which is most of them.
     /// </summary>
@@ -175,20 +183,26 @@ public class ShopOfferData
 {
     public const string Modifier = "modifier";
     public const string Bookmark = "bookmark";
+    public const string Checkout = "checkout";
 
     public string kind;
 
-    /// <summary>The TileModifier or Bookmark asset's name.</summary>
+    /// <summary>The TileModifier, Bookmark or Checkout asset's name.</summary>
     public string assetName;
 
-    /// <summary>Bag index the upgrade would land on. -1 for a bookmark offer.</summary>
+    /// <summary>Bag index the upgrade would land on. -1 for every other kind.</summary>
     public int targetTile = -1;
 
-    /// <summary>Purchases made this visit — what escalates a modifier's price.</summary>
-    public int timesBought;
+    /// <summary>
+    /// Bought during this visit. Unlike being out of stock this CANNOT be
+    /// re-derived: a sold bookmark is simply one the run owns, which is
+    /// indistinguishable from one it owned before walking in — so a resumed visit
+    /// would put it back on the shelf and sell it twice.
+    /// </summary>
+    public bool sold;
 
-    // Deliberately NOT recorded: whether the row was sold out. An empty
+    // Deliberately NOT recorded: whether the row was out of STOCK. An empty
     // assetName already says so, and the restored offer works it out through the
-    // same InStock the live one uses — a second copy of that answer could only
-    // ever disagree with the first.
+    // same check the live one uses — a second copy of that answer could only ever
+    // disagree with the first.
 }

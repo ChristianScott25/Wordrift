@@ -45,7 +45,14 @@ public static class WordCrushSetup
         var shape = BuildBoardShape();
         RogueDemoModeSetup.Build(shape, letterSet, modifiers, null);
         TileSkinSetup.Build();
+
+        // Every pool the shop draws from. Bookmarks were missing here until
+        // 2026-09-16, so a rebuilt project had two dead bookmark rows and no way
+        // to tell — each of these seeders attaches its assets to the mode config,
+        // and a pool the config doesn't list is a slot the shop can't stock.
         LibrarianSetup.Build();
+        BookmarkSetup.Build();
+        CheckoutSetup.Build();
         BuildTilePrefab();
         BuildHudPrefabs();
 

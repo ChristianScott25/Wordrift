@@ -79,6 +79,12 @@ public class RogueDemoModeConfig : ModeConfig
              "down, so renaming them is this field. Blank shows just the name.")]
     public string librarianLabel = "LIBRARIAN";
 
+    [Header("Checkouts")]
+    [Tooltip("The pool of checkouts this mode's shop can offer — permanent, " +
+             "run-wide perks. A run can own each at most once, and an empty list " +
+             "simply means the checkout row is never stocked.")]
+    public List<Checkout> checkouts = new();
+
     [Header("Payout")]
     [Tooltip("Points needed per $1 of the round's payout. 10 = a 60-point round pays $6.")]
     [Min(1)] public int pointsPerCoin = 10;
@@ -87,16 +93,19 @@ public class RogueDemoModeConfig : ModeConfig
              "efficiency, and gives the move counter a second job. 0 turns it off.")]
     [Min(0)] public int coinsPerUnusedMove = 1;
 
-    [Tooltip("How much an offer's price grows each time you buy it AGAIN in the same " +
-             "shop visit. 1.5 = $5, then $8, then $11. Resets every visit.")]
-    [Min(1f)] public float repeatPriceGrowth = 1.5f;
-
     [Tooltip("The most one cleared round may pay, whatever it scored. A ceiling on " +
              "the payout, not on the score: it stops a runaway round buying out the " +
              "shop in one visit, and stops a broken one paying a nonsense number. " +
              "Applied LAST, after the librarian's multiplier — a librarian round " +
              "that already earned the cap is paid the cap. 0 removes the ceiling.")]
     [Min(0)] public int maxRoundPayout = 200;
+
+    [Tooltip("The most interest one cleared round may pay, whatever the run is " +
+             "holding (see Checkout_Interest). A ceiling on the rate's output, " +
+             "and it lives here rather than on the checkout so that two sources " +
+             "of interest are bounded together rather than one at a time. " +
+             "Applied before the round payout cap. 0 removes the ceiling.")]
+    [Min(0)] public int maxInterest = 25;
 
     /// <summary>
     /// What clearing a round pays. The seam every later payout idea hangs off —
@@ -109,7 +118,17 @@ public class RogueDemoModeConfig : ModeConfig
     /// so "this round pays double" stays true no matter which term later ideas
     /// (interest, purses) add.
     /// </param>
-    public int RewardFor(int score, int movesLeft, float payoutMultiplier = 1f)
+    /// <param name="perks">
+    /// What the run's checkouts grant, or null for a run without any. Taken as
+    /// the bundle rather than as loose numbers so that widening RunPerks doesn't
+    /// widen this signature again.
+    /// </param>
+    /// <param name="moneyHeld">
+    /// The balance interest is charged against — the run's money BEFORE this
+    /// payout lands, so clearing a round never pays interest on its own winnings.
+    /// </param>
+    public int RewardFor(int score, int movesLeft, float payoutMultiplier = 1f,
+                         RunPerks perks = null, int moneyHeld = 0)
     {
         // long, then double: score is already saturated at a billion (see
         // ScoreLimits), and a payout multiplier on top of that overflows an int
@@ -118,9 +137,39 @@ public class RogueDemoModeConfig : ModeConfig
                       (long)Mathf.Max(0, movesLeft) * Mathf.Max(0, coinsPerUnusedMove);
 
         double paid = earned * (double)Mathf.Max(0f, payoutMultiplier);
+
+        // The bonus is a percentage of what the ROUND earned, so it rides the
+        // librarian's multiplier — a doubled round pays a doubled bonus. Interest
+        // is not part of what the round earned, so it lands after and is not
+        // multiplied by either.
+        if (perks != null)
+        {
+            paid += paid * (Mathf.Max(0, perks.PayoutBonusPercent) / 100.0);
+            paid += InterestOn(moneyHeld, perks);
+        }
+
+        // Last, as ever: the cap is a cap, so a bonus or interest that would
+        // carry a round past it simply doesn't.
         if (maxRoundPayout > 0 && paid > maxRoundPayout) paid = maxRoundPayout;
 
         return ScoreLimits.Clamp(paid);
+    }
+
+    /// <summary>
+    /// What a balance earns when a round is cleared. Split out of RewardFor so
+    /// the rate and its ceiling sit together and the payout above reads as the
+    /// four terms it is — and so that a shop that ever wants to PREVIEW interest
+    /// ("hold this and you'll earn $12") has one number to ask for rather than a
+    /// second copy of the arithmetic. Nothing previews it today.
+    /// </summary>
+    private int InterestOn(int moneyHeld, RunPerks perks)
+    {
+        if (perks == null || perks.InterestPer10 <= 0 || moneyHeld <= 0) return 0;
+
+        long interest = (long)(moneyHeld / 10) * perks.InterestPer10;
+        if (maxInterest > 0 && interest > maxInterest) interest = maxInterest;
+
+        return ScoreLimits.Clamp(interest);
     }
 
     /// <summary>The score target for a given 1-based round of a run.</summary>
@@ -144,12 +193,13 @@ public class RogueDemoModeConfig : ModeConfig
     public override GameMode CreateMode() => new RogueDemoMode(this);
 
     /// <summary>
-    /// The librarian pool joins the stamp for the same reason the modifier and
-    /// bookmark pools do: a librarian's numbers are tuning knobs, and a run
-    /// resumed against a retuned one would play a round the save doesn't
-    /// describe. The base stamp covers this asset's own fields, but the pool
-    /// arrives there as instance IDs, which are deliberately zeroed — so the
+    /// The librarian and checkout pools join the stamp for the same reason the
+    /// modifier and bookmark pools do: their numbers are tuning knobs, and a run
+    /// resumed against a retuned one would play by numbers the save doesn't
+    /// describe. The base stamp covers this asset's own fields, but the pools
+    /// arrive there as instance IDs, which are deliberately zeroed — so the
     /// assets themselves have to be stamped by hand.
     /// </summary>
-    public override string Fingerprint() => base.Fingerprint() + StampAll(librarians);
+    public override string Fingerprint() =>
+        base.Fingerprint() + StampAll(librarians) + StampAll(checkouts);
 }

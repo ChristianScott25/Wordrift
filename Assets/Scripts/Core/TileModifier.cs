@@ -24,6 +24,11 @@ public abstract class TileModifier : ScriptableObject
     public Color badgeTextColor = Color.white;
 
     [Header("Shop")]
+    [Tooltip("What this does, in the player's words. Shown when a shop row is " +
+             "tapped. Refreshed by Word Crush > Create Tile Modifier Assets, " +
+             "since it describes what the modifier IS rather than how it's tuned.")]
+    [TextArea] public string description = "";
+
     [Tooltip("What one of these costs in the shop. 0 means unpriced — Word Crush > " +
              "Create Tile Modifier Assets fills a 0 with the default ladder and " +
              "leaves any number you've tuned alone.")]

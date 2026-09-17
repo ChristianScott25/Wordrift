@@ -15,5 +15,6 @@ MonoBehaviour:
   badgeLabel: 2L
   badgeColor: {r: 0.2, g: 0.52, b: 0.88, a: 1}
   badgeTextColor: {r: 1, g: 1, b: 1, a: 1}
+  description: Multiplies that one tile's letter score by 2.
   price: 5
   multiplier: 2

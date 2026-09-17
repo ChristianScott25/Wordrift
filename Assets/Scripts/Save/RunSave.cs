@@ -18,7 +18,9 @@ public static class RunSave
     /// is cheaper than a migration path nobody will maintain.
     /// </summary>
     // v2 (2026-09-01): added the round's librarian and the unseen pool.
-    public const int Version = 2;
+    // v3 (2026-09-16): added owned checkouts; shop offers now record `sold`
+    //                  instead of `timesBought`, which no longer exists.
+    public const int Version = 3;
 
     private const string FileName = "run.json";
 
