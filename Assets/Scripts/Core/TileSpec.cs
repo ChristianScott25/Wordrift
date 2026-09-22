@@ -12,11 +12,12 @@ using System.Collections.Generic;
 [System.Serializable]
 public class TileSpec
 {
-    [UnityEngine.Tooltip("What this tile spells. Usually one letter.")]
-    // A string, not a char: multi-letter tiles ("qu", "ie") are planned. Nothing
-    // downstream speaks multi-letter yet — Tile.Letter and ChainController.WordOf
-    // are per-character — so until they widen, only the first character plays.
-    // Widen those, not this.
+    [UnityEngine.Tooltip("What this tile spells. Usually one letter, sometimes two.")]
+    // A string, not a char, and it is played WHOLE: ChainController.WordOf
+    // concatenates each tile's spelling, so a "ch" tile contributes two letters
+    // to the word from one board cell. There is deliberately no "first
+    // character" accessor any more — one existed until 2026-09-17 and every
+    // caller of it was a place the second letter went missing.
     public string letters = "a";
 
     [UnityEngine.Tooltip("What this tile is worth before any modifiers or bonuses.")]
@@ -63,7 +64,12 @@ public class TileSpec
         return true;
     }
 
-    /// <summary>The single character this tile plays as, until multi-letter lands.</summary>
-    public char Letter =>
-        string.IsNullOrEmpty(letters) ? 'e' : char.ToLowerInvariant(letters[0]);
+    /// <summary>
+    /// What this tile plays as, lowercased — the whole spelling, never a single
+    /// character. "ch" is two letters out of one cell, which is the entire point
+    /// of a multi-letter tile, so anything that narrows this to letters[0] is a
+    /// bug rather than a shortcut.
+    /// </summary>
+    public string Spelling =>
+        string.IsNullOrEmpty(letters) ? "e" : letters.ToLowerInvariant();
 }

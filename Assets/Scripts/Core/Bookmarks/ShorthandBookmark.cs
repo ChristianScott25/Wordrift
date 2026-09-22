@@ -18,7 +18,10 @@ public class ShorthandBookmark : Bookmark
 
     public override void OnWordScored(ScoringContext ctx)
     {
-        if (ctx.Tiles == null || ctx.Tiles.Count != ctx.MinWordLength) return;
+        // LETTERS, not ctx.Tiles.Count. A "ch" tile makes those different
+        // numbers, and counting tiles would pay this out on CH+A+T — a
+        // four-letter word — which is the exact opposite of what it rewards.
+        if (string.IsNullOrEmpty(ctx.Word) || ctx.Word.Length != ctx.MinWordLength) return;
         ctx.AddMult(multBonus, displayName);
     }
 }

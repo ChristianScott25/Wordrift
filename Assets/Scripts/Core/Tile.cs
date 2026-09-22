@@ -88,6 +88,12 @@ public class Tile : MonoBehaviour
 
     [SerializeField] private Color selectionBoxColor = new Color(1f, 0.75f, 0.1f);
 
+    [Tooltip("Letter font size as a fraction of the size the prefab was authored " +
+             "with, indexed by how many characters the tile spells. A two-letter " +
+             "tile has to shrink or it runs off the edge of the art; index 0 is a " +
+             "one-character tile and must stay 1.")]
+    [SerializeField] private float[] letterFontScale = { 1f, 0.62f, 0.45f };
+
     [Header("Feedback")]
     [SerializeField] private Color invalidColor = new Color(1f, 0.35f, 0.35f);
     [SerializeField] private float invalidFlashSeconds = 0.25f;
@@ -96,8 +102,12 @@ public class Tile : MonoBehaviour
     /// <summary>The persistent identity this tile is the body of (see TileSpec).</summary>
     public TileSpec Spec { get; private set; }
 
-    /// <summary>The single character this tile plays as, until multi-letter lands.</summary>
-    public char Letter { get; private set; }
+    /// <summary>
+    /// What this tile plays as — the WHOLE spelling, lowercased. Usually one
+    /// character; a multi-letter tile ("ch") hands over both, which is how one
+    /// board cell contributes two letters to a word.
+    /// </summary>
+    public string Letters { get; private set; }
 
     public Vector2Int Cell { get; set; }
     public bool IsSettled => !moving;
@@ -131,6 +141,11 @@ public class Tile : MonoBehaviour
     private readonly List<SpriteRenderer> badgeCircles = new();
     private readonly List<TMP_Text> badgeTexts = new();
 
+    // The letter label's authored font size, captured the first time ApplyLook
+    // runs and before anything writes to it — so re-initialising a tile can't
+    // compound the multi-letter shrink onto an already-shrunk size.
+    private float baseLetterFontSize;
+
     private Vector3 targetPosition;
     private bool moving;
     private float baseScale = 1f;
@@ -140,7 +155,7 @@ public class Tile : MonoBehaviour
     public void Init(TileSpec spec, TileLook look, Vector2Int cell, Vector3 startPos, float cellSize)
     {
         Spec = spec;
-        Letter = spec.Letter;
+        Letters = spec.Spelling;
         LetterPoints = spec.baseScore;
         Cell = cell;
         Modifiers.Clear();
@@ -185,11 +200,39 @@ public class Tile : MonoBehaviour
 
         if (letterLabel != null)
         {
+            if (baseLetterFontSize <= 0f) baseLetterFontSize = letterLabel.fontSize;
+
             if (look.LetterFont != null) letterLabel.font = look.LetterFont;
-            // The full spelling, so a "QU" tile reads QU the day one exists —
-            // though the label isn't sized for more than ~2 characters.
+
+            // The full spelling — a "CH" tile reads CH — shrunk to fit, because
+            // the label is one line of fixed-size world-space text and two
+            // characters at the one-character size overhang the art.
             letterLabel.text = Spec.letters.ToUpperInvariant();
+            letterLabel.fontSize = baseLetterFontSize * LetterScaleFor(letterLabel.text.Length);
         }
+    }
+
+    /// <summary>
+    /// How much to shrink the letter for a tile that spells this many characters.
+    /// Off the end of the table means "as small as the table goes" rather than
+    /// full size: a longer tile than anyone planned for should come out cramped,
+    /// never hanging off the edge.
+    ///
+    /// An EMPTY table falls back to the curve the default table was drawn from
+    /// (1 / 0.62 / 0.44) rather than to 1. A serialized array that arrives empty
+    /// is a plausible accident — a prefab saved before this field existed, or
+    /// someone clearing it in the Inspector — and 1 is the one answer that puts
+    /// letters outside the tile, which is the failure this exists to prevent.
+    /// </summary>
+    private float LetterScaleFor(int characters)
+    {
+        characters = Mathf.Max(1, characters);
+
+        if (letterFontScale == null || letterFontScale.Length == 0)
+            return Mathf.Min(1f, 1.55f / (characters + 0.5f));
+
+        int index = Mathf.Clamp(characters - 1, 0, letterFontScale.Length - 1);
+        return Mathf.Max(0.01f, letterFontScale[index]);
     }
 
     public void AddModifier(TileModifier modifier)

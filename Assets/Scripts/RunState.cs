@@ -93,6 +93,25 @@ public class RunState
         return true;
     }
 
+    // ---- Tiles ----------------------------------------------------------
+
+    /// <summary>
+    /// Puts a new tile in the bag, for the rest of the run. How the shop sells a
+    /// CH tile.
+    ///
+    /// APPEND ONLY, and only between rounds. A tile's identity is its INDEX in
+    /// TileBag — a saved round's board and drawn-down bag are both lists of those
+    /// indices — so inserting or removing would silently re-point every one of
+    /// them at a different tile. Appending can't move an existing index, which is
+    /// the only reason this is safe to do mid-run at all.
+    /// </summary>
+    public bool AddTile(TileSpec spec)
+    {
+        if (spec == null) return false;
+        TileBag.Add(spec);
+        return true;
+    }
+
     // ---- Checkouts ------------------------------------------------------
 
     /// <summary>

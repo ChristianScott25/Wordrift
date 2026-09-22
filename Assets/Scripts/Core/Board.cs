@@ -58,6 +58,23 @@ public class Board : MonoBehaviour
     /// <summary>Tiles on the board right now, counting ones still falling in.</summary>
     public int TileCount => tiles.Count;
 
+    /// <summary>
+    /// LETTERS the board could still spell, counting ones still falling in — a
+    /// multi-letter tile counts for all of them. Different from TileCount the
+    /// moment a "ch" tile is on the board, and it's this number that decides
+    /// whether a word is still possible at all.
+    /// </summary>
+    public int LetterCount
+    {
+        get
+        {
+            int letters = 0;
+            foreach (var tile in tiles.Values)
+                if (tile != null) letters += tile.Letters.Length;
+            return letters;
+        }
+    }
+
     /// <summary>How many tiles the board holds when completely full.</summary>
     public int CellCount => cells.Count;
 
@@ -435,12 +452,8 @@ public class Board : MonoBehaviour
     {
         if (spec == null) return null;
 
-        // Multi-letter specs ("qu") aren't playable yet — Tile, the chain, and
-        // scoring all speak single characters — so only the first letter plays.
-        char letter = spec.Letter;
-
         var tile = Instantiate(tilePrefab, startPos, Quaternion.identity, transform);
-        tile.name = $"Tile {char.ToUpperInvariant(letter)} ({cell.x},{cell.y})";
+        tile.name = $"Tile {spec.Spelling.ToUpperInvariant()} ({cell.x},{cell.y})";
         tile.Init(spec, NextLook(), cell, startPos, cellSize);
 
         // Modifiers come from the spec and ONLY the spec: a tile has a

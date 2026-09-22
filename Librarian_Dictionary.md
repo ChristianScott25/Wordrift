@@ -148,8 +148,9 @@ The cheapest librarian there is — it doesn't even read the round, only the wor
 Refusal reads: *"E is banned this round."*
 
 **⭐ The banned letter is weighted by what's in your bag.** It's drawn from a pool holding **one
-entry per tile**, not one entry per distinct letter — so with a standard bag a banned E (13
-tiles) is thirteen times likelier than a banned Z (1 tile). That is the entire point: a banned Z
+entry per letter you own**, not one entry per distinct letter — so with a standard bag a banned
+E (13 tiles) is thirteen times likelier than a banned Z (1 tile). A multi-letter tile puts in
+every letter it spells, so a `CH` tile counts once toward C and once toward H. That is the entire point: a banned Z
 is a shrug, and a boss round shouldn't be a shrug. It also means the letter tracks *your* bag —
 if a run has been stacking vowels, the vowels are what's at risk.
 
@@ -164,6 +165,12 @@ uses the same three fields rather than inventing its own.
 
 ⚠️ It can strike out the letter the board happens to be full of, which is another route into the
 dead-board problem — see [Open](#open).
+
+⚠️ **A multi-letter tile puts every letter it spells into the pool, and a ban on either one
+kills the whole tile.** A `CH` tile weights both C and H, and a round that bans C refuses every
+word played through it — the refusal scans the letters of the word, and the word contains the
+C whether you think of the tile as a C or not. That's the intended reading (the tile really does
+spell a C), but it makes a bought tile fully dead for a round rather than merely awkward.
 
 ---
 

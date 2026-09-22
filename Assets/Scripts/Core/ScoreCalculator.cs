@@ -70,7 +70,12 @@ public class ScoreCalculator
         return new ScorePair
         {
             Points = ScoreLimits.Clamp(points * wordMultiplier),
-            Mult = ScoreLimits.ClampMult(config.LengthMultiplier(chain.Count)),
+            // LETTERS, not chain.Count: a "ch" tile is two letters out of one
+            // cell, and the length multiplier is what the player is told it is
+            // ("how long the word is"). Base is also the live HUD preview, so
+            // this one expression is what both the preview and the award use.
+            Mult = ScoreLimits.ClampMult(
+                config.LengthMultiplier(ChainController.LetterCount(chain))),
             WordMultiplier = (int)wordMultiplier,
         };
     }

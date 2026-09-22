@@ -27,7 +27,16 @@ public class ScoringContext
     /// <summary>The word as submitted, lowercase.</summary>
     public string Word;
 
-    /// <summary>The tiles it was spelled from, in selection order.</summary>
+    /// <summary>
+    /// The tiles it was spelled from, in selection order.
+    ///
+    /// ⚠️ `Tiles.Count` is NOT the word's length. A multi-letter tile ("ch") is
+    /// one tile and two letters, so a bookmark that talks about length wants
+    /// `Word.Length` — Marginalia and Shorthand both read this field until
+    /// 2026-09-17 and both said the wrong thing the moment a CH tile was played.
+    /// Use this for what the tiles themselves carry (modifiers, base scores);
+    /// use Word for anything about the word.
+    /// </summary>
     public IReadOnlyList<Tile> Tiles;
 
     /// <summary>

@@ -20,7 +20,9 @@ public static class RunSave
     // v2 (2026-09-01): added the round's librarian and the unseen pool.
     // v3 (2026-09-16): added owned checkouts; shop offers now record `sold`
     //                  instead of `timesBought`, which no longer exists.
-    public const int Version = 3;
+    // v4 (2026-09-17): the shelf grew a sixth slot (a new tile for the bag), so
+    //                  a v3 shelf is the wrong length to restore.
+    public const int Version = 4;
 
     private const string FileName = "run.json";
 

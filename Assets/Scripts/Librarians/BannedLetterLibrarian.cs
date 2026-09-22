@@ -10,9 +10,11 @@ using UnityEngine;
 /// letter with nothing written to disk. Drawing anywhere else (in Refuse, say)
 /// would give a different answer on every keystroke.
 ///
-/// It draws from RoundRules.LetterPool, which holds one entry per TILE in the
-/// run's bag. So the roll is weighted by how common the letter actually is: a
-/// banned Z would be a shrug, and this is much more likely to take an E.
+/// It draws from RoundRules.LetterPool, which holds one entry per LETTER in the
+/// run's bag — so a "ch" tile puts in a c AND an h. The roll is therefore
+/// weighted by how common the letter actually is: a banned Z would be a shrug,
+/// and this is much more likely to take an E. One draw whatever the pool's size,
+/// so widening it changed the weighting and not the seed's draw count.
 ///
 /// The banner has to say WHICH letter, which is what PowerFor is for — PowerText
 /// alone can only describe the rule in the abstract, and a boss whose rule you

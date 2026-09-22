@@ -63,13 +63,15 @@ public abstract class ModeConfig : ScriptableObject
     public List<Bookmark> bookmarks = new();
 
     /// <summary>
-    /// The base multiplier a word of this many tiles is worth. Below the minimum
-    /// word length it just reads as the first entry — nothing can be submitted
-    /// there anyway, and the live preview still needs a number to show.
+    /// The base multiplier a word of this many LETTERS is worth — letters, not
+    /// tiles, which stopped being the same number when multi-letter tiles landed
+    /// (ChainController.LetterCount is the one place that count is taken). Below
+    /// the minimum word length it just reads as the first entry — nothing can be
+    /// submitted there anyway, and the live preview still needs a number to show.
     /// </summary>
-    public float LengthMultiplier(int tileCount)
+    public float LengthMultiplier(int letterCount)
     {
-        int index = Mathf.Max(0, tileCount - minWordLength);
+        int index = Mathf.Max(0, letterCount - minWordLength);
 
         if (lengthMultipliers == null || lengthMultipliers.Length == 0)
             return 1f + index * multiplierPerExtraLetter;

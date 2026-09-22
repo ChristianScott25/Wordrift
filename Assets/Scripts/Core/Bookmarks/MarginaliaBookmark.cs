@@ -17,10 +17,12 @@ public class MarginaliaBookmark : Bookmark
 
     public override void OnWordScored(ScoringContext ctx)
     {
-        if (ctx.Tiles == null) return;
+        if (string.IsNullOrEmpty(ctx.Word)) return;
 
-        // Off the context's minimum, never a hardcoded 3 — see ScoringContext.
-        int extra = ctx.Tiles.Count - ctx.MinWordLength;
+        // LETTERS, not ctx.Tiles.Count — a "ch" tile is one tile and two letters,
+        // and this bookmark says "per letter". Off the context's minimum too,
+        // never a hardcoded 3 — see ScoringContext.
+        int extra = ctx.Word.Length - ctx.MinWordLength;
         if (extra <= 0) return;
 
         ctx.AddMult(extra * multPerExtraLetter, displayName);

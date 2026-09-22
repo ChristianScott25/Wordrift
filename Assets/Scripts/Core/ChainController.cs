@@ -261,11 +261,34 @@ public class ChainController : MonoBehaviour
     private static bool IsPointerOverUI() =>
         EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
 
-    /// <summary>The word currently spelled out by a chain.</summary>
+    /// <summary>
+    /// The word currently spelled out by a chain.
+    ///
+    /// Each tile contributes its WHOLE spelling, so a "ch" tile puts two letters
+    /// into the word from one cell. It used to fill a char[tiles.Count], one slot
+    /// per tile, which is where the second letter of a multi-letter tile went.
+    /// </summary>
     public static string WordOf(IReadOnlyList<Tile> tiles)
     {
-        var chars = new char[tiles.Count];
-        for (int i = 0; i < tiles.Count; i++) chars[i] = tiles[i].Letter;
-        return new string(chars);
+        var word = new System.Text.StringBuilder(tiles.Count + 4);
+        for (int i = 0; i < tiles.Count; i++)
+            if (tiles[i] != null) word.Append(tiles[i].Letters);
+        return word.ToString();
+    }
+
+    /// <summary>
+    /// How many LETTERS a chain spells — not how many tiles it uses. A "ch" tile
+    /// counts for two.
+    ///
+    /// It lives next to WordOf so there is one definition of how long a chain is:
+    /// the scorer asks this and the dictionary asks WordOf().Length, and two
+    /// separate walks of the chain would eventually disagree about a word.
+    /// </summary>
+    public static int LetterCount(IReadOnlyList<Tile> tiles)
+    {
+        int letters = 0;
+        for (int i = 0; i < tiles.Count; i++)
+            if (tiles[i] != null) letters += tiles[i].Letters.Length;
+        return letters;
     }
 }

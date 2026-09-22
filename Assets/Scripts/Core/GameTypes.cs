@@ -166,7 +166,11 @@ public struct WordCheck
     /// </summary>
     public string Note;
 
-    /// <summary>Letters in the word. The tile count, and the thing most rules ask about.</summary>
+    /// <summary>
+    /// Letters in the word — NOT the tile count, which is a different number
+    /// once a multi-letter tile is on the board. This is what every length rule
+    /// asks about, and letters is what they all mean.
+    /// </summary>
     public int Length => Word == null ? 0 : Word.Length;
 }
 

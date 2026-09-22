@@ -33,6 +33,19 @@ public class LetterSet : ScriptableObject
         [Tooltip("Relative spawn frequency — and the share of a run's tile bag " +
                  "this letter gets. 0 = in the catalog but never appears.")]
         public int weight = 1;
+
+        [Tooltip("What one of these costs in the shop. 0 is every ordinary " +
+                 "letter — nothing sells single letters. A multi-letter row " +
+                 "left at 0 still reaches the shelf and warns there, rather " +
+                 "than quietly never being offered.")]
+        [Min(0)] public int price = 0;
+
+        /// <summary>
+        /// Does this row spell more than one letter? The shop's whole test for
+        /// "is this a tile you can buy": a new kind of tile is a catalog row,
+        /// not a class, so there is nothing else to ask.
+        /// </summary>
+        public bool IsMultiLetter => !string.IsNullOrEmpty(letter) && letter.Length > 1;
     }
 
     [SerializeField] private List<Entry> entries = new();

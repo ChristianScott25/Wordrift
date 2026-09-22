@@ -184,10 +184,16 @@ public class ShopOfferData
     public const string Modifier = "modifier";
     public const string Bookmark = "bookmark";
     public const string Checkout = "checkout";
+    public const string Tile = "tile";
 
     public string kind;
 
-    /// <summary>The TileModifier, Bookmark or Checkout asset's name.</summary>
+    /// <summary>
+    /// The TileModifier, Bookmark or Checkout asset's name — or, for a tile row,
+    /// the LETTER SET KEY it spells ("ch"), since a catalog row isn't an asset of
+    /// its own. Both resolve the same way: against the mode's own pools, so there
+    /// is no registry to keep in sync.
+    /// </summary>
     public string assetName;
 
     /// <summary>Bag index the upgrade would land on. -1 for every other kind.</summary>

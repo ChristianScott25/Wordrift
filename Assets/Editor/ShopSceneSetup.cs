@@ -62,6 +62,23 @@ public static class ShopSceneSetup
     private const float OfferTop = 250f;
     private const float OfferPitch = 152f;
 
+    private const float ContinueWidth = 620f;
+    private const float ContinueHeight = 150f;
+    private const float HintHeight = 60f;
+
+    /// <summary>
+    /// Where the shelf stops — the bottom edge of the last row.
+    ///
+    /// Everything below the shelf is DERIVED from this rather than written down,
+    /// because the shelf's length is ShopScreen.Slots and that number moves. It
+    /// moved on 2026-09-17, from five to six, and the hand-typed -570 the
+    /// Continue button had been carrying since then sat on top of the new row.
+    /// </summary>
+    private const float ShelfBottom = OfferTop - (OfferRows - 1) * OfferPitch - OfferHeight / 2f;
+
+    private const float ContinueY = ShelfBottom - 20f - ContinueHeight / 2f;
+    private const float HintY = ContinueY - ContinueHeight / 2f - 22f - HintHeight / 2f;
+
     [MenuItem("Word Crush/Create Shop Scene")]
     public static void Create()
     {
@@ -166,7 +183,7 @@ public static class ShopSceneSetup
         var hint = root.Find("Hint");
         if (hint != null)
         {
-            WordCrushSetup.Anchor(hint.gameObject, Center, new Vector2(0f, -690f), new Vector2(1000f, 60f));
+            WordCrushSetup.Anchor(hint.gameObject, Center, new Vector2(0f, HintY), new Vector2(1000f, HintHeight));
             var hintText = hint.GetComponent<TMP_Text>();
 
             // Each of these was true when it was written and isn't any more.
@@ -225,7 +242,8 @@ public static class ShopSceneSetup
             continueButton = made.transform;
             added++;
         }
-        WordCrushSetup.Anchor(continueButton.gameObject, Center, new Vector2(0f, -570f), new Vector2(620f, 150f));
+        WordCrushSetup.Anchor(continueButton.gameObject, Center, new Vector2(0f, ContinueY),
+            new Vector2(ContinueWidth, ContinueHeight));
 
         var panel = EnsureDetailPanel(shop, root, ref added);
 

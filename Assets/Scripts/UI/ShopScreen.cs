@@ -10,8 +10,9 @@ using UnityEngine.UI;
 /// what you can spend it on. Its one certainty is that everything sold here
 /// edits RunState.Current — never an authored asset.
 ///
-/// THE SHELF IS FIVE SLOTS WITH FIXED ROLES — two tile upgrades, two bookmarks,
-/// one checkout — and each slot is stocked once, when the shop opens. Prices are
+/// THE SHELF IS SIX SLOTS WITH FIXED ROLES — two tile upgrades, two bookmarks,
+/// one checkout, one new tile for the bag — and each slot is stocked once, when
+/// the shop opens. Prices are
 /// what the assets say (through the run's discount); buying a row SELLS it, and
 /// it stays on screen greyed out rather than vanishing, so the shelf can't shift
 /// under a finger that's already moving.
@@ -165,7 +166,7 @@ public class ShopScreen : MonoBehaviour
     // ------------------------------------------------------------------------
     // THE STOCK
     //
-    // Five slots with fixed roles. What's real here: set prices, one purchase per
+    // Six slots with fixed roles. What's real here: set prices, one purchase per
     // row, and a shelf that empties as you buy it.
     //
     // 🚧 Still temporary: an upgrade lands on a RANDOM tile from your bag. The
@@ -183,12 +184,19 @@ public class ShopScreen : MonoBehaviour
     private const int CheckoutSlots = 1;
 
     /// <summary>
+    /// The new-tile row. One per visit, and unlike every other slot it never
+    /// runs out: you may own as many CH tiles as you care to buy, so the same
+    /// pair can come back next visit.
+    /// </summary>
+    private const int TileSlots = 1;
+
+    /// <summary>
     /// How many rows the shelf needs. Public because ShopSceneSetup lays out
     /// exactly this many buttons — the count used to be written down separately
     /// in the editor script, and two copies of it would part company the first
     /// time a slot was added.
     /// </summary>
-    public const int Slots = ModifierSlots + BookmarkSlots + CheckoutSlots;
+    public const int Slots = ModifierSlots + BookmarkSlots + CheckoutSlots + TileSlots;
 
     /// <summary>
     /// One thing on the shelf. Subclassed rather than switched on, so the row
@@ -395,12 +403,83 @@ public class ShopScreen : MonoBehaviour
     }
 
     /// <summary>
-    /// Fills the five slots. THE ROLL ORDER IS PART OF THE SEED — every draw
+    /// A brand-new tile for the bag — a multi-letter one, which is the only kind
+    /// anything sells. Unlike every other row it can't run out and doesn't care
+    /// what the run already owns: two CH tiles are twice as likely to turn up as
+    /// one, which is the whole reason to buy a second.
+    ///
+    /// It holds the catalog ROW rather than a TileSpec so that nothing is built
+    /// until the purchase goes through — and so the row's price and score come
+    /// from the asset every time they're read, rather than from a copy taken when
+    /// the shop opened.
+    /// </summary>
+    private class TileOffer : Offer
+    {
+        public LetterSet.Entry Entry;
+
+        public override bool HasStock => Entry != null;
+        public override int ListPrice => Entry == null ? 0 : Entry.price;
+
+        public override string Title =>
+            Entry == null ? "" : $"NEW TILE   {Entry.letter.ToUpperInvariant()}";
+
+        /// <summary>
+        /// Written from the row's own numbers, the same discipline as
+        /// Checkout.PowerText — a hand-authored second copy is how the shop ends
+        /// up describing a tile that was retuned last week.
+        /// </summary>
+        public override string Description
+        {
+            get
+            {
+                if (Entry == null) return "";
+                string spelling = Entry.letter.ToUpperInvariant();
+                string howMany = Entry.letter.Length == 2 ? "both letters" : "every letter";
+                return $"A new {spelling} tile, worth {Entry.points} points, added to " +
+                       "your bag for the rest of the run.\n\n" +
+                       $"It spells {howMany} from a single square, and the word counts " +
+                       "them all — so it reaches a longer word off fewer tiles.";
+            }
+        }
+
+        public override void Deliver(RunState run)
+        {
+            // The spec is built HERE, not when the shelf was stocked: one made
+            // up front and then not bought is a tile nobody owns, and — worse —
+            // buying twice would hand out the SAME spec object, which is two
+            // board tiles sharing one identity, so gilding one would gild both.
+            //
+            // Null-guarded rather than assumed. ConfirmBuy checks Available,
+            // which checks HasStock, so it can't be null — but Deliver runs
+            // AFTER the money is gone, and an exception here would leave the
+            // player charged with the shelf half-updated.
+            if (Entry == null || !run.AddTile(LetterSet.CreateSpec(Entry)))
+                Debug.LogError($"Bought a '{(Entry == null ? "?" : Entry.letter)}' tile that " +
+                               "couldn't be added to the bag — the player has been charged " +
+                               "and given nothing.");
+        }
+
+        public override ShopOfferData Capture(Dictionary<TileSpec, int> tileIndex) => new ShopOfferData
+        {
+            kind = ShopOfferData.Tile,
+
+            // The catalog KEY, not an asset file name — a catalog row isn't an
+            // asset of its own. It resolves the same way everything else does:
+            // against the mode's own letter set, so there's nothing to keep in
+            // sync and a renamed row invalidates the save exactly like a renamed
+            // asset would.
+            assetName = Entry == null ? "" : Entry.letter,
+            sold = Sold,
+        };
+    }
+
+    /// <summary>
+    /// Fills the six slots. THE ROLL ORDER IS PART OF THE SEED — every draw
     /// below comes off one stream in sequence, so reordering these lines changes
     /// what every existing seed stocks. Add to the end, don't reshuffle.
     ///
     /// Slots keep their roles even when a pool is empty: an offer with nothing in
-    /// it still takes its place in the list, so the checkout is always row 5 and
+    /// it still takes its place in the list, so the new tile is always row 6 and
     /// a shelf that loses its bookmarks doesn't slide everything up a row.
     /// </summary>
     private void StockShelves()
@@ -438,6 +517,12 @@ public class ShopScreen : MonoBehaviour
 
         for (int i = 0; i < CheckoutSlots; i++)
             offers.Add(new CheckoutOffer { Checkout = RollCheckout() });
+
+        // Appended LAST, deliberately: every roll above it keeps its position in
+        // the stream, so a seed recorded before this row existed still stocks
+        // rows 0-4 with exactly what it used to.
+        for (int i = 0; i < TileSlots; i++)
+            offers.Add(new TileOffer { Entry = RollTile() });
     }
 
     /// <summary>
@@ -494,6 +579,14 @@ public class ShopScreen : MonoBehaviour
                     });
                     break;
 
+                case ShopOfferData.Tile:
+                    offers.Add(new TileOffer
+                    {
+                        Entry = FindEntry(entry.assetName),
+                        Sold = entry.sold,
+                    });
+                    break;
+
                 default:
                     var target = run.TileAt(entry.targetTile);
 
@@ -516,6 +609,17 @@ public class ShopScreen : MonoBehaviour
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// The catalog row a saved tile row named, or null if the catalog no longer
+    /// has it. Null is allowed and means the slot comes back empty, the same as
+    /// every other kind of vanished stock.
+    /// </summary>
+    private LetterSet.Entry FindEntry(string key)
+    {
+        var letters = run.Template.letterSet;
+        return letters == null ? null : letters.EntryFor(key);
     }
 
     private static T FindByName<T>(List<T> pool, string assetName) where T : UnityEngine.Object
@@ -610,6 +714,27 @@ public class ShopScreen : MonoBehaviour
         var available = new List<Checkout>();
         foreach (var checkout in pool)
             if (checkout != null && !run.Owns(checkout)) available.Add(checkout);
+
+        return available.Count == 0 ? null : available[rng.Range(0, available.Count)];
+    }
+
+    /// <summary>
+    /// A random multi-letter tile from the catalog, or null when the catalog has
+    /// none. Deliberately unfiltered by what the run already owns: duplicates are
+    /// the point, so a pair you bought last visit can be offered again.
+    ///
+    /// A row left at price 0 is NOT filtered out either — it reaches the shelf
+    /// and trips WarnAboutFreeRows, which is a loud complaint about an unpriced
+    /// catalog row rather than a tile that silently never appears.
+    /// </summary>
+    private LetterSet.Entry RollTile()
+    {
+        var letters = run.Template.letterSet;
+        if (letters == null) return null;
+
+        var available = new List<LetterSet.Entry>();
+        foreach (var entry in letters.Entries)
+            if (entry != null && entry.IsMultiLetter) available.Add(entry);
 
         return available.Count == 0 ? null : available[rng.Range(0, available.Count)];
     }
@@ -783,7 +908,16 @@ public class ShopScreen : MonoBehaviour
         foreach (var owned in run.Bookmarks) names.Add(owned.Name.ToUpperInvariant());
         foreach (var checkout in run.Checkouts) names.Add(checkout.Title.ToUpperInvariant());
 
-        return names.Count == 0 ? "" : $"OWNED   {string.Join("  ·  ", names)}";
+        // The bag size rides along because it is the ONLY thing buying a tile
+        // changes that the player can see. Everything else on this shelf hands
+        // over something with a name; a tile goes into a bag of a hundred and
+        // then waits for a round to deal it, so without this the purchase looks
+        // like it did nothing.
+        string bag = $"BAG {run.TileBag.Count}";
+
+        return names.Count == 0
+            ? bag
+            : $"OWNED   {string.Join("  ·  ", names)}      {bag}";
     }
 
     /// <summary>Wired to the Continue button. Starts the next round of the run.</summary>

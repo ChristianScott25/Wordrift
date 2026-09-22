@@ -162,6 +162,16 @@ mode config's `tileModifiers` — the pool of upgrades that mode can hand out.
 A modifier reaches an actual tile only via `TileSpec.AddModifier` (an upgrade
 on a specific tile in the run's bag); nothing spawns with one randomly.
 
+**A new kind of tile** — it's a CATALOG ROW, not a class. Add an `Entry` to the
+`LetterSet` (`Assets/Editor/LetterSetSetup.cs` is the one place they're authored)
+with what it spells, what it's worth and its spawn weight. A multi-letter entry
+("ch") works the whole way through with no code: the lookup is keyed by the full
+string, `LetterSet.CreateSpec` stamps it whole, `ChainController.WordOf`
+concatenates each tile's spelling, and `ChainController.LetterCount` is what the
+length multiplier reads. Weight 0 means "listed but never dealt" — which is how
+the shop-only tiles stay out of the starting bag. Anything with a `price` and
+more than one character is what the shop's tile row offers.
+
 **A new tile look** — create a `TileSkin` (body sprite + letter/score colors +
 spawn weight) and add it to a mode config's `Tile Skins`. Several in one list
 means tiles draw a random skin each, so looks can be mixed on one board. The

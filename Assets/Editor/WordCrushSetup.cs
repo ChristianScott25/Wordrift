@@ -40,7 +40,7 @@ public static class WordCrushSetup
         EnsureFolder(HudPrefabFolder);
         EnsureFolder("Assets/Scenes");
 
-        var letterSet = BuildLetterSet();
+        var letterSet = LetterSetSetup.Build();
         var modifiers = BuildModifiers();
         var shape = BuildBoardShape();
         RogueDemoModeSetup.Build(shape, letterSet, modifiers, null);
@@ -97,37 +97,6 @@ public static class WordCrushSetup
     }
 
     // ------------------------------------------------------------------ data
-
-    // letter, points, spawn weight (Scrabble values, which also scale the tile bag)
-    private static readonly (string letter, int points, int weight)[] ScrabbleLetters =
-    {
-        ("a", 1, 9), ("b", 3, 2), ("c", 3, 2), ("d", 2, 4), ("e", 1, 12),
-        ("f", 4, 2), ("g", 2, 3), ("h", 4, 2), ("i", 1, 9), ("j", 8, 1),
-        ("k", 5, 1), ("l", 1, 4), ("m", 3, 2), ("n", 1, 6), ("o", 1, 8),
-        ("p", 3, 2), ("q", 10, 1), ("r", 1, 6), ("s", 1, 4), ("t", 1, 6),
-        ("u", 1, 4), ("v", 4, 2), ("w", 4, 2), ("x", 8, 1), ("y", 4, 2),
-        ("z", 10, 1),
-    };
-
-    private static LetterSet BuildLetterSet()
-    {
-        var asset = CreateOrLoad<LetterSet>($"{DataFolder}/LetterSet_Scrabble.asset");
-
-        var so = new SerializedObject(asset);
-        var entries = so.FindProperty("entries");
-        entries.arraySize = ScrabbleLetters.Length;
-        for (int i = 0; i < ScrabbleLetters.Length; i++)
-        {
-            var (letter, points, weight) = ScrabbleLetters[i];
-            var entry = entries.GetArrayElementAtIndex(i);
-            entry.FindPropertyRelative("letter").stringValue = letter;
-            entry.FindPropertyRelative("points").intValue = points;
-            entry.FindPropertyRelative("weight").intValue = weight;
-        }
-        so.ApplyModifiedProperties();
-        EditorUtility.SetDirty(asset);
-        return asset;
-    }
 
     private static List<TileModifier> BuildModifiers() => TileModifierSetup.Build();
 

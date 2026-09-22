@@ -219,7 +219,8 @@ public class RogueDemoMode : GameMode
     }
 
     /// <summary>
-    /// Every letter in the run's bag, one entry per TILE — so a librarian
+    /// Every letter in the run's bag, one entry per LETTER — a "ch" tile puts in
+    /// both of its own — so a librarian
     /// drawing from it uniformly is really drawing weighted by how common the
     /// letter is in this particular run. Built from the run's bag rather than
     /// the letter catalog because the bag is what the player actually owns, and
@@ -230,8 +231,13 @@ public class RogueDemoMode : GameMode
         var letters = new System.Collections.Generic.List<char>();
         if (run == null) return letters;
 
+        // Every letter a tile SPELLS, so a "ch" tile weights both c and h. It
+        // has to: BannedLetterLibrarian refuses a word by scanning its letters,
+        // so a c it never put in the pool is a letter it can never ban but would
+        // happily refuse words for.
         foreach (var tile in run.TileBag)
-            if (tile != null) letters.Add(tile.Letter);
+            if (tile != null)
+                foreach (char letter in tile.Spelling) letters.Add(letter);
         return letters;
     }
 
@@ -320,7 +326,10 @@ public class RogueDemoMode : GameMode
     private bool OutOfTiles =>
         board != null && !board.Resolving &&
         bag != null && bag.Remaining == 0 &&
-        board.TileCount < config.minWordLength;
+        // LETTERS on the board, not tiles: two "ch" tiles are four letters and
+        // can still make a word, so counting tiles here would call a winnable
+        // round over.
+        board.LetterCount < config.minWordLength;
 
     public override bool IsRoundOver =>
         movesLeft <= 0 || OutOfTiles || (config.endOnTargetReached && TargetReached);

@@ -150,7 +150,8 @@ slides out from under your finger mid-word.
 They appear as soon as anything is selected, and they are the only way to act on it.
 
 **ENTER** plays the selection as a word. It is **disabled unless the selection is a valid
-word** — at least **3 letters** *(`minWordLength`)* and in the dictionary, about 178,800
+word** — at least **3 letters** *(`minWordLength`)* — letters, so a `CH` tile and an `A` are
+enough — and in the dictionary, about 178,800
 English words. You can no longer submit a bad word at all, so nothing flashes red any more and
 nothing is ever penalised for a wrong guess. *(`rejectedWordsCostMoves` is now unreachable.)*
 
@@ -212,7 +213,8 @@ board full of tiles that spell nothing — see §6.
 then multiplied by every word multiplier (2W, 3W) in the word. A 2W is part of what the tiles
 are worth, so it lives on this side.
 
-**MULT** comes from **word length**, and nothing else to start with:
+**MULT** comes from **word length in LETTERS**, and nothing else to start with — letters, not
+tiles, which stopped being the same number the day multi-letter tiles arrived (§4):
 
 | Letters | 3 | 4 | 5 | 6 | 7 | each further letter |
 |---|--:|--:|--:|--:|--:|--:|
@@ -314,8 +316,47 @@ The rules around them:
 🎯 Word multipliers are priced far above letter multipliers because they scale with the whole
 word — a 3W on a common letter is the single most valuable thing in the shop.
 
-❓ **Wild tiles** and **multi-letter tiles** ("QU", "IE") are both planned and neither is
-designed. The catalog can already hold them; nothing can play them yet.
+### Multi-letter tiles
+
+**Some tiles spell two letters.** A `CH` tile is one square on the board that puts *both*
+letters into your word — so `CH·A·T` is the four-letter word CHAT off three tiles, and
+`CH·A` is the perfectly legal three-letter word CHA.
+
+They are **the only thing the shop sells outright**, one row a visit (§8), and you can own as
+many as you like — buying a second CH just makes CH twice as likely to turn up.
+
+| Tile | Worth | Price |
+|:--:|--:|--:|
+| **ER** | 3 | $8 |
+| **IN** | 3 | $8 |
+| **IE** | 3 | $8 |
+| **ED** | 5 | $10 |
+| **TH** | 8 | $14 |
+| **SH** | 8 | $14 |
+| **CH** | 11 | $17 |
+| **QU** | 17 | $22 |
+
+**What they're worth is a rule, not a list:** the two letters' own base scores added together
+and multiplied by **1.5, rounded up** — because a tile you can only play where its pair fits is
+harder to use than the two letters loose. `C`(3) + `H`(4) = 7, ×1.5 = **11**.
+
+- **Word length counts LETTERS.** That is the whole reason to buy one: `CH` reaches a longer
+  word off fewer tiles, and length is the multiplier side of the score. *(Discards still count
+  **tiles** — that's a board cell, not a letter.)*
+- **They never turn up on their own.** They sit in the catalog at spawn weight 0, so your
+  starting bag of 104 is exactly what it always was. The only way to have one is to buy it.
+- **They can be gilded like anything else.** A `QU` is a legitimate target for a 3W in a later
+  visit, and a 3W'd QU is worth 51 points from one square. 🚧 That's the first combination
+  likely to look silly once it's been played.
+- **A librarian sees every letter on them.** The Censor can ban the `C` in your CH tile, and
+  then the whole tile is unplayable for the round.
+
+🎯 `ER` and `ED` are the cheap ones on purpose — they're not about points, they're about turning
+a three-letter word into a four. `QU` is the opposite: it's the tile that makes your single Q
+worth owning at all.
+
+❓ **Wild tiles** are still planned and still undesigned. The catalog can hold them; nothing
+plays them yet.
 
 ---
 
@@ -472,7 +513,7 @@ over at round 27 — where the same one *can* immediately reappear, since by the
 been seen.
 
 **The Censor's letter is part of the seed too**, and it's drawn from your bag one entry per
-tile — so a banned E is far likelier than a banned Z, which is the whole point. Quit and resume
+letter you own — so a banned E is far likelier than a banned Z, which is the whole point. Quit and resume
 a Censor round and it's the same letter; it isn't stored anywhere, it's re-derived. **The
 Dilapidated's holes work exactly the same way** — the same three spaces every time you come back
 to that round.
@@ -597,19 +638,20 @@ something the game does for you. ❓ Still no per-round purse and no sink other 
 
 ## 8. The shop
 
-Between rounds. It shows the round you cleared, what it paid, the next target, and five things
+Between rounds. It shows the round you cleared, what it paid, the next target, and six things
 for sale. **CONTINUE** starts the next round.
 
-**The shelf is five slots, and each one is stocked once when the shop opens:**
+**The shelf is six slots, and each one is stocked once when the shop opens:**
 
 | Slot | What it sells |
 |:--:|---|
 | 1, 2 | **A tile upgrade** — a random badge (2L / 3L / 2W / 3W) for a random tile in your bag |
 | 3, 4 | **A bookmark** you don't own. The two are always different |
 | 5 | **A checkout** you don't own (§9) |
+| 6 | **A new multi-letter tile** for your bag (§4) |
 
 ```
-   OWNED   DEJA VU · SENSE AND FRUGALITY
+   OWNED   DEJA VU · SENSE AND FRUGALITY      BAG 104
 
    ┌────────────────────────────────┐
    │  2L → E                   $4   │
@@ -621,6 +663,8 @@ for sale. **CONTINUE** starts the next round.
    │  MARGINALIA               $11  │
    ├────────────────────────────────┤
    │  ONE MORE CHAPTER         $28  │
+   ├────────────────────────────────┤
+   │  NEW TILE   CH            $17  │
    └────────────────────────────────┘
 
               [ CONTINUE ]
@@ -647,6 +691,10 @@ The rules of the shelf:
 - **A slot with nothing in it isn't drawn.** Own every bookmark and both bookmark rows are
   gone; fill every tile in your bag and the upgrade rows go. The shop carries on with what's
   left rather than back-filling, so the slots keep their meaning.
+- **The tile row is the one that never runs out.** Everything else on the shelf is something
+  you can only own once; a multi-letter tile is something you can own six of, so the same pair
+  can be offered again next visit. Buying one shows up as the **BAG** count going up — which is
+  the only visible sign, since the tile then waits for a round to deal it.
 - **A new shelf every visit.** Stock doesn't carry over, and nothing you declined comes back
   except by chance.
 - **Leaving and coming back finds the same shelf**, minus what you bought — the visit is saved
@@ -664,8 +712,8 @@ full run.
 🚧 **There's no reroll and no skip.** Unspent money simply carries — which is worth something
 now that Great Expectations exists.
 
-❓ Still open: whether you choose which tile gets upgraded, whether you can sell or remove
-tiles from your bag, and whether the shop should ever sell a tile outright.
+❓ Still open: whether you choose which tile gets upgraded, and whether you can sell or
+*remove* tiles from your bag — adding to it is now answered, taking away isn't.
 
 ---
 
@@ -742,7 +790,7 @@ second mode would slot into; there just isn't one.*
 |---|--:|---|
 | Board | 5 × 5 | `Board_5x5.asset` |
 | Minimum word length | 3 | `Mode_RogueDemo.asset` |
-| Length multiplier | ×1 / ×1.5 / ×2, then +0.5 a letter | `Mode_RogueDemo.asset` |
+| Length multiplier | ×1 / ×1.5 / ×2, then +0.5 a letter (LETTERS, not tiles) | `Mode_RogueDemo.asset` |
 | Score multiplier | ×1 | `Mode_RogueDemo.asset` |
 | Words per round | 20 | `Mode_RogueDemo.asset` |
 | Discards per round | 5 tiles | `Mode_RogueDemo.asset` |
@@ -764,10 +812,13 @@ second mode would slot into; there just isn't one.*
 | $ per unused move | 1 | `Mode_RogueDemo.asset` |
 | Max payout per round | $200 (0 = no cap) | `Mode_RogueDemo.asset` |
 | Max interest per round | $25 (0 = no cap) | `Mode_RogueDemo.asset` |
-| Shop slots | 2 upgrades · 2 bookmarks · 1 checkout | `ShopScreen` (code, not an asset) |
+| Shop slots | 2 upgrades · 2 bookmarks · 1 checkout · 1 new tile | `ShopScreen` (code, not an asset) |
 | Modifier prices | 5 / 9 / 14 / 22 | each asset in `GameData/Modifiers/` |
 | Bookmark prices | 10 / 12 / 13 / 13 / 14 / 16 | each asset in `GameData/Bookmarks/` |
 | Checkout prices | 20 / 25 / 30 / 35 / 40 | each asset in `GameData/Checkouts/` |
+| Multi-letter tiles | ER IN IE ED TH SH CH QU | `LetterSet_Scrabble.asset` |
+| Multi-letter tile worth | the two letters, ×1.5 rounded up | derived — `LetterSetSetup` |
+| Multi-letter tile prices | 8 / 8 / 8 / 10 / 14 / 14 / 17 / 22 | `LetterSet_Scrabble.asset` |
 | Shop discount | 20% off, rounded up (cap 90%) | `Checkout_ShopDiscount.asset` |
 | Extra discards | +2 tiles a round | `Checkout_ExtraDiscards.asset` |
 | Extra moves | +1 a round | `Checkout_ExtraMoves.asset` |
@@ -791,8 +842,9 @@ second mode would slot into; there just isn't one.*
 
 The board, tap-or-drag selection and the ENTER / DISCARD buttons · scoring with stacking
 multipliers · the run (rounds, escalating
-targets, a persistent finite tile bag) · money · bookmarks (six of them, with a scoring pipeline
-built to take many more) · a shop of five slots with set prices, one purchase each, and a
+targets, a persistent finite tile bag) · money · **multi-letter tiles** — eight of them, bought
+outright, spelling two letters from one square (§4) · bookmarks (six of them, with a scoring
+pipeline built to take many more) · a shop of six slots with set prices, one purchase each, and a
 description you read before you buy (§8) · **checkouts** — five permanent run-wide perks,
 including interest on savings (§9) · runs that save and resume themselves (§6) ·
 **librarians** — rule-warping rounds every third round, eight of them, paying double (§6).
@@ -807,7 +859,9 @@ including interest on savings (§9) · runs that save and resume themselves (§6
 ### ❓ Open questions
 
 - **Wild tiles** — a special letter, or a modifier?
-- **Multi-letter tiles** ("QU") — the bag can hold them; nothing can play them.
+- **Taking tiles OUT of the bag.** The shop can add to it now (§4) but nothing removes, and a
+  bag that only ever grows dilutes every good tile you buy. Selling tiles back, a smaller-bag
+  upgrade, or both.
 - **Gravity on a board with holes** — tiles currently fall *past* gaps instead of into them.
 - **How a run ends** — librarians now give a run a rhythm, but there's still **no victory**, so
   every run ends in failure. Run length and whether winning stops the run are still open; the
