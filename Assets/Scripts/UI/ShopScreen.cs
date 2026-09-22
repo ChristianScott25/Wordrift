@@ -11,11 +11,15 @@ using UnityEngine.UI;
 /// edits RunState.Current — never an authored asset.
 ///
 /// THE SHELF IS SIX SLOTS WITH FIXED ROLES — two tile upgrades, two bookmarks,
-/// one checkout, one new tile for the bag — and each slot is stocked once, when
-/// the shop opens. Prices are
+/// one checkout, one new tile for the bag — stocked when the shop opens and then
+/// only ever by a REROLL the player pays for. Prices are
 /// what the assets say (through the run's discount); buying a row SELLS it, and
 /// it stays on screen greyed out rather than vanishing, so the shelf can't shift
 /// under a finger that's already moving.
+///
+/// A reroll is the one thing that replaces a row the player didn't buy, and it
+/// doesn't break that promise: the shelf never changes on its own, only when
+/// they ask it to and pay for it.
 ///
 /// Picking a row and BUYING it are two different acts, the same way selecting
 /// tiles and submitting them are: Select opens a description, and only
@@ -62,6 +66,13 @@ public class ShopScreen : MonoBehaviour
              "BUY and BACK.")]
     [SerializeField] private Button continueButton;
 
+    [Tooltip("Re-stocks the whole shelf for a price that climbs each time. " +
+             "Hidden while a description is open for the same reason Continue " +
+             "is — a tap meant for BACK must not be able to spend money.")]
+    [SerializeField] private Button rerollButton;
+
+    [SerializeField] private TMP_Text rerollLabel;
+
     [SerializeField] private string gameSceneName = "Game";
     [SerializeField] private string menuSceneName = "Main Menu";
 
@@ -76,6 +87,13 @@ public class ShopScreen : MonoBehaviour
     // The run's shop stream, taken once and kept: asking RunState again would
     // restart the sequence and re-roll the same offers every purchase.
     private Rng rng;
+
+    // Rerolls bought THIS VISIT — what the next one costs. Per-visit rather than
+    // per-run, which needs no code to enforce: a fresh visit never goes through
+    // RestockFrom, so this simply starts at 0 again. It IS saved, though (see
+    // ShopSnapshot.rerolls) — without that, quitting and resuming would put the
+    // price back to its base every time.
+    private int rerolls;
 
     private void Start()
     {
@@ -154,6 +172,7 @@ public class ShopScreen : MonoBehaviour
         {
             captured = true,
             rngDraws = rng == null ? 0 : rng.Draws,
+            rerolls = rerolls,
         };
 
         var index = run.TileIndex();
@@ -540,6 +559,10 @@ public class ShopScreen : MonoBehaviour
         offers.Clear();
         rng.Skip(saved.rngDraws);
 
+        // Before the length check below: even a shelf too broken to restore has
+        // to keep its price ladder, or re-rolling it hands back a cheap reroll.
+        rerolls = Mathf.Max(0, saved.rerolls);
+
         // A shelf of the wrong length can't be restored faithfully — the slots
         // are positional, so there is no honest way to decide which role the
         // missing one was. Re-rolling loses the visit's stock, which is a bad
@@ -739,6 +762,100 @@ public class ShopScreen : MonoBehaviour
         return available.Count == 0 ? null : available[rng.Range(0, available.Count)];
     }
 
+    // ---- Re-rolling the shelf ----------------------------------------------
+
+    /// <summary>
+    /// What the next reroll costs, or 0 when the mode has rerolls switched off.
+    ///
+    /// Compounds off the EXACT price and rounds up only at the very end, so the
+    /// ceiling can't accumulate into a ladder steeper than the config asks for:
+    /// $5 · $8 · $12 · $17 · $26 at 1.5x, rather than $5 · $8 · $12 · $18 · $27.
+    ///
+    /// NOT run through RunState.PriceOf, deliberately. PriceOf is still the only
+    /// place a PERCENTAGE discount is applied — a reroll simply isn't discounted
+    /// by one, so that Sense and Frugality and the voucher below can't compound
+    /// into a free reroll. RunPerks.RerollDiscount is the different thing: a flat
+    /// cut to the BASE, which shifts the whole ladder rather than one rung, and
+    /// THIS IS THE ONE PLACE IT LANDS.
+    /// </summary>
+    private int RerollPrice
+    {
+        get
+        {
+            if (run == null || run.Template == null) return 0;
+
+            // The config's own number decides whether rerolls exist at all, and
+            // it is read BEFORE the voucher: otherwise a run carrying the voucher
+            // into a mode with rerolls switched off would resurrect them at $1.
+            int basePrice = run.Template.rerollBasePrice;
+            if (basePrice <= 0) return 0;
+
+            // Floored at 1 for the reason RunState.PriceOf clamps its discount at
+            // 90%: a shop that gives things away has stopped being a decision.
+            basePrice = Mathf.Max(1, basePrice - run.Perks.RerollDiscount);
+
+            double exact = basePrice *
+                System.Math.Pow(Mathf.Max(1f, run.Template.rerollPriceGrowth), rerolls);
+
+            // Rounded to six places BEFORE the ceiling. Math.Pow can land a
+            // hair over a whole number, and a ceiling turns 9.000000000000002
+            // into 10 — an off-by-one on a price the player is charged, with
+            // nothing on screen to suggest anything went wrong. Belt and braces
+            // at today's numbers (1.5^n is exact in binary), but the growth
+            // factor is an Inspector field and won't always be 1.5.
+            double ceiling = System.Math.Ceiling(System.Math.Round(exact, 6));
+            if (double.IsNaN(ceiling)) return basePrice;
+
+            // Saturating, like every other number the player is charged: 1.5^n
+            // passes int.MaxValue somewhere around the 52nd reroll, and a wrapped
+            // price comes back NEGATIVE — which TrySpend refuses with no
+            // explanation at all. Same argument as RunState.PriceOf and
+            // ScoreLimits. Infinity satisfies the comparison, so it's covered.
+            return ceiling >= int.MaxValue ? int.MaxValue : (int)ceiling;
+        }
+    }
+
+    /// <summary>
+    /// Wired to the REROLL button. Buys a whole new shelf.
+    ///
+    /// Tap-to-buy, which the shelf rows deliberately are NOT: their
+    /// select-then-confirm gap exists so a row can be read before it's paid for,
+    /// and a reroll has nothing to read — the price is printed on the button, so
+    /// a confirmation step would be friction carrying no information.
+    ///
+    /// StockShelves does the rest by itself. It builds brand-new Offers, so
+    /// every row comes back UNSOLD, and it already skips bookmarks and checkouts
+    /// the run owns — so something bought a moment ago correctly doesn't return.
+    /// The stream needs no special handling either: every roll comes off it in
+    /// sequence and Save records the new position, so a resume winds forward past
+    /// the rerolls exactly as it already did past the opening shelf.
+    /// </summary>
+    public void Reroll()
+    {
+        // Never while a description is open. The button is hidden then, so this
+        // is belt and braces — but the offer that description is reading would
+        // be thrown away underneath it.
+        if (run == null || selected >= 0) return;
+
+        int price = RerollPrice;
+        if (price <= 0) return;
+
+        // The real guard. The button only dims when you can't afford it; nothing
+        // but TrySpend may decide whether money actually moves.
+        if (!run.TrySpend(price)) return;
+
+        rerolls++;
+        StockShelves();
+
+        // A reroll is a new shelf, not a re-render, so the unpriced-asset check
+        // earns another run: this stock could include an asset the opening shelf
+        // never showed.
+        WarnAboutFreeRows();
+
+        Refresh();
+        Save();
+    }
+
     // ---- Picking, then buying ---------------------------------------------
 
     /// <summary>
@@ -836,6 +953,12 @@ public class ShopScreen : MonoBehaviour
     {
         if (continueButton != null) continueButton.gameObject.SetActive(visible);
 
+        // Hidden with Continue, not with the rows: while a description is open,
+        // BUY and BACK are the only ways out, and this one spends money on a tap.
+        // Refresh decides whether it comes BACK — a mode with rerolls turned off
+        // has one that never shows.
+        if (rerollButton != null) rerollButton.gameObject.SetActive(visible);
+
         if (rows == null) return;
         foreach (var row in rows)
             if (row?.button != null) row.button.gameObject.SetActive(visible);
@@ -862,6 +985,10 @@ public class ShopScreen : MonoBehaviour
         // A description is open over the top; it owns what's visible until it
         // closes, and it closes through CloseDetail, which calls back here.
         if (selected >= 0) return;
+
+        // Behind that guard on purpose: this can SHOW the reroll button, and a
+        // description must stay the only thing on screen while it's open.
+        RefreshReroll();
 
         if (rows == null) return;
         for (int i = 0; i < rows.Length; i++)
@@ -894,6 +1021,39 @@ public class ShopScreen : MonoBehaviour
             // does is how you decide whether to save for it. Only a sold row is
             // dead, because there is nothing left to learn about it.
             if (row.button != null) row.button.interactable = !offer.Sold;
+        }
+    }
+
+    /// <summary>
+    /// The REROLL button: its price, and whether it can be pressed.
+    ///
+    /// Unlike a shelf row it goes non-interactable when you can't afford it,
+    /// because tapping it IS the purchase — there is no description to read
+    /// first, so leaving it live would only ever be a tap that does nothing.
+    /// It still DIMS rather than disappearing, so the price stays legible as
+    /// something to save for.
+    /// </summary>
+    private void RefreshReroll()
+    {
+        if (rerollButton == null) return;
+
+        int price = RerollPrice;
+
+        // 0 means the mode switched rerolls off (rerollBasePrice), so there is
+        // no button at all rather than a free one. Shown as well as hidden, so
+        // this method decides the answer on its own rather than depending on
+        // SetShelfVisible having just turned it back on — the same both-ways
+        // SetActive the row loop above does.
+        rerollButton.gameObject.SetActive(price > 0);
+        if (price <= 0) return;
+
+        bool affordable = run.CanAfford(price);
+        rerollButton.interactable = affordable;
+
+        if (rerollLabel != null)
+        {
+            rerollLabel.text = $"REROLL   ${price}";
+            rerollLabel.alpha = affordable ? 1f : 0.55f;
         }
     }
 

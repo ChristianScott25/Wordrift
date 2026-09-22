@@ -56,6 +56,11 @@ public static class CheckoutSetup
         Name(interest, "Great Expectations", price: 40);
         checkouts.Add(interest);
 
+        var reroll = CreateOrLoad<RerollDiscountCheckout>("Checkout_RerollDiscount");
+        reroll.discountOff = 2;
+        Name(reroll, "A Tale of Two Shelves", price: 20);
+        checkouts.Add(reroll);
+
         int added = AttachToModes(checkouts);
 
         AssetDatabase.SaveAssets();

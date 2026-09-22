@@ -170,6 +170,18 @@ public class ShopSnapshot
     /// </summary>
     public int rngDraws;
 
+    /// <summary>
+    /// Rerolls bought during THIS visit, which is the only thing that decides
+    /// what the next one costs. Saved rather than recomputed, because a resumed
+    /// visit with the price back at its base is an unlimited supply of cheap
+    /// rerolls for anyone who notices — quit, continue, reroll, repeat.
+    ///
+    /// It needed no save-version bump: a file written before this field existed
+    /// reads it back as 0, which means "no rerolls yet this visit" and is the
+    /// correct answer rather than a migration.
+    /// </summary>
+    public int rerolls;
+
     public List<ShopOfferData> offers = new();
 }
 

@@ -62,8 +62,17 @@ public static class ShopSceneSetup
     private const float OfferTop = 250f;
     private const float OfferPitch = 152f;
 
-    private const float ContinueWidth = 620f;
+    // CONTINUE and REROLL share one line, spanning exactly the shelf's width.
+    // Continue gives up the width the reroll takes rather than the pair growing
+    // past the rows, and its HEIGHT is untouched — which is what keeps ContinueY
+    // and HintY, both derived from it, exactly where they already were.
+    private const float RerollWidth = 300f;
+    private const float RerollGap = 40f;
+
+    private const float ContinueWidth = OfferWidth - RerollWidth - RerollGap;
     private const float ContinueHeight = 150f;
+    private const float ContinueX = -(OfferWidth - ContinueWidth) / 2f;
+    private const float RerollX = (OfferWidth - RerollWidth) / 2f;
     private const float HintHeight = 60f;
 
     /// <summary>
@@ -190,8 +199,9 @@ public static class ShopSceneSetup
             // Matched exactly so anything hand-edited is left alone.
             if (hintText != null &&
                 (hintText.text == "nothing for sale yet" ||
-                 hintText.text == "buying the same upgrade again costs more"))
-                hintText.text = "one of each, and it's gone";
+                 hintText.text == "buying the same upgrade again costs more" ||
+                 hintText.text == "one of each, and it's gone"))
+                hintText.text = "one of each, or pay to reshuffle";
         }
 
         var buttons = new Button[OfferRows];
@@ -242,8 +252,32 @@ public static class ShopSceneSetup
             continueButton = made.transform;
             added++;
         }
-        WordCrushSetup.Anchor(continueButton.gameObject, Center, new Vector2(0f, ContinueY),
+        WordCrushSetup.Anchor(continueButton.gameObject, Center, new Vector2(ContinueX, ContinueY),
             new Vector2(ContinueWidth, ContinueHeight));
+
+        // Beside Continue rather than below it: the shelf now runs down to
+        // ShelfBottom and the band under it is already spoken for by Continue,
+        // the hint line and the seed readout. These two are also the screen's
+        // only "what now" actions, so they read as a pair.
+        var reroll = root.Find("RerollButton");
+        if (reroll == null)
+        {
+            reroll = WordCrushSetup.MakeButton(root, "RerollButton", "REROLL   $5",
+                Vector2.zero, OfferColor, Color.white).transform;
+            added++;
+        }
+        WordCrushSetup.Anchor(reroll.gameObject, Center, new Vector2(RerollX, ContinueY),
+            new Vector2(RerollWidth, ContinueHeight));
+
+        var rerollLabel = reroll.GetComponentInChildren<TMP_Text>();
+
+        // "REROLL   $114" in a 300px box, so it has to be allowed to give.
+        AutoSize(rerollLabel, 28f, 48f);
+
+        var rerollButton = reroll.GetComponent<Button>();
+        Rewire(rerollButton, () =>
+            UnityEditor.Events.UnityEventTools.AddVoidPersistentListener(
+                rerollButton.onClick, shop.Reroll));
 
         var panel = EnsureDetailPanel(shop, root, ref added);
 
@@ -252,6 +286,8 @@ public static class ShopSceneSetup
         WordCrushSetup.SetRef(shop, "moneyLabel", money);
         WordCrushSetup.SetRef(shop, "bookmarkLabel", bookmarks);
         WordCrushSetup.SetRef(shop, "continueButton", continueButton.GetComponent<Button>());
+        WordCrushSetup.SetRef(shop, "rerollButton", rerollButton);
+        WordCrushSetup.SetRef(shop, "rerollLabel", rerollLabel);
         WordCrushSetup.SetRef(shop, "detailRoot", panel.gameObject);
         WireRows(shop, buttons, labels);
 

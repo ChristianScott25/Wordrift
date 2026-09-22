@@ -115,7 +115,7 @@ target beats you. ❓ That ending is undesigned.
 - **Escalation** — the target curve going up faster than you're comfortable with.
 - **Spending** — a shelf of five things you can afford two of. The shop stocks tile upgrades,
   bookmarks and checkouts against one wallet, so every visit makes you give something up.
-  🚧 Six bookmarks and five checkouts is a start, not a space worth exploring yet — the
+  🚧 Six bookmarks and six checkouts is a start, not a space worth exploring yet — the
   content is still the thinnest part of the design.
 
 ---
@@ -641,7 +641,8 @@ something the game does for you. ❓ Still no per-round purse and no sink other 
 Between rounds. It shows the round you cleared, what it paid, the next target, and six things
 for sale. **CONTINUE** starts the next round.
 
-**The shelf is six slots, and each one is stocked once when the shop opens:**
+**The shelf is six slots, stocked when the shop opens and after that only by a reroll you
+pay for:**
 
 | Slot | What it sells |
 |:--:|---|
@@ -667,7 +668,7 @@ for sale. **CONTINUE** starts the next round.
    │  NEW TILE   CH            $17  │
    └────────────────────────────────┘
 
-              [ CONTINUE ]
+       [ CONTINUE ]   [ REROLL $5 ]
 ```
 
 **Tap a row to read what it does.** The shelf is replaced by a description — what it is, what
@@ -697,6 +698,7 @@ The rules of the shelf:
   the only visible sign, since the tile then waits for a round to deal it.
 - **A new shelf every visit.** Stock doesn't carry over, and nothing you declined comes back
   except by chance.
+- **You can pay to reroll the whole shelf.** See below.
 - **Leaving and coming back finds the same shelf**, minus what you bought — the visit is saved
   the moment you arrive and again after every purchase.
 
@@ -709,8 +711,45 @@ from one you've gilded twice. Choosing needs a bag picker, and that's its own pi
 roughly "two cheap things, or one permanent one". Nothing here has been balanced against a
 full run.
 
-🚧 **There's no reroll and no skip.** Unspent money simply carries — which is worth something
-now that Great Expectations exists.
+### Rerolling
+
+**REROLL replaces all six rows for a price that climbs each time you use it.** The first one
+of a visit costs **$5**, and every reroll after it costs **1.5× the last**, rounded up:
+
+| Reroll | 1st | 2nd | 3rd | 4th | 5th | 6th |
+|---|--:|--:|--:|--:|--:|--:|
+| **Costs** | $5 | $8 | $12 | $17 | $26 | $38 |
+
+**The price resets the moment you walk into the next shop.** It is a per-visit ladder, not a
+run-long one — so rerolling hard in round 2 costs you nothing in round 3.
+
+🎯 That climb is the whole design. One reroll is cheap enough to be an obvious yes when the
+shelf is bad; the fourth costs more than most of the things on it. You're meant to run out of
+willingness before you run out of money.
+
+What a reroll does and doesn't do:
+
+- **Everything is re-stocked, including rows you already bought.** A sold row comes back
+  available — possibly showing the same thing, since it's a fresh random roll.
+- **The usual rules still hold.** A bookmark or checkout you now own won't be offered, so
+  buying one and then rerolling permanently removes it from the pool.
+- **Your money is spent either way.** Rerolling doesn't refund the row you bought.
+- **It's one tap, with no confirmation.** Everything else in the shop makes you read a
+  description and press BUY; a reroll has nothing to read, and the price is on the button.
+- **Late in a run a reroll buys less.** Once you own every bookmark and checkout, those three
+  rows are empty and you're paying full price to re-roll two upgrades and a tile. Nothing
+  warns you.
+
+**A Tale of Two Shelves** (§9) makes the first reroll of every shop **$2 cheaper**, and because
+the climb compounds off that lower number, the whole ladder comes down with it: **$3 · $5 · $7
+· $11 · $16**. It is the only thing that makes a reroll cheaper — Sense and Frugality's
+percentage is for what's *on* the shelf and deliberately doesn't touch a reroll, so the two
+can't stack into a free one.
+
+🚧 **The price is a first guess.** $5 climbing at 1.5× against a round that pays about $19
+allows two or three rerolls a visit. Both numbers are tuning knobs.
+
+🚧 **There's still no skip**, and no way to pay to keep a row you liked through a reroll.
 
 ❓ Still open: whether you choose which tile gets upgraded, and whether you can sell or
 *remove* tiles from your bag — adding to it is now answered, taking away isn't.
@@ -728,19 +767,20 @@ you get, how much the shop charges, what a cleared round pays. They never touch 
 
 | Checkout | What it does | Price |
 |---|---|--:|
-| **Sense and Frugality** | Everything in the shop costs **20% less**, rounded up | $30 |
+| **Sense and Frugality** | Everything **on the shelf** costs **20% less**, rounded up. Rerolls pay full price | $30 |
 | **Second Thoughts** | Discard **2 more tiles** every round | $25 |
 | **Late Fees and Other Stories** | Cleared rounds pay **10% more** | $20 |
 | **One More Chapter** | **One more move** every round | $35 |
 | **Great Expectations** | Earn **$1 per $10** you're holding when a round is cleared | $40 |
+| **A Tale of Two Shelves** | Rerolling the shelf starts **$2 cheaper**, every shop (§8) | $20 |
 
 The rules around them:
 
 - **One of each, at most**, and the shop never offers one you already own. There's no limit on
   how many different ones you can hold.
 - **They apply the moment you buy them** — including to the rest of the shelf you're standing
-  in front of. Buy Sense and Frugality and the other four rows get cheaper before you've
-  looked away.
+  in front of. Buy Sense and Frugality and the other five rows get cheaper before you've
+  looked away; buy A Tale of Two Shelves and the REROLL button drops $2 on the spot.
 - **They stack additively.** Two sources of a discount would add up, and the total is capped at
   90% so the shop can never be free.
 - **Checkouts die with the run**, like money, bookmarks and tile upgrades.
@@ -758,15 +798,23 @@ Details worth knowing:
   and after interest. A round already paying the cap is paid the cap, so both money checkouts
   quietly stop working at the top end.
 - 🎯 **Sense and Frugality is a bet on how long the run lasts.** It does nothing on its own and
-  pays back over every later visit — the only purchase in the game that compounds. Bought late
-  it's worthless, which is the decision.
+  pays back over every later visit. Bought late it's worthless, which is the decision.
+- ⚠️ **Sense and Frugality does NOT make rerolls cheaper.** Its percentage is for what's on
+  the shelf. A Tale of Two Shelves is the one that touches a reroll, and it does it as a flat
+  cut to the starting price — deliberately two different mechanisms, so a stack of both can
+  never reach a free reroll.
+- 🎯 **A Tale of Two Shelves compounds too, and harder than it looks.** The $2 comes off the
+  price the 1.5× climb multiplies, so it's worth $2 on your first reroll of a visit and $10 on
+  your fifth. It's also the only checkout that can be worth *nothing*: a player who never
+  rerolls has bought a blank, and the shop has no way to tell them that. Priced at the bottom
+  of the ladder for exactly that reason.
 - 🎯 **Great Expectations is the only reason not to spend.** Everything else in the shop
   rewards emptying your wallet; this is the one thing that makes sitting on it a plan.
-- 🚧 **Late Fees is the weakest of the five right now.** 10% of a $19 round is $1. It scales
+- 🚧 **Late Fees is the weakest of the six right now.** 10% of a $19 round is $1. It scales
   with the targets and it's the cheapest, but it wants either a higher rate or a lower price
   once a full run has been played.
 
-❓ **Five is not a tree.** Balatro's vouchers come in tiers where buying one unlocks a stronger
+❓ **Six is not a tree.** Balatro's vouchers come in tiers where buying one unlocks a stronger
 version. Nothing here unlocks anything, and whether that's the shape this wants is undecided.
 
 ---
@@ -815,15 +863,18 @@ second mode would slot into; there just isn't one.*
 | Shop slots | 2 upgrades · 2 bookmarks · 1 checkout · 1 new tile | `ShopScreen` (code, not an asset) |
 | Modifier prices | 5 / 9 / 14 / 22 | each asset in `GameData/Modifiers/` |
 | Bookmark prices | 10 / 12 / 13 / 13 / 14 / 16 | each asset in `GameData/Bookmarks/` |
-| Checkout prices | 20 / 25 / 30 / 35 / 40 | each asset in `GameData/Checkouts/` |
+| Checkout prices | 20 / 20 / 25 / 30 / 35 / 40 | each asset in `GameData/Checkouts/` |
 | Multi-letter tiles | ER IN IE ED TH SH CH QU | `LetterSet_Scrabble.asset` |
 | Multi-letter tile worth | the two letters, ×1.5 rounded up | derived — `LetterSetSetup` |
 | Multi-letter tile prices | 8 / 8 / 8 / 10 / 14 / 14 / 17 / 22 | `LetterSet_Scrabble.asset` |
-| Shop discount | 20% off, rounded up (cap 90%) | `Checkout_ShopDiscount.asset` |
+| Shop discount | 20% off the shelf, rounded up (cap 90%) | `Checkout_ShopDiscount.asset` |
 | Extra discards | +2 tiles a round | `Checkout_ExtraDiscards.asset` |
 | Extra moves | +1 a round | `Checkout_ExtraMoves.asset` |
 | Payout bonus | +10% | `Checkout_PayoutBonus.asset` |
 | Interest rate | $1 per $10 held | `Checkout_Interest.asset` |
+| Reroll, first of a visit | $5 (0 = no reroll button) | `Mode_RogueDemo.asset` |
+| Reroll price climb | ×1.5 each time, rounded up, resets per visit | `Mode_RogueDemo.asset` |
+| Reroll discount | $2 off the first one, floor $1 | `Checkout_RerollDiscount.asset` |
 | Seed length | 8 characters | `Rng` (code, not an asset) |
 | Deja Vu bonus | +10 Points | `DejaVu.asset` |
 | Vowel Fanatic bonus | +4 Mult | `VowelFanatic.asset` |
@@ -845,8 +896,9 @@ multipliers · the run (rounds, escalating
 targets, a persistent finite tile bag) · money · **multi-letter tiles** — eight of them, bought
 outright, spelling two letters from one square (§4) · bookmarks (six of them, with a scoring
 pipeline built to take many more) · a shop of six slots with set prices, one purchase each, and a
-description you read before you buy (§8) · **checkouts** — five permanent run-wide perks,
-including interest on savings (§9) · runs that save and resume themselves (§6) ·
+description you read before you buy (§8) · **paying to reroll the shelf**, at a price that
+climbs within a visit and resets between them (§8) · **checkouts** — six permanent run-wide
+perks, including interest on savings and a cheaper reroll (§9) · runs that save and resume themselves (§6) ·
 **librarians** — rule-warping rounds every third round, eight of them, paying double (§6).
 
 ### 📋 Decided, not built
@@ -893,11 +945,12 @@ including interest on savings (§9) · runs that save and resume themselves (§6
   the order to bite.
 - **You still don't choose which tile gets upgraded.** The shop rolls one and shows you what it
   already carries, which makes the offer readable but not a decision. A bag picker is the fix.
-- **The shop has no reroll and no skip.** Five slots, take it or leave it — so a visit that
-  rolls badly is simply a visit you save through. Whether that's tension or dead time needs
-  playing to find out.
+- **The shop has no skip, and no way to keep a row through a reroll.** Rerolling answers the
+  badly-rolled visit (§8), but it's all-or-nothing: there's no paying to hold the one row you
+  liked while the other five change. Whether that's a missing decision or one decision too
+  many needs playing to find out.
 - **Checkouts don't tier.** Balatro's vouchers unlock stronger versions of themselves; these
-  five are flat. Whether a tree is the right shape here is undecided (§9).
+  six are flat. Whether a tree is the right shape here is undecided (§9).
 - **Payouts reward speed, not scoring.** Unused moves pay far more than points do — clearing
   fast beats clearing big. Tied to the run-length question above.
 - **The $200 payout cap is closer than it looks.** A librarian round cleared fast already pays

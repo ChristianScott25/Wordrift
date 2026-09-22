@@ -85,6 +85,20 @@ public class RogueDemoModeConfig : ModeConfig
              "simply means the checkout row is never stocked.")]
     public List<Checkout> checkouts = new();
 
+    [Header("Shop")]
+    [Tooltip("What the FIRST reroll of a shop visit costs. Every reroll after " +
+             "it costs the growth factor below times more, and the price resets " +
+             "the next time the player walks into a shop — it is a per-visit " +
+             "ladder, not a run-long one. 0 removes the reroll button entirely, " +
+             "the same way discardsPerRound of 0 turns discarding off.")]
+    [Min(0)] public int rerollBasePrice = 5;
+
+    [Tooltip("What each reroll multiplies the next one's price by. The ladder " +
+             "compounds off the EXACT price and is only rounded up at the end, " +
+             "so the rounding can't stack into a curve steeper than this says: " +
+             "at 1.5 it runs $5, $8, $12, $17, $26.")]
+    [Min(1f)] public float rerollPriceGrowth = 1.5f;
+
     [Header("Payout")]
     [Tooltip("Points needed per $1 of the round's payout. 10 = a 60-point round pays $6.")]
     [Min(1)] public int pointsPerCoin = 10;

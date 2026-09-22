@@ -21,6 +21,18 @@ public class RunPerks
     /// </summary>
     public int ShopDiscountPercent;
 
+    /// <summary>
+    /// Dollars off the BASE reroll price — the first reroll of each shop visit.
+    /// The ladder still climbs at the mode config's rate from there, so this
+    /// shifts the WHOLE ladder down rather than discounting a single rung.
+    ///
+    /// Separate from ShopDiscountPercent on purpose: that one is a percentage
+    /// off what's on the shelf and deliberately does NOT touch a reroll, so the
+    /// two never compound into a free one. Read in exactly one place,
+    /// ShopScreen.RerollPrice.
+    /// </summary>
+    public int RerollDiscount;
+
     /// <summary>Tiles added to every round's discard allowance, in TILES.</summary>
     public int ExtraDiscards;
 
