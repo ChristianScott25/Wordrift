@@ -237,7 +237,12 @@ public class RogueDemoMode : GameMode
         // happily refuse words for.
         foreach (var tile in run.TileBag)
             if (tile != null)
-                foreach (char letter in tile.Spelling) letters.Add(letter);
+                foreach (char letter in tile.Spelling)
+                    // LETTERS only. A wild spells "*", and a Censor that drew it
+                    // would announce "no words containing *" and then ban nothing
+                    // at all — a resolved word never contains one. A boss round
+                    // that silently does nothing is worse than no boss round.
+                    if (char.IsLetter(letter)) letters.Add(letter);
         return letters;
     }
 

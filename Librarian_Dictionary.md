@@ -150,7 +150,9 @@ Refusal reads: *"E is banned this round."*
 **⭐ The banned letter is weighted by what's in your bag.** It's drawn from a pool holding **one
 entry per letter you own**, not one entry per distinct letter — so with a standard bag a banned
 E (13 tiles) is thirteen times likelier than a banned Z (1 tile). A multi-letter tile puts in
-every letter it spells, so a `CH` tile counts once toward C and once toward H. That is the entire point: a banned Z
+every letter it spells, so a `CH` tile counts once toward C and once toward H. A **wild** puts
+in nothing: the pool takes `char.IsLetter` only, and a round that banned `*` would announce a
+rule and then enforce nothing, since a resolved word never contains one. That is the entire point: a banned Z
 is a shrug, and a boss round shouldn't be a shrug. It also means the letter tracks *your* bag —
 if a run has been stacking vowels, the vowels are what's at risk.
 
@@ -171,6 +173,14 @@ kills the whole tile.** A `CH` tile weights both C and H, and a round that bans 
 word played through it — the refusal scans the letters of the word, and the word contains the
 C whether you think of the tile as a C or not. That's the intended reading (the tile really does
 spell a C), but it makes a bought tile fully dead for a round rather than merely awkward.
+
+⚠️ **A WILD BEATS THIS LIBRARIAN OUTRIGHT.** A wild becomes whichever letter scores best *among
+the ones this round allows* — `GameSession.ResolveSelection` drops every refused candidate
+before it picks — so with E banned, `B*D` quietly resolves to BAD and is never refused at all.
+The Censor only lands on a wild when EVERY letter that fits the dictionary is banned, which for
+one banned letter is close to never. This is the first thing in the game that can no-sell a
+boss, it was asked for deliberately ("best option, boss wise"), and it is worth re-checking once
+wilds have actually been played against a Censor round.
 
 ---
 

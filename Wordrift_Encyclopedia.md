@@ -322,8 +322,8 @@ word — a 3W on a common letter is the single most valuable thing in the shop.
 letters into your word — so `CH·A·T` is the four-letter word CHAT off three tiles, and
 `CH·A` is the perfectly legal three-letter word CHA.
 
-They are **the only thing the shop sells outright**, one row a visit (§8), and you can own as
-many as you like — buying a second CH just makes CH twice as likely to turn up.
+They and the wild below are **what the shop sells outright**, one row a visit (§8), and you can
+own as many as you like — buying a second CH just makes CH twice as likely to turn up.
 
 | Tile | Worth | Price |
 |:--:|--:|--:|
@@ -355,8 +355,42 @@ harder to use than the two letters loose. `C`(3) + `H`(4) = 7, ×1.5 = **11**.
 a three-letter word into a four. `QU` is the opposite: it's the tile that makes your single Q
 worth owning at all.
 
-❓ **Wild tiles** are still planned and still undesigned. The catalog can hold them; nothing
-plays them yet.
+### Wild tiles
+
+**A wild is a tile with no letter of its own.** It shows a **\*** and is worth **0 points**.
+Drop it into a word and it becomes whichever single letter suits you best.
+
+| Tile | Worth | Price |
+|:--:|--:|--:|
+| **\*** | 0 | $35 |
+
+**It picks the best letter for you, every time.** The game works out every word your tiles
+could spell, throws away the ones this round's librarian would refuse, and out of what's left
+takes **the one that scores highest**. You never choose, and you never have to.
+
+- **It shows `*` until the word is real.** Two tiles selected, or a combination that spells
+  nothing — it stays a star. The moment the selection is a word, the tile's face flips to the
+  letter it became, and flips back when you let go. The small **\*** in the corner, where a
+  score would be, stays there always: that's how you know which tile it is.
+- **It counts as one letter** toward the length multiplier, like any ordinary tile — so it
+  lengthens a word without paying for it.
+- **It beats a banned letter.** On a Censor round, a letter that would get the word refused is
+  simply never chosen. If you're holding a wild, the Censor mostly can't touch you.
+- **When nothing works, it still shows you a word.** If every letter that fits the dictionary
+  would be refused by the librarian, the game shows the best of those anyway, in red, with the
+  reason — rather than a star and no explanation.
+- ⚠️ **It can't be upgraded.** The shop's tile-upgrade rows skip it: a 3W that fits into any
+  word at all would be the strongest thing in the game by a distance.
+
+🎯 **$35 is well above QU at $22 on purpose.** A wild is strictly more useful than any letter
+pair — it fits everywhere, it dodges the boss, and it always takes the best answer. It's the
+thing you save for, not the thing you buy on the way past.
+
+❓ **You can't see why it chose what it chose.** With no bookmarks owned, every candidate scores
+exactly the same, so it takes the alphabetically first — `C*T` is always CAT, never CUT. Once
+you own Vowel Fanatic or Bookend the choice starts genuinely following your score, but nothing
+on screen explains the difference. Letting you pick is the same piece of work as choosing which
+tile an upgrade lands on.
 
 ---
 
@@ -649,7 +683,7 @@ pay for:**
 | 1, 2 | **A tile upgrade** — a random badge (2L / 3L / 2W / 3W) for a random tile in your bag |
 | 3, 4 | **A bookmark** you don't own. The two are always different |
 | 5 | **A checkout** you don't own (§9) |
-| 6 | **A new multi-letter tile** for your bag (§4) |
+| 6 | **A new tile** for your bag — a letter pair, or a wild (§4) |
 
 ```
    OWNED   DEJA VU · SENSE AND FRUGALITY      BAG 104
@@ -693,8 +727,9 @@ The rules of the shelf:
   gone; fill every tile in your bag and the upgrade rows go. The shop carries on with what's
   left rather than back-filling, so the slots keep their meaning.
 - **The tile row is the one that never runs out.** Everything else on the shelf is something
-  you can only own once; a multi-letter tile is something you can own six of, so the same pair
-  can be offered again next visit. Buying one shows up as the **BAG** count going up — which is
+  you can only own once; a tile is something you can own six of, so the same pair — or another
+  wild — can be offered again next visit. The wild sits in that row at the same odds as the
+  eight pairs, so it's one in nine. Buying one shows up as the **BAG** count going up — which is
   the only visible sign, since the tile then waits for a round to deal it.
 - **A new shelf every visit.** Stock doesn't carry over, and nothing you declined comes back
   except by chance.
@@ -867,6 +902,7 @@ second mode would slot into; there just isn't one.*
 | Multi-letter tiles | ER IN IE ED TH SH CH QU | `LetterSet_Scrabble.asset` |
 | Multi-letter tile worth | the two letters, ×1.5 rounded up | derived — `LetterSetSetup` |
 | Multi-letter tile prices | 8 / 8 / 8 / 10 / 14 / 14 / 17 / 22 | `LetterSet_Scrabble.asset` |
+| Wild tile | `*`, worth 0, $35 | `LetterSet_Scrabble.asset` |
 | Shop discount | 20% off the shelf, rounded up (cap 90%) | `Checkout_ShopDiscount.asset` |
 | Extra discards | +2 tiles a round | `Checkout_ExtraDiscards.asset` |
 | Extra moves | +1 a round | `Checkout_ExtraMoves.asset` |
@@ -894,7 +930,8 @@ second mode would slot into; there just isn't one.*
 The board, tap-or-drag selection and the ENTER / DISCARD buttons · scoring with stacking
 multipliers · the run (rounds, escalating
 targets, a persistent finite tile bag) · money · **multi-letter tiles** — eight of them, bought
-outright, spelling two letters from one square (§4) · bookmarks (six of them, with a scoring
+outright, spelling two letters from one square (§4) · **wild tiles**, which become whichever
+letter scores best and route around a banned one (§4) · bookmarks (six of them, with a scoring
 pipeline built to take many more) · a shop of six slots with set prices, one purchase each, and a
 description you read before you buy (§8) · **paying to reroll the shelf**, at a price that
 climbs within a visit and resets between them (§8) · **checkouts** — six permanent run-wide
@@ -910,7 +947,9 @@ perks, including interest on savings and a cheaper reroll (§9) · runs that sav
 
 ### ❓ Open questions
 
-- **Wild tiles** — a special letter, or a modifier?
+- **Which letter a wild becomes is never explained, or yours to choose.** It takes the
+  best-scoring option and falls back to alphabetical, which is most of the time (§4). Same
+  missing piece as choosing which tile an upgrade lands on.
 - **Taking tiles OUT of the bag.** The shop can add to it now (§4) but nothing removes, and a
   bag that only ever grows dilutes every good tile you buy. Selling tiles back, a smaller-bag
   upgrade, or both.

@@ -21,8 +21,10 @@ public class LetterSet : ScriptableObject
     [System.Serializable]
     public class Entry
     {
-        [Tooltip("What a tile of this kind spells. Lowercase. Usually one letter; " +
-                 "multi-letter entries (qu, ie) are allowed but not playable yet.")]
+        [Tooltip("What a tile of this kind spells. Lowercase. Usually one letter, " +
+                 "but a multi-letter entry (qu, ie) plays both from one square, " +
+                 "and \"*\" is the wild — it spells no letter of its own and " +
+                 "becomes whichever one suits the word.")]
         public string letter = "a";
 
         // Entry is where per-letter base values live. Add future ones (base
@@ -46,6 +48,17 @@ public class LetterSet : ScriptableObject
         /// not a class, so there is nothing else to ask.
         /// </summary>
         public bool IsMultiLetter => !string.IsNullOrEmpty(letter) && letter.Length > 1;
+
+        /// <summary>Spells nothing of its own — see TileSpec.IsWild.</summary>
+        public bool IsWild => letter == TileSpec.WildSpelling;
+
+        /// <summary>
+        /// The shop's whole test for "is this something you can buy". Deliberately
+        /// NOT `price > 0`: an unpriced row still has to reach the shelf so
+        /// ShopScreen.WarnAboutFreeRows shouts about it, rather than quietly never
+        /// being offered by a filter nobody thinks to check.
+        /// </summary>
+        public bool IsForSale => IsMultiLetter || IsWild;
     }
 
     [SerializeField] private List<Entry> entries = new();

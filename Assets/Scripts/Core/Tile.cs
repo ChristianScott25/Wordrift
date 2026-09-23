@@ -160,6 +160,10 @@ public class Tile : MonoBehaviour
         Cell = cell;
         Modifiers.Clear();
 
+        // Before ApplyLook writes the face: a tile being re-initialised must not
+        // inherit the letter some earlier selection's wild resolved to.
+        shownLetters = null;
+
         if (tileRenderer == null) tileRenderer = GetComponent<SpriteRenderer>();
         ApplyLook(look);
 
@@ -200,16 +204,51 @@ public class Tile : MonoBehaviour
 
         if (letterLabel != null)
         {
-            if (baseLetterFontSize <= 0f) baseLetterFontSize = letterLabel.fontSize;
-
             if (look.LetterFont != null) letterLabel.font = look.LetterFont;
-
-            // The full spelling — a "CH" tile reads CH — shrunk to fit, because
-            // the label is one line of fixed-size world-space text and two
-            // characters at the one-character size overhang the art.
-            letterLabel.text = Spec.letters.ToUpperInvariant();
-            letterLabel.fontSize = baseLetterFontSize * LetterScaleFor(letterLabel.text.Length);
+            RefreshLetterLabel();
         }
+    }
+
+    /// <summary>
+    /// Writes the tile's face. The full spelling — a "CH" tile reads CH — shrunk
+    /// to fit, because the label is one line of fixed-size world-space text and
+    /// two characters at the one-character size overhang the art.
+    ///
+    /// The authored size is captured ONCE and before anything writes to the
+    /// label, so re-initialising a tile — or a wild flipping between "*" and the
+    /// letter it became — can never compound the shrink onto an already-shrunk
+    /// size.
+    /// </summary>
+    private void RefreshLetterLabel()
+    {
+        if (letterLabel == null) return;
+
+        if (baseLetterFontSize <= 0f) baseLetterFontSize = letterLabel.fontSize;
+
+        // Letters, not Spec.letters: the same accessor ChainController.WordOf
+        // spells with, so a tile's face can never disagree with what it plays as.
+        string face = string.IsNullOrEmpty(shownLetters) ? Letters : shownLetters;
+        letterLabel.text = face.ToUpperInvariant();
+        letterLabel.fontSize = baseLetterFontSize * LetterScaleFor(letterLabel.text.Length);
+    }
+
+    // What a WILD resolved to for the selection this tile is part of, or empty
+    // for "show your own spelling". Display only — see ShowLetters.
+    private string shownLetters;
+
+    /// <summary>
+    /// Show a letter this tile isn't: what a wild became for the word it's
+    /// currently in. DISPLAY ONLY — Spec, Letters and LetterPoints are all
+    /// untouched, so nothing that scores, saves or spells can see it, and the
+    /// tile is still a wild the moment it leaves the selection.
+    ///
+    /// Null or empty puts the tile back to its own spelling.
+    /// </summary>
+    public void ShowLetters(string resolved)
+    {
+        if (shownLetters == resolved) return;
+        shownLetters = resolved;
+        RefreshLetterLabel();
     }
 
     /// <summary>
@@ -330,9 +369,19 @@ public class Tile : MonoBehaviour
 
     private void RefreshScoreLabel()
     {
-        // Deliberately the BASE value, not the multiplied one: the corner always
-        // means "what this letter is worth" and the badge explains the rest.
-        if (scoreLabel != null) scoreLabel.text = LetterPoints.ToString();
+        if (scoreLabel == null) return;
+
+        // A wild is worth 0, and a "0" in the corner says nothing at all. The
+        // star is what keeps saying "this is a wild" once the big letter has
+        // been replaced by whatever the word needed — so it's the permanent
+        // mark, and the face is the temporary one.
+        //
+        // Not a display-side multiply: the corner still means "what this tile is
+        // worth", it just says it with a symbol for the one tile whose worth is
+        // the point.
+        scoreLabel.text = Spec != null && Spec.IsWild
+            ? TileSpec.WildSpelling
+            : LetterPoints.ToString();
     }
 
     /// <summary>

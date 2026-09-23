@@ -72,4 +72,19 @@ public class TileSpec
     /// </summary>
     public string Spelling =>
         string.IsNullOrEmpty(letters) ? "e" : letters.ToLowerInvariant();
+
+    /// <summary>
+    /// What a WILD tile spells. A wild is a catalog row like every other kind of
+    /// tile — its wildness IS its spelling — which is why nothing new has to be
+    /// saved for it and why this is the only place the character is written down.
+    /// </summary>
+    public const string WildSpelling = "*";
+
+    /// <summary>
+    /// Becomes whichever single letter suits the word best, rather than spelling
+    /// anything of its own. Worth 0, and NOT a letter: anything walking a tile's
+    /// characters (the Censor's pool) has to skip it, and anything asking the
+    /// dictionary has to resolve it first (GameSession.ResolveSelection).
+    /// </summary>
+    public bool IsWild => Spelling == WildSpelling;
 }

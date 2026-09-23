@@ -149,3 +149,7 @@ MonoBehaviour:
     points: 17
     weight: 0
     price: 22
+  - letter: '*'
+    points: 0
+    weight: 0
+    price: 35

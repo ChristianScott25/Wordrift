@@ -440,7 +440,9 @@ public class ShopScreen : MonoBehaviour
         public override int ListPrice => Entry == null ? 0 : Entry.price;
 
         public override string Title =>
-            Entry == null ? "" : $"NEW TILE   {Entry.letter.ToUpperInvariant()}";
+            Entry == null ? ""
+            : Entry.IsWild ? $"NEW TILE   WILD {TileSpec.WildSpelling}"
+            : $"NEW TILE   {Entry.letter.ToUpperInvariant()}";
 
         /// <summary>
         /// Written from the row's own numbers, the same discipline as
@@ -452,6 +454,14 @@ public class ShopScreen : MonoBehaviour
             get
             {
                 if (Entry == null) return "";
+
+                if (Entry.IsWild)
+                    return "A wild tile, worth no points at all, added to your bag " +
+                           "for the rest of the run.\n\n" +
+                           "It becomes whichever letter makes the best word it can " +
+                           "— counting the round's rules, so it will dodge a banned " +
+                           "letter if any other letter fits. It can't be upgraded.";
+
                 string spelling = Entry.letter.ToUpperInvariant();
                 string howMany = Entry.letter.Length == 2 ? "both letters" : "every letter";
                 return $"A new {spelling} tile, worth {Entry.points} points, added to " +
@@ -691,7 +701,11 @@ public class ShopScreen : MonoBehaviour
 
         var available = new List<TileSpec>();
         foreach (var tile in run.TileBag)
-            if (tile != null && tile.CanAddModifier(limit) &&
+            // A WILD is skipped outright: it has no letter of its own to gild,
+            // and a 3W that fits into any word at all would be the strongest
+            // thing in the game by a distance. Same "nothing to sell" answer as
+            // a bag with no room — the row just doesn't draw.
+            if (tile != null && !tile.IsWild && tile.CanAddModifier(limit) &&
                 (taken == null || !taken.Contains(tile)))
                 available.Add(tile);
 
@@ -757,7 +771,7 @@ public class ShopScreen : MonoBehaviour
 
         var available = new List<LetterSet.Entry>();
         foreach (var entry in letters.Entries)
-            if (entry != null && entry.IsMultiLetter) available.Add(entry);
+            if (entry != null && entry.IsForSale) available.Add(entry);
 
         return available.Count == 0 ? null : available[rng.Range(0, available.Count)];
     }

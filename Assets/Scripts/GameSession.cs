@@ -242,18 +242,19 @@ public class GameSession : MonoBehaviour
     private void RaiseSelection()
     {
         var chain = chainController.Selection;
-        string word = ChainController.WordOf(chain);
 
-        // Two questions, asked in order and never merged: is it a word, and will
-        // this round allow it? The mode is only asked about words the dictionary
-        // already knows, so "that isn't a word" never arrives dressed up as a
-        // rule the player is supposed to understand.
-        bool isWord = chain.Count > 0 && IsValidWord(word);
-        string refused = isWord ? mode.Refuse(CheckFor(chain, word)) : null;
+        // Resolve first: with a wild in the chain the word isn't decided until
+        // the dictionary, the round's rule and the scorer have all had a say.
+        // Without one this is exactly the two questions it always was.
+        var resolved = ResolveSelection(chain);
+        ShowResolvedWilds(chain, resolved);
+
+        bool isWord = resolved.IsWord;
+        string refused = resolved.Refused;
 
         GameEvents.RaiseSelectionChanged(new SelectionState
         {
-            Word = word,
+            Word = resolved.Word,
             TileCount = chain.Count,
             CanSubmit = IsPlaying && isWord && refused == null,
             RefusedReason = refused,
@@ -310,12 +311,17 @@ public class GameSession : MonoBehaviour
     {
         if (!IsPlaying || chain.Count == 0) return;
 
-        string word = ChainController.WordOf(chain);
+        // Resolved again rather than carried over from the preview. Safe, and
+        // deliberately so: the rule draws no randomness and wordsThisRound only
+        // grows AFTER Evaluate, so the same chain resolves to the same word — a
+        // cached answer could go stale, this one cannot disagree.
+        var resolved = ResolveSelection(chain);
+        string word = resolved.Word;
 
         // Unreachable through the ENTER button, which disables itself on an
         // invalid word — kept because the submit path is public and the rule
         // that a bad word costs nothing shouldn't live only in a button.
-        if (!IsValidWord(word))
+        if (!resolved.IsWord)
         {
             var rejected = ScoreCalculator.Rejected(word, chain.Count);
             foreach (var tile in chain) tile.FlashInvalid();
@@ -331,7 +337,7 @@ public class GameSession : MonoBehaviour
         // the branch above this is unreachable through ENTER, which disables
         // itself — but unlike it, nothing is charged for trying: a librarian
         // says a word CAN'T be played, which isn't the same as playing a bad one.
-        if (mode.Refuse(CheckFor(chain, word)) != null)
+        if (resolved.Refused != null)
         {
             foreach (var tile in chain) tile.FlashInvalid();
             RaiseSelection();
@@ -492,6 +498,202 @@ public class GameSession : MonoBehaviour
 
     private bool IsValidWord(string word) =>
         word.Length >= Config.minWordLength && validator.Contains(word);
+
+    // ---- Wild tiles ---------------------------------------------------------
+    //
+    // A wild spells "*" and becomes whichever single letter suits the word best.
+    // Deciding which needs the dictionary, the round's rule AND the scorer, so it
+    // can't live in ChainController.WordOf — Scripts/Core may not reference
+    // Scripts/Modes. WordOf stays dumb and assembles the word with its "*" still
+    // in it; this is where that word is turned into the one the player gets.
+    //
+    // ⚠️ NOTHING HERE MAY DRAW FROM Rng. This runs on every selection change
+    // while a finger is moving, and one draw would shift every roll after it and
+    // make the run's seed meaningless.
+
+    /// <summary>What a selection really spells, once its wilds have been decided.</summary>
+    private readonly struct Resolved
+    {
+        /// <summary>The word to show, score and record — or the raw "*" one when nothing fits.</summary>
+        public readonly string Word;
+
+        public readonly bool IsWord;
+
+        /// <summary>The round's reason for refusing it, or null.</summary>
+        public readonly string Refused;
+
+        public Resolved(string word, bool isWord = false, string refused = null)
+        {
+            Word = word;
+            IsWord = isWord;
+            Refused = refused;
+        }
+    }
+
+    /// <summary>
+    /// Picks the best letter for every wild in the chain, by the rule: of the
+    /// words this chain could spell, throw away the ones the round refuses, and
+    /// take whichever of the rest scores highest.
+    ///
+    /// When the round refuses ALL of them it still returns one, with the reason —
+    /// so the player sees a real word in red and is told why, rather than being
+    /// shown "*" and left to guess whether it was even a word.
+    /// </summary>
+    private Resolved ResolveSelection(IReadOnlyList<Tile> chain)
+    {
+        string raw = ChainController.WordOf(chain);
+        if (chain.Count == 0) return new Resolved(raw);
+
+        // No wild: exactly what this did before wilds existed, at exactly the
+        // same cost. Every word of every run that hasn't bought one comes
+        // through here, so it must stay a single dictionary probe.
+        if (raw.IndexOf(TileSpec.WildSpelling, System.StringComparison.Ordinal) < 0)
+        {
+            bool plain = IsValidWord(raw);
+            return new Resolved(raw, plain, plain ? mode.Refuse(CheckFor(chain, raw)) : null);
+        }
+
+        // Too short to be a word at all, so there is nothing to resolve against
+        // and the "*" stays on screen. This is what makes a wild read as a wild
+        // until the selection is actually long enough to mean something.
+        if (raw.Length < Config.minWordLength) return new Resolved(raw);
+
+        var candidates = validator.Matches(raw);
+        if (candidates.Count == 0) return new Resolved(raw);
+
+        // Only the FIRST refused candidate is ever needed, so nothing collects
+        // the rest: a word that can't be played has no score worth comparing.
+        string firstRefused = null, firstReason = null;
+        List<string> allowed = null;
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            string reason = mode.Refuse(CheckFor(chain, candidates[i]));
+
+            if (reason != null)
+            {
+                if (firstRefused == null)
+                {
+                    firstRefused = candidates[i];
+                    firstReason = reason;
+                }
+                continue;
+            }
+
+            // Nothing can tell the allowed candidates apart, so the first one
+            // already IS the answer — stop rather than asking the round about
+            // hundreds of words whose scores are all going to be equal. "***"
+            // matches every three-letter word in the dictionary, so this is the
+            // difference between one Refuse call and a thousand.
+            if (!ScoreSeparatesWords) return new Resolved(candidates[i], true);
+
+            (allowed ??= new List<string>()).Add(candidates[i]);
+        }
+
+        if (allowed != null) return new Resolved(BestOf(chain, allowed), true);
+
+        // Everything fits the dictionary and nothing fits the round. Show the
+        // first one with its reason, so the player gets a real word in red and
+        // an explanation rather than a star and a guess about whether it was
+        // even a word. firstReason is that exact word's reason, since both were
+        // taken together.
+        return new Resolved(firstRefused, true, firstReason);
+    }
+
+    /// <summary>
+    /// Can anything actually tell two candidate words apart?
+    ///
+    /// ⚠️ Usually NOT, and that's the normal case rather than an edge case. A wild
+    /// is worth 0 and carries no modifiers, and every candidate is the same number
+    /// of letters — so ScoreCalculator.Base returns identical Points AND Mult for
+    /// all of them. Only a bookmark that reads the letters (Bookend, Spine, Vowel
+    /// Fanatic, Deja Vu) or a librarian that scores can separate them, and a run
+    /// owns neither until it buys one. When this is false the alphabetical
+    /// tiebreak IS the answer, which is why it's worth asking before doing any
+    /// work at all.
+    /// </summary>
+    private bool ScoreSeparatesWords =>
+        (mode.Bookmarks != null && mode.Bookmarks.Count > 0) || mode.ScoreRule != null;
+
+    /// <summary>
+    /// The highest-scoring of several words the same tiles could spell. Ties keep
+    /// the earlier one, and Matches hands them over alphabetically — so a tie is
+    /// broken the same way every time rather than by whatever order a set happened
+    /// to enumerate in.
+    ///
+    /// Only ever reached when ScoreSeparatesWords is true; the caller answers the
+    /// tie case itself, without collecting a list to pick from.
+    /// </summary>
+    private string BestOf(IReadOnlyList<Tile> chain, List<string> candidates)
+    {
+        if (candidates.Count == 1) return candidates[0];
+
+        string best = candidates[0];
+        int bestPoints = -1;
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            // Safe to run speculatively: Evaluate builds a fresh ScoringContext
+            // and every bookmark and librarian only ever writes into that one.
+            // ⚠️ A bookmark that DID something — paid money, touched the run —
+            // would fire once per candidate here. They must stay declarative.
+            int points = scorer.Evaluate(chain, candidates[i], wordsThisRound,
+                                         mode.Bookmarks, mode.ScoreRule).Points;
+
+            // Strictly greater, so the first of equal answers wins.
+            if (points > bestPoints)
+            {
+                bestPoints = points;
+                best = candidates[i];
+            }
+        }
+
+        return best;
+    }
+
+    // Wild tiles currently showing a letter that isn't theirs. Kept here rather
+    // than asked of the board, so putting them back costs nothing and doesn't
+    // need Board to grow an enumerator.
+    private readonly List<Tile> wildsShowing = new();
+
+    /// <summary>
+    /// Puts the resolved letter on the face of every wild in the chain, and takes
+    /// it back off the ones that have left it.
+    ///
+    /// ⚠️ Walks by Letters.Length, not one character per tile — a "ch" tile eats
+    /// two characters of the word. Resolving never changes the word's LENGTH (each
+    /// "*" becomes exactly one letter), which is what lets the raw chain and the
+    /// resolved string be walked together.
+    /// </summary>
+    private void ShowResolvedWilds(IReadOnlyList<Tile> chain, Resolved resolved)
+    {
+        // Cleared first and unconditionally: a tile that left the selection has
+        // to go back to "*" even when the new selection resolves to nothing.
+        // Null-checked because a tile played a moment ago has been destroyed.
+        for (int i = 0; i < wildsShowing.Count; i++)
+            if (wildsShowing[i] != null) wildsShowing[i].ShowLetters(null);
+        wildsShowing.Clear();
+
+        if (!resolved.IsWord || resolved.Word == null) return;
+
+        int at = 0;
+        for (int i = 0; i < chain.Count && at < resolved.Word.Length; i++)
+        {
+            var tile = chain[i];
+            if (tile == null) continue;
+
+            int span = tile.Letters.Length;
+            if (at + span > resolved.Word.Length) break;
+
+            if (tile.Spec != null && tile.Spec.IsWild)
+            {
+                tile.ShowLetters(resolved.Word.Substring(at, span));
+                wildsShowing.Add(tile);
+            }
+
+            at += span;
+        }
+    }
 
     /// <summary>
     /// A word plus the round around it, for the mode to judge. wordsThisRound is

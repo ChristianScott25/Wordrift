@@ -56,6 +56,15 @@ public static class LetterSetSetup
     };
 
     /// <summary>
+    /// What a WILD costs. Well above QU at $22, deliberately: a wild fits every
+    /// word, sidesteps a banned letter, and resolves to whatever scores best, so
+    /// it is strictly more useful than any pair. Its POINTS are 0 and can't be
+    /// derived like a pair's — it has no letters to add up — so the row is
+    /// written on its own rather than squeezed into the table above.
+    /// </summary>
+    private const int WildPrice = 35;
+
+    /// <summary>
     /// What a pair is worth: the letters it spells, summed, times 1.5, rounded
     /// up — because a tile you can only play where its pair fits is harder to
     /// use than the two letters loose.
@@ -102,9 +111,20 @@ public static class LetterSetSetup
             AssetDatabase.CreateAsset(asset, AssetPath);
         }
 
+        // Read BEFORE the resize below, and this is not optional. Growing a
+        // serialized array duplicates its LAST element, so a wild row that
+        // doesn't exist yet arrives carrying QU's price ($22) rather than 0 —
+        // and the "seed only when it's 0" guard every other price uses would
+        // then faithfully preserve a number nobody chose. Asking the asset first
+        // is the only place where "no wild row yet" honestly reads as 0.
+        int tunedWildPrice = 0;
+        foreach (var entry in asset.Entries)
+            if (entry != null && entry.IsWild) { tunedWildPrice = entry.price; break; }
+
         var so = new SerializedObject(asset);
         var entries = so.FindProperty("entries");
-        entries.arraySize = Letters.Length + Pairs.Length;
+        // The 26 letters, the pairs, and one wild.
+        entries.arraySize = Letters.Length + Pairs.Length + 1;
 
         for (int i = 0; i < Letters.Length; i++)
         {
@@ -137,6 +157,19 @@ public static class LetterSetSetup
             if (priceProperty.intValue == 0) priceProperty.intValue = price;
         }
 
+        // The wild, last. Weight 0 like the pairs — bought, never dealt — and
+        // worth nothing: what you pay for is that it fits anywhere, so paying
+        // points for it too would be charging twice.
+        var wild = entries.GetArrayElementAtIndex(Letters.Length + Pairs.Length);
+        wild.FindPropertyRelative("letter").stringValue = TileSpec.WildSpelling;
+        wild.FindPropertyRelative("points").intValue = 0;
+        wild.FindPropertyRelative("weight").intValue = 0;
+
+        // Seeded, or whatever it was actually tuned to — never what the resize
+        // happened to copy in. See tunedWildPrice above.
+        wild.FindPropertyRelative("price").intValue =
+            tunedWildPrice > 0 ? tunedWildPrice : WildPrice;
+
         so.ApplyModifiedProperties();
 
         // The catalog caches a lookup and a weight total on first use, and a
@@ -146,8 +179,8 @@ public static class LetterSetSetup
         asset.Invalidate();
         EditorUtility.SetDirty(asset);
 
-        Debug.Log($"Word Crush: letter set has {Letters.Length} letters and " +
-                  $"{Pairs.Length} multi-letter tiles.");
+        Debug.Log($"Word Crush: letter set has {Letters.Length} letters, " +
+                  $"{Pairs.Length} multi-letter tiles and 1 wild.");
         return asset;
     }
 }
