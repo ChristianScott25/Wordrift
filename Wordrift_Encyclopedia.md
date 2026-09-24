@@ -232,7 +232,7 @@ what a word pays before you commit to it.
 ### Then your bookmarks, one at a time
 
 When you press ENTER the two numbers are locked in, and each bookmark you own takes its turn
-**in the order you bought them**, pushing one side or the other. Each is called out as it
+**in the order their cards sit, left to right**, pushing one side or the other. Each is called out as it
 lands — `BOOKEND   ×2 MULT` — and the numbers move as you watch.
 
 There are three shapes a bookmark can have, and the difference matters:
@@ -244,8 +244,8 @@ There are three shapes a bookmark can have, and the difference matters:
 | **×Mult** | Bookend, ×2 | Multiplies everything the +Mult bookmarks built up |
 
 **This is why bookmark order matters.** `+4 Mult` then `×2 Mult` is not the same as `×2` then
-`+4` — the first doubles the four, the second doesn't. ❓ You can't reorder your bookmarks yet;
-they run in purchase order.
+`+4` — the first doubles the four, the second doesn't. They run left to right in the order the
+cards sit below the board, and **you choose that order** by dragging them (§5).
 
 **Finally**, `POINTS × MULT` is the score — always, with nothing applied afterwards. *(The
 mode-wide `scoreMultiplier`, currently ×1, takes its turn as one more step, so what the readout
@@ -422,14 +422,19 @@ this pays you for obeying the same rule forever. The boss is where you learn wha
 
 The rules around them:
 
-- **One of each, at most.** The shop never offers a bookmark you already own, and there's no
-  limit on how many different ones you can hold.
+- **One of each, at most — and five in all.** The shop never offers a bookmark you already
+  own. Once you're carrying five it still *offers* them: the row shows what it is, what it
+  does and what it costs, and the buy button reads **BOOKMARKS FULL** and won't take your
+  money. Being full and being broke are different problems, so they say different things.
+  (With six bookmarks in the game the cap only ever blocks the sixth. It's built for a
+  bigger roster than this one.)
 - **They stack**, and the way they stack depends on their shapes — see the worked example
   in §3.
-- **They fire in the order you bought them, and the order changes the answer.** Vowel Fanatic
-  before Bookend is `(×1 +4) ×2` = ×10; the other way round it's `(×1 ×2) +4` = ×6. ❓ You
-  can't reorder them yet, so the order you happen to buy in is the order you're stuck with —
-  that wants solving.
+- **They fire left to right, and you choose the order.** Your bookmarks sit as cards below
+  the board and again in the shop, and you **drag them to rearrange**. Vowel Fanatic before
+  Bookend is `(×1 +4) ×2` = ×10; the other way round it's `(×1 ×2) +4` = ×6 — so where you
+  slot a new one in is a real decision and not just where it landed. You can rearrange at
+  any time, mid-round included.
 - **Bookmarks die with the run**, like money and tile upgrades.
 
 Details worth knowing:
@@ -712,10 +717,14 @@ pay for:**
 **Tap a row to read what it does.** The shelf is replaced by a description — what it is, what
 it does, what it costs — with **BUY** and **BACK**. Nothing is bought until you press BUY.
 
-🎯 That's the point of the two steps: **a row you can't afford is still worth tapping.** The
+🎯 That's the point of the two steps: **a row you can't buy is still worth tapping.** The
 price is dimmed and BUY reads NOT ENOUGH, but you can read the thing and decide whether to save
 for it. The old shop bought on the first tap, so anything you couldn't afford was also
 something you could never find out about.
+
+The button says which problem you have, because they have different answers: **NOT ENOUGH**
+means come back with more money, **BOOKMARKS FULL** means you're carrying five already
+(§5), and **SOLD** means you took it this visit.
 
 The rules of the shelf:
 
@@ -911,6 +920,7 @@ one. It comes out before release.
 | Shop slots | 2 upgrades · 2 bookmarks · 1 checkout · 1 new tile | `ShopScreen` (code, not an asset) |
 | Modifier prices | 5 / 9 / 14 / 22 | each asset in `GameData/Modifiers/` |
 | Bookmark prices | 10 / 12 / 13 / 13 / 14 / 16 | each asset in `GameData/Bookmarks/` |
+| Bookmarks you may hold | 5 (0 = no limit) | `Mode_RogueDemo.asset` |
 | Checkout prices | 20 / 20 / 25 / 30 / 35 / 40 | each asset in `GameData/Checkouts/` |
 | Multi-letter tiles | ER IN IE ED TH SH CH QU | `LetterSet_Scrabble.asset` |
 | Multi-letter tile worth | the two letters, ×1.5 rounded up | derived — `LetterSetSetup` |
@@ -992,9 +1002,11 @@ perks, including interest on savings and a cheaper reroll (§9) · runs that sav
 - **Nothing scales a librarian to the round it lands on.** The Insatiable's ×3 is the same
   demand on round 3 as on round 30, and The Critic's 25% is flat. Whether a boss should get
   harder as the run goes on is undecided.
-- **Bookmark order can't be changed.** It now affects your score (§3), but the shop decides it —
-  and with six bookmarks and two on offer a visit, a run will actually hold enough of them for
-  the order to bite.
+- ❓ **Reordering is free, unlimited, and allowed mid-round.** The cards can be dragged at any
+  time, so in principle you can re-optimise before every single word — shuffle Shorthand to the
+  front for a three-letter word, then Marginalia for a long one. That's a lot of fiddling for a
+  little score, and nothing stops it. Locking the order once a round starts would make it a
+  commitment instead; whether that's a better game or just a slower one is undecided.
 - **You still don't choose which tile gets upgraded.** The shop rolls one and shows you what it
   already carries, which makes the offer readable but not a decision. A bag picker is the fix.
 - **The shop has no skip, and no way to keep a row through a reroll.** Rerolling answers the
@@ -1013,8 +1025,12 @@ perks, including interest on savings and a cheaper reroll (§9) · runs that sav
 - **Entering a seed** — every run has one and shows it, but there's nowhere to type one in yet,
   so a run can be reported and reproduced by a developer but not replayed by a player.
 - **A board that's playable-looking but dead** — full of tiles that spell nothing (see §5).
-- **The HUD** — round, target, bag and money share one line; bookmarks have their own below it.
+- **The HUD** — round, target, bag and money still share one shrunken line. Bookmarks used to
+  share that corner too; they're cards below the board now, which is one readout's worth of
+  pressure off it and no more.
 - **Bookmark editions** — holographic / negative / foil equivalents are planned, undesigned.
-- **Bookmark feedback** — nothing shows you *which* bookmark just paid out.
+- **Bookmark feedback** — the tally names each step as it walks, but the CARD that did it
+  doesn't light up. Now that the cards are on screen while the tally runs, that's a gap with
+  an obvious shape.
 - **Save-scumming** — killing the app mid-round rewinds one word. Balatro has the same hole; it
   hasn't been decided whether it's worth closing.

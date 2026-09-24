@@ -16,6 +16,27 @@ public class RunState
     /// <summary>The run in progress, or null when there isn't one.</summary>
     public static RunState Current { get; private set; }
 
+    /// <summary>
+    /// The run changed in a way that belongs on disk, outside the paths that
+    /// already save. Raised by MoveBookmark, which the HUD calls when the player
+    /// drags a card — reordering is a scoring change, so a run resumed without
+    /// it would come back playing by an order the player didn't choose.
+    ///
+    /// It lives HERE rather than on GameEvents deliberately: GameEvents is the
+    /// channel FROM gameplay TO the UI, and this is the opposite direction — the
+    /// UI telling the run it moved. It carries no payload because the two
+    /// listeners want different things from it, and both re-read the run anyway.
+    ///
+    /// The listener decides HOW to save, because the hosts genuinely differ:
+    /// GameSession QUEUES one (the file may only be written with the board at
+    /// rest) and ShopScreen writes immediately. Subscribe in OnEnable and
+    /// unsubscribe in OnDisable — it's static, so a listener that outlives its
+    /// scene keeps hearing it, the same discipline GameEvents needs.
+    /// </summary>
+    public static event System.Action Changed;
+
+    private static void RaiseChanged() => Changed?.Invoke();
+
     /// <summary>The config this run was started from. Read it, never write it.</summary>
     public RogueDemoModeConfig Template { get; }
 
@@ -59,9 +80,12 @@ public class RunState
 
     /// <summary>
     /// The bookmarks this run owns, in slot order — which is the order they get
-    /// to touch a word's score. No cap on how many: with three in the game a
-    /// limit would be invisible, and a slot count is easy to add to the config
-    /// when there's a reason for one.
+    /// to touch a word's score, and which the player sets by dragging the cards
+    /// below the board. Capped at ModeConfig.maxBookmarks; see BookmarksFull.
+    ///
+    /// MoveBookmark is the only thing that reorders it. Don't sort it, and don't
+    /// hand a copy to anything that might: the list IS the scoring order, and
+    /// ScoreCalculator.Evaluate walks it by index.
     /// </summary>
     public List<BookmarkSpec> Bookmarks { get; } = new();
 
@@ -85,11 +109,56 @@ public class RunState
         return false;
     }
 
-    /// <summary>Takes ownership of a bookmark, refusing a duplicate.</summary>
+    /// <summary>
+    /// The run is carrying all the bookmarks it may. THE one place that question
+    /// is answered, the same way CanAfford is the one place affordability is —
+    /// don't compare Bookmarks.Count against the config anywhere else, or a
+    /// retuned cap would be obeyed in one place and ignored in another.
+    ///
+    /// Derived from the Template every time it's asked, like UnlimitedMoney, so
+    /// there is nothing here for RunSaveData to capture.
+    /// </summary>
+    public bool BookmarksFull =>
+        Template != null && Template.maxBookmarks > 0 && Bookmarks.Count >= Template.maxBookmarks;
+
+    /// <summary>
+    /// Takes ownership of a bookmark, refusing a duplicate — and refusing one
+    /// the run has no room for.
+    ///
+    /// The cap here is the last line of defence, not the one the player meets:
+    /// ShopScreen asks Offer.Blocked BEFORE it spends, because a refusal at this
+    /// point means money has already been taken (hence the error BookmarkOffer
+    /// logs when this returns false).
+    /// </summary>
     public bool AddBookmark(Bookmark bookmark)
     {
-        if (bookmark == null || Owns(bookmark)) return false;
+        if (bookmark == null || Owns(bookmark) || BookmarksFull) return false;
         Bookmarks.Add(new BookmarkSpec(bookmark));
+        return true;
+    }
+
+    /// <summary>
+    /// Moves a bookmark to a different slot, shuffling the rest along.
+    ///
+    /// THE one place the order changes — and the order is the SCORING order, so
+    /// this is a real mechanic and not a display preference. Vowel Fanatic before
+    /// Bookend is (×1 +4) ×2 = ×10; the other way round it's ×6.
+    ///
+    /// Remove-then-insert rather than a swap, because dragging a card three slots
+    /// left should push the three it passes one step right, not trade places with
+    /// whatever happens to be sitting at the far end.
+    /// </summary>
+    public bool MoveBookmark(int from, int to)
+    {
+        if (from == to) return false;
+        if (from < 0 || from >= Bookmarks.Count) return false;
+        if (to < 0 || to >= Bookmarks.Count) return false;
+
+        var moved = Bookmarks[from];
+        Bookmarks.RemoveAt(from);
+        Bookmarks.Insert(to, moved);
+
+        RaiseChanged();
         return true;
     }
 

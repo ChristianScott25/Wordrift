@@ -62,6 +62,14 @@ public abstract class ModeConfig : ScriptableObject
              "at most once, and an empty list simply means no bookmark is for sale.")]
     public List<Bookmark> bookmarks = new();
 
+    [Tooltip("How many bookmarks a run may hold at once. The shop still OFFERS one " +
+             "when you're full \u2014 it shows what it is and what it does, and the buy " +
+             "button reads BOOKMARKS FULL \u2014 because knowing what you're turning down " +
+             "is the decision. It is a balance limit and a display one at once: the " +
+             "cards sit in one row below the board, and there is only so much row. " +
+             "0 removes the limit.")]
+    [Min(0)] public int maxBookmarks = 5;
+
     /// <summary>
     /// The base multiplier a word of this many LETTERS is worth — letters, not
     /// tiles, which stopped being the same number when multi-letter tiles landed

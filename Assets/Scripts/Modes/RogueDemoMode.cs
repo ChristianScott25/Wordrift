@@ -38,10 +38,6 @@ public class RogueDemoMode : GameMode
     // than read back into loose fields because End needs the payout rate off it.
     private RoundRules rules = new RoundRules();
 
-    // Built once per round: bookmarks can only change in the shop, and Status is
-    // rebuilt every frame — no reason to re-join the same string 60 times a second.
-    private string bookmarkLine = "";
-
     // Same again for the librarian's name and power, which are fixed for the round.
     private string librarianBanner = "";
 
@@ -160,7 +156,6 @@ public class RogueDemoMode : GameMode
         roundTarget = run == null
             ? int.MaxValue
             : ScoreLimits.Clamp((double)run.TargetScore * rules.TargetMultiplier);
-        bookmarkLine = BuildBookmarkLine();
         librarianBanner = BuildLibrarianBanner();
     }
 
@@ -244,19 +239,6 @@ public class RogueDemoMode : GameMode
                     // that silently does nothing is worse than no boss round.
                     if (char.IsLetter(letter)) letters.Add(letter);
         return letters;
-    }
-
-    private string BuildBookmarkLine()
-    {
-        if (run == null || run.Bookmarks.Count == 0) return "";
-
-        var names = new System.Text.StringBuilder();
-        foreach (var owned in run.Bookmarks)
-        {
-            if (names.Length > 0) names.Append("  ·  ");
-            names.Append(owned.Name.ToUpperInvariant());
-        }
-        return names.ToString();
     }
 
     /// <summary>
@@ -392,9 +374,15 @@ public class RogueDemoMode : GameMode
         Goal = $"R{run.Round}   {session.Score} / {roundTarget}   " +
                $"BAG {bag.Remaining}   {run.MoneyText}",
 
-        // Whatever bookmarks the run is carrying. Drawn on its own HUD line, or
-        // dropped entirely if the widget has no label for it.
-        Extra = bookmarkLine,
+        // Empty, and explicitly so rather than left unset — StatusWidget assigns
+        // this straight into a TMP_Text, which has no business being handed null.
+        //
+        // It used to list the run's bookmarks. BookmarkRowWidget draws them as
+        // cards now, in the order they score, which is the half that matters and
+        // the half a cached string got wrong: it was built once in Begin, so a
+        // mid-round reorder left it naming the old order beside a row showing
+        // the new one. The slot is free for the next standing readout.
+        Extra = "",
 
         // Empty on an ordinary round, so the line simply isn't there.
         Banner = librarianBanner,

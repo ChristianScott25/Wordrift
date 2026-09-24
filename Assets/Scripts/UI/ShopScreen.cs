@@ -95,6 +95,29 @@ public class ShopScreen : MonoBehaviour
     // price back to its base every time.
     private int rerolls;
 
+    /// <summary>
+    /// The bookmark row lets the player reorder while they're standing in the
+    /// shop, and that order is part of the run. Writing immediately is safe here
+    /// in a way it isn't in the Game scene — there's no board mid-fall to catch
+    /// a half-settled snapshot of.
+    /// </summary>
+    private void OnEnable() => RunState.Changed += OnRunChanged;
+
+    private void OnDisable() => RunState.Changed -= OnRunChanged;
+
+    private void OnRunChanged()
+    {
+        // OnEnable runs before Start, so there is a window where this object is
+        // listening and hasn't been handed a run yet. Nothing raises Changed in
+        // it today, but Refresh would dereference `run` if anything ever did.
+        if (run == null) return;
+
+        // Refresh too, not just Save: the owned line and any FULL button are
+        // reading the same list that just moved.
+        Refresh();
+        Save();
+    }
+
     private void Start()
     {
         run = RunState.Current;
@@ -250,6 +273,22 @@ public class ShopScreen : MonoBehaviour
         public bool Available => !Sold && HasStock;
 
         /// <summary>
+        /// Why this can't be taken right now, in the player's own words — or null
+        /// when it can. The buy button shows it instead of BUY.
+        ///
+        /// Deliberately NOT the same question as HasStock. Out of stock means
+        /// there is nothing to sell and the row hides, because there is nothing
+        /// to read. Blocked means there IS something, and what it is and what it
+        /// does are exactly what the player needs in order to decide whether to
+        /// go and make room — so the row stays, and says why.
+        ///
+        /// It takes the run rather than caching an answer because the answer
+        /// changes mid-visit: buying the bookmark in row 2 is what fills the run
+        /// up and blocks row 3.
+        /// </summary>
+        public virtual string Blocked(RunState run) => null;
+
+        /// <summary>
         /// Has a row on screen at all — either something to sell, or the memory
         /// of having sold it.
         ///
@@ -362,6 +401,17 @@ public class ShopScreen : MonoBehaviour
         public override string Title =>
             Bookmark == null ? "" : Bookmark.displayName.ToUpperInvariant();
         public override string Description => Bookmark == null ? "" : Bookmark.description;
+
+        /// <summary>
+        /// ⚠️ The cap is answered HERE and not in HasStock, on purpose. HasStock
+        /// decides whether the row exists, and buying the bookmark in row 2 is
+        /// what fills the run — so gating stock on the cap would make row 3
+        /// VANISH while still unsold, which is the one thing the shelf promises
+        /// it never does. (It's the same failure RollTarget's `taken` list was
+        /// written to avoid on the upgrade rows.) The row stays and says FULL.
+        /// </summary>
+        public override string Blocked(RunState run) =>
+            run != null && run.BookmarksFull ? "BOOKMARKS FULL" : null;
 
         public override void Deliver(RunState run)
         {
@@ -901,6 +951,11 @@ public class ShopScreen : MonoBehaviour
         var offer = offers[selected];
         if (!offer.Available) return;
 
+        // BEFORE TrySpend, not after. RunState.AddBookmark refuses past the cap
+        // too, but by then the money is gone and all it can do is log that the
+        // player was charged for nothing.
+        if (offer.Blocked(run) != null) return;
+
         // The button is disabled when you can't afford it; this is the real
         // guard, since nothing else may take money.
         if (!run.TrySpend(run.PriceOf(offer.ListPrice))) return;
@@ -943,10 +998,17 @@ public class ShopScreen : MonoBehaviour
         if (detailBody != null) detailBody.text = offer.Description;
         if (detailPrice != null) detailPrice.text = PriceText(offer.ListPrice, price);
 
+        // Three separate reasons a row might not be buyable, and they must not
+        // collapse into one: SOLD means you already took it, blocked means you
+        // have no room for it, NOT ENOUGH means you can't pay. Being full and
+        // being broke are different problems with different answers.
+        string blocked = offer.Blocked(run);
         bool affordable = run.CanAfford(price);
-        if (buyButton != null) buyButton.interactable = offer.Available && affordable;
+
+        if (buyButton != null) buyButton.interactable = offer.Available && affordable && blocked == null;
         if (buyLabel != null)
-            buyLabel.text = !offer.Available ? "SOLD" : affordable ? "BUY" : "NOT ENOUGH";
+            buyLabel.text = !offer.Available ? "SOLD"
+                          : blocked ?? (affordable ? "BUY" : "NOT ENOUGH");
 
         SetShelfVisible(false);
         detailRoot.SetActive(true);
@@ -1075,14 +1137,15 @@ public class ShopScreen : MonoBehaviour
     }
 
     /// <summary>
-    /// What the run is carrying, on one line. Bookmarks and checkouts share it
-    /// because they're both "things you own that keep working" — and because the
-    /// shop has one line for them.
+    /// What the run is carrying, on one line — the things with no picture of
+    /// their own. Bookmarks used to share it; they have cards now.
     /// </summary>
     private string BuildOwnedLine()
     {
+        // Bookmarks are deliberately NOT here any more: BookmarkRowWidget draws
+        // them as cards a few pixels above this line, in the order they score.
+        // A second copy as text could only ever be redundant or wrong.
         var names = new List<string>();
-        foreach (var owned in run.Bookmarks) names.Add(owned.Name.ToUpperInvariant());
         foreach (var checkout in run.Checkouts) names.Add(checkout.Title.ToUpperInvariant());
 
         // The bag size rides along because it is the ONLY thing buying a tile

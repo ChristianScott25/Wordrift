@@ -92,6 +92,19 @@ public class GameSession : MonoBehaviour
         chainController.ChainSubmitted += OnChainSubmitted;
     }
 
+    /// <summary>
+    /// The bookmark row lets the player reorder mid-round, and that order is the
+    /// scoring order — so it has to reach the save file, or a resumed run comes
+    /// back playing by an order the player didn't choose.
+    ///
+    /// RequestSave rather than SaveRun: a drag can land at any moment, including
+    /// while a cleared word's tiles are still falling, and the whole point of the
+    /// queue is that the file is never written with the board mid-collapse.
+    /// </summary>
+    private void OnEnable() => RunState.Changed += RequestSave;
+
+    private void OnDisable() => RunState.Changed -= RequestSave;
+
     private void OnDestroy()
     {
         if (chainController == null) return;

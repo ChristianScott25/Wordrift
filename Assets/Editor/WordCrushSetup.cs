@@ -72,6 +72,11 @@ public static class WordCrushSetup
         ScoreTallySetup.Run();
         SeedWidgetSetup.Run();
         RoundBannerSetup.Run();
+
+        // After the banner, because the two share the bottom of the screen and
+        // this one is placed relative to the board rather than to a fixed height.
+        BookmarkRowSetup.Run();
+
         RegisterScenes();
 
         AssetDatabase.SaveAssets();

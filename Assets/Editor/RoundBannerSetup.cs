@@ -4,16 +4,23 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 
 /// <summary>
-/// Puts the librarian's announcement in the Game scene, in the empty band below
-/// the board and above the ENTER / DISCARD row.
+/// Puts the librarian's announcement in the Game scene, in the strip along the
+/// bottom — below the ENTER / DISCARD row and above the seed line.
 ///
-/// It's anchored to the BOTTOM rather than the top, because that band is defined
-/// by the buttons underneath it: the board is framed to the camera and its
-/// bottom edge moves with the screen's aspect, while the buttons never do. Top-
-/// anchoring it would eventually put it through the board on some phone.
+/// It's anchored to the BOTTOM rather than the top because everything around it
+/// is: the board is framed to the camera and its lower edge moves with the
+/// screen's aspect, while the buttons and the seed line never do. Top-anchoring
+/// it would eventually put it through the board on some phone.
 ///
-/// Safe to re-run: adds the widget only where it's missing, and never touches
-/// its position or styling once it exists.
+/// It used to sit directly under the board, at y 372. The bookmark row has that
+/// band now, and the two swapping places rather than taking turns is what keeps
+/// anything from jumping when a librarian round starts. The cost is that the
+/// banner is less prominent than it was — worth knowing if the boss rules ever
+/// stop being read.
+///
+/// Safe to re-run: adds the widget where it's missing and re-applies its
+/// position (absolute, so a re-run can't walk it down the screen), but never
+/// touches its styling once it exists.
 /// </summary>
 public static class RoundBannerSetup
 {
@@ -25,9 +32,10 @@ public static class RoundBannerSetup
 
     private static readonly Vector2 BottomCenter = new Vector2(0.5f, 0f);
 
-    // Just above the action row, which sits at y 180 and is 170 tall. Bottom
-    // aligned so a second line grows UP, away from the buttons.
-    private static readonly Vector2 BannerAt = new Vector2(0f, 372f);
+    // BELOW the action row, which sits at y 180 and is 170 tall, and above the
+    // seed line at y 24. Bottom aligned so a second line grows UP, into the gap
+    // under the buttons rather than down over the seed.
+    private static readonly Vector2 BannerAt = new Vector2(0f, 64f);
     private static readonly Vector2 BannerSize = new Vector2(1000f, 110f);
     private static readonly Color BannerColor = new Color(1f, 0.45f, 0.45f, 1f);
 
@@ -141,14 +149,26 @@ public static class RoundBannerSetup
             return;
         }
 
-        if (Object.FindFirstObjectByType<RoundBannerWidget>(FindObjectsInactive.Include) == null)
+        var widget = Object.FindFirstObjectByType<RoundBannerWidget>(FindObjectsInactive.Include);
+        if (widget == null)
         {
             var placed = (GameObject)PrefabUtility.InstantiatePrefab(prefab, canvas.transform);
             placed.name = prefab.name;
+            widget = placed.GetComponent<RoundBannerWidget>();
         }
+
+        // Re-anchored every run, not just on creation. Without this, moving
+        // BannerAt would change the PREFAB and leave the banner already sitting
+        // in the scene exactly where it was — on top of the bookmark row.
+        WordCrushSetup.Anchor(widget.gameObject, BottomCenter, BannerAt, BannerSize);
+
+        // Writing straight to a RectTransform on a prefab INSTANCE isn't always
+        // recorded as an override, and one that isn't is lost on the scene save.
+        if (PrefabUtility.IsPartOfPrefabInstance(widget))
+            PrefabUtility.RecordPrefabInstancePropertyModifications(widget.transform);
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
-        Debug.Log("Round banner ready in the Game scene, below the board.");
+        Debug.Log("Round banner ready in the Game scene, in the bottom strip below the buttons.");
     }
 }

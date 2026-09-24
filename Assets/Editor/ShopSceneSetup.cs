@@ -54,6 +54,22 @@ public static class ShopSceneSetup
     /// </summary>
     private const int OfferRows = ShopScreen.Slots;
 
+    // The header, laid out from the top down, all centre-anchored. It was pulled
+    // UP on 2026-09-23 to open the band the bookmark row now sits in: the cards
+    // need ~110px and the gap between the owned line and the top shelf row was
+    // 22. Everything here moved by the same idea — tighter boxes, same order.
+    //
+    // ⚠️ The band below OwnedY and above the shelf belongs to
+    // BookmarkRowSetup.RowAtInShop. Change one of these and check the other.
+    private const float HeadlineY = 745f;
+    private const float HeadlineHeight = 110f;
+    private const float DetailY = 650f;
+    private const float DetailHeight = 70f;
+    private const float MoneyY = 558f;
+    private const float MoneyHeight = 100f;
+    private const float OwnedY = 470f;
+    private const float OwnedHeight = 44f;
+
     // The shelf, laid out from the top down. Bigger than they were (640x104) —
     // these are thumb targets on a phone, and they now carry a struck-through
     // price as well as a name.
@@ -167,24 +183,24 @@ public static class ShopSceneSetup
             t.text = "ROUND 1 CLEARED";
             t.color = AccentColor;
         });
-        WordCrushSetup.Anchor(headline.gameObject, Center, new Vector2(0f, 700f), new Vector2(1000f, 140f));
+        WordCrushSetup.Anchor(headline.gameObject, Center, new Vector2(0f, HeadlineY), new Vector2(1000f, HeadlineHeight));
 
         var detail = Ensure(root, "Detail", 52, ref added, t => t.text = "NEXT TARGET   90");
-        WordCrushSetup.Anchor(detail.gameObject, Center, new Vector2(0f, 585f), new Vector2(1000f, 80f));
+        WordCrushSetup.Anchor(detail.gameObject, Center, new Vector2(0f, DetailY), new Vector2(1000f, DetailHeight));
 
         var money = Ensure(root, "Money", 76, ref added, t =>
         {
             t.text = "$0";
             t.color = AccentColor;
         });
-        WordCrushSetup.Anchor(money.gameObject, Center, new Vector2(0f, 470f), new Vector2(1000f, 110f));
+        WordCrushSetup.Anchor(money.gameObject, Center, new Vector2(0f, MoneyY), new Vector2(1000f, MoneyHeight));
 
         var bookmarks = Ensure(root, "Bookmarks", 36, ref added, t =>
         {
             t.text = "";
             t.color = new Color(1f, 1f, 1f, 0.7f);
         });
-        WordCrushSetup.Anchor(bookmarks.gameObject, Center, new Vector2(0f, 370f), new Vector2(1000f, 60f));
+        WordCrushSetup.Anchor(bookmarks.gameObject, Center, new Vector2(0f, OwnedY), new Vector2(1000f, OwnedHeight));
 
         // The old stub's "nothing for sale yet" line is now a lie. Deleting a
         // child isn't this script's job, so it's parked under the button and —

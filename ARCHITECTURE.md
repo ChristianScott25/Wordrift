@@ -82,6 +82,15 @@ than the game-over panel calls `session.ContinueTo(scene)` from its `End()`
 override — that skips the panel (RogueDemo's cleared round goes to the shop
 this way).
 
+**The UI changing the run** goes back the other way from `GameEvents`, which is
+gameplay → UI only. Two shapes are in use and both are fine: a direct serialized
+reference to the host (`WordActionsWidget.session`, for a widget that lives in one
+scene), or `RunState.Changed` (for one that lives in several, like
+`BookmarkRowWidget`, where the hosts differ — `GameSession` QUEUES a save because
+the file may only be written with the board at rest, and `ShopScreen` writes at
+once). Don't add UI-raised events to `GameEvents`; that's what keeps it readable
+as one direction.
+
 **Anything a run or a round remembers** — put it in `RunState` (run-scoped) or on
 the `GameMode` (round-scoped), and then **capture it**, or it silently resets the
 next time the player continues. Run-level state goes in `RunState.Capture` /
@@ -281,7 +290,18 @@ lowercase word per line.
   `ModeStatus.Goal`, one shrunken string four readouts wide — close to
   overflowing the 400px name label. A run HUD needs a real multi-readout
   `ModeStatus` and widget; wiring `StatusWidget.goalLabel` to a dedicated label
-  is the cheap interim fix.
+  is the cheap interim fix. `ModeStatus.Extra` is free again — it used to list
+  the bookmarks, which are cards below the board now.
+- **The screen is full, and the bookmark row is what proved it.** At 1080×1920
+  the board is framed by WIDTH (`max(halfHeight, halfWidth / aspect)`, and the
+  second term wins in portrait), so it takes 884 of 1920px and leaves 641 above
+  / 395 below — against roughly 590px of top stack and, now, 460 of bottom. It
+  fits on the 19.5:9 phones this is built for, where the board takes a smaller
+  share of the height, and doesn't at 16:9. `BookmarkRowWidget` handles that by
+  pinning itself to the board's real bottom edge and clamping at a floor, which
+  is a workaround and not an answer: the next widget that wants a band will have
+  to move something. `GameSession.verticalOffset` is the one knob, and it only
+  trades room above for room below.
 - **Price lives on the thing being sold** — `TileModifier.price`, `Bookmark.price`,
   `Checkout.price` — rather than on an *offer* asset. Three copies of the same
   field now, and the shop's `Offer.ListPrice` is the seam that hides it. It holds
