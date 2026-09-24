@@ -52,6 +52,17 @@ public abstract class TileModifier : ScriptableObject
     public virtual int WordMultiplier => 1;
 
     /// <summary>
+    /// Would this do ANYTHING to a tile worth 0? A 2L on a nothing tile is still
+    /// nothing, so the shop must never charge for one — but a 3W on the same tile
+    /// triples the whole word and is a perfectly good buy.
+    ///
+    /// Derived from what the modifier does rather than from what class it is, so
+    /// a future "+5 points" modifier is covered the day it's written instead of
+    /// the day someone remembers to add it to a list of type checks.
+    /// </summary>
+    public bool WorksOnZeroPointTile => ModifyLetterScore(0) != 0 || WordMultiplier != 1;
+
+    /// <summary>
     /// Runs a letter's value through a tile's modifiers, in order. Shared so the
     /// number printed on a tile and the number ScoreCalculator adds up can't drift
     /// apart — change how letter modifiers stack here and both follow.

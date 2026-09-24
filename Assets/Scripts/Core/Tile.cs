@@ -89,10 +89,11 @@ public class Tile : MonoBehaviour
     [SerializeField] private Color selectionBoxColor = new Color(1f, 0.75f, 0.1f);
 
     [Tooltip("Letter font size as a fraction of the size the prefab was authored " +
-             "with, indexed by how many characters the tile spells. A two-letter " +
+             "with, indexed by how many characters the tile DRAWS. A two-letter " +
              "tile has to shrink or it runs off the edge of the art; index 0 is a " +
-             "one-character tile and must stay 1.")]
-    [SerializeField] private float[] letterFontScale = { 1f, 0.62f, 0.45f };
+             "one-character tile and must stay 1. Index 1 is a letter pair (CH); " +
+             "2 and 4 are choice tiles (A/E is three characters, A/E/I is five).")]
+    [SerializeField] private float[] letterFontScale = { 1f, 0.62f, 0.45f, 0.36f, 0.30f };
 
     [Header("Feedback")]
     [SerializeField] private Color invalidColor = new Color(1f, 0.35f, 0.35f);
@@ -105,9 +106,33 @@ public class Tile : MonoBehaviour
     /// <summary>
     /// What this tile plays as — the WHOLE spelling, lowercased. Usually one
     /// character; a multi-letter tile ("ch") hands over both, which is how one
-    /// board cell contributes two letters to a word.
+    /// board cell contributes two letters to a word. A wild and a choice tile
+    /// both hand over a single "*", because each stands for exactly one
+    /// undecided letter — see TileSpec for why that matters.
     /// </summary>
     public string Letters { get; private set; }
+
+    /// <summary>
+    /// What this tile DRAWS when it isn't showing a resolved letter. The same
+    /// string as Letters for everything except a choice tile, which plays as "*"
+    /// but reads "A/E/I" — the one place the two deliberately disagree, because
+    /// the player has to be able to see what the tile is offering.
+    /// </summary>
+    public string Face { get; private set; }
+
+    /// <summary>
+    /// Does this tile arrive without a letter of its own — a wild or a choice
+    /// tile? Both spell "*" and both get a resolved letter put on their face
+    /// while they're in a word.
+    /// </summary>
+    public bool IsUndecided { get; private set; }
+
+    /// <summary>
+    /// The letters a choice tile may become ("aei"), or empty for every other
+    /// kind of tile. What GameSession hands the dictionary as the options for
+    /// this tile's position in the word.
+    /// </summary>
+    public string Options { get; private set; }
 
     public Vector2Int Cell { get; set; }
     public bool IsSettled => !moving;
@@ -154,14 +179,21 @@ public class Tile : MonoBehaviour
 
     public void Init(TileSpec spec, TileLook look, Vector2Int cell, Vector3 startPos, float cellSize)
     {
+        // Stamped once, here, rather than asked of the Spec while a finger is
+        // moving: Face and Options both normalise the authored string, which
+        // ALLOCATES, and the selection path walks every tile in the chain on
+        // every frame of a drag.
         Spec = spec;
         Letters = spec.Spelling;
+        Face = spec.Face;
+        Options = spec.Options;
+        IsUndecided = spec.IsWild || spec.IsChoice;
         LetterPoints = spec.baseScore;
         Cell = cell;
         Modifiers.Clear();
 
         // Before ApplyLook writes the face: a tile being re-initialised must not
-        // inherit the letter some earlier selection's wild resolved to.
+        // inherit the letter some earlier selection resolved it to.
         shownLetters = null;
 
         if (tileRenderer == null) tileRenderer = GetComponent<SpriteRenderer>();
@@ -210,9 +242,9 @@ public class Tile : MonoBehaviour
     }
 
     /// <summary>
-    /// Writes the tile's face. The full spelling — a "CH" tile reads CH — shrunk
-    /// to fit, because the label is one line of fixed-size world-space text and
-    /// two characters at the one-character size overhang the art.
+    /// Writes the tile's face — a "CH" tile reads CH, a choice tile reads A/E/I —
+    /// shrunk to fit, because the label is one line of fixed-size world-space text
+    /// and anything past one character at the one-character size overhangs the art.
     ///
     /// The authored size is captured ONCE and before anything writes to the
     /// label, so re-initialising a tile — or a wild flipping between "*" and the
@@ -225,24 +257,26 @@ public class Tile : MonoBehaviour
 
         if (baseLetterFontSize <= 0f) baseLetterFontSize = letterLabel.fontSize;
 
-        // Letters, not Spec.letters: the same accessor ChainController.WordOf
-        // spells with, so a tile's face can never disagree with what it plays as.
-        string face = string.IsNullOrEmpty(shownLetters) ? Letters : shownLetters;
+        // Face, not Letters: they're the same string for every tile except a
+        // choice tile, which plays as "*" and must READ "A/E/I" — showing what it
+        // plays as there would make every choice tile look like a wild. Both come
+        // off the Spec in Init, so neither can drift from what the tile is.
+        string face = string.IsNullOrEmpty(shownLetters) ? Face : shownLetters;
         letterLabel.text = face.ToUpperInvariant();
         letterLabel.fontSize = baseLetterFontSize * LetterScaleFor(letterLabel.text.Length);
     }
 
-    // What a WILD resolved to for the selection this tile is part of, or empty
-    // for "show your own spelling". Display only — see ShowLetters.
+    // What a WILD or CHOICE tile resolved to for the selection it is part of, or
+    // empty for "show your own face". Display only — see ShowLetters.
     private string shownLetters;
 
     /// <summary>
-    /// Show a letter this tile isn't: what a wild became for the word it's
-    /// currently in. DISPLAY ONLY — Spec, Letters and LetterPoints are all
-    /// untouched, so nothing that scores, saves or spells can see it, and the
-    /// tile is still a wild the moment it leaves the selection.
+    /// Show a letter this tile isn't: what a wild or a choice tile became for the
+    /// word it's currently in. DISPLAY ONLY — Spec, Letters, Face and LetterPoints
+    /// are all untouched, so nothing that scores, saves or spells can see it, and
+    /// the tile is itself again the moment it leaves the selection.
     ///
-    /// Null or empty puts the tile back to its own spelling.
+    /// Null or empty puts the tile back to its own face.
     /// </summary>
     public void ShowLetters(string resolved)
     {

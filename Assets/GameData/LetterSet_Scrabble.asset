@@ -153,3 +153,43 @@ MonoBehaviour:
     points: 0
     weight: 0
     price: 35
+  - letter: r/s/t
+    points: 0
+    weight: 0
+    price: 24
+  - letter: l/n/r
+    points: 0
+    weight: 0
+    price: 22
+  - letter: b/c/p
+    points: 2
+    weight: 0
+    price: 20
+  - letter: a/e/i
+    points: 0
+    weight: 0
+    price: 18
+  - letter: f/h/w
+    points: 3
+    weight: 0
+    price: 18
+  - letter: k/v/y
+    points: 3
+    weight: 0
+    price: 15
+  - letter: d/g
+    points: 1
+    weight: 0
+    price: 12
+  - letter: j/x
+    points: 6
+    weight: 0
+    price: 12
+  - letter: q/z
+    points: 7
+    weight: 0
+    price: 12
+  - letter: o/u
+    points: 0
+    weight: 0
+    price: 10

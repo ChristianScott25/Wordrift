@@ -178,8 +178,24 @@ with what it spells, what it's worth and its spawn weight. A multi-letter entry
 string, `LetterSet.CreateSpec` stamps it whole, `ChainController.WordOf`
 concatenates each tile's spelling, and `ChainController.LetterCount` is what the
 length multiplier reads. Weight 0 means "listed but never dealt" — which is how
-the shop-only tiles stay out of the starting bag. Anything with a `price` and
-more than one character is what the shop's tile row offers.
+the shop-only tiles stay out of the starting bag. `Entry.IsForSale` is what the
+shop's tile row offers.
+
+Three rows in and the shape is clear: **a tile's whole identity is its `letters`
+string**, which is also the only thing saved about what it is. That's why a wild
+is `"*"` and a choice tile is `"a/e/i"` rather than either being a flag or a
+field — `RunState.Resume` rebuilds a spec from nothing but that string and a
+score, so a new kind costs no save work at all.
+
+The one rule to respect: **one tile is one character of the search pattern unless
+it really does spell more.** `ChainController.WordOf`/`LetterCount`,
+`Board.LetterCount` and `GameSession.ShowResolvedLetters` all walk a chain by
+`tile.Letters.Length`. A choice tile therefore has three views on `TileSpec` —
+`Face` ("a/e/i", what it draws and what the Censor scans), `Spelling` ("*", what
+goes into the word) and `Options` ("aei", what the dictionary may try). Spelling
+itself would have counted it as three letters toward the length multiplier and
+kept a dead round alive in `Board.LetterCount`. A new undecided tile kind reuses
+that split; a new *spelling* kind (a three-letter pair) needs none of it.
 
 **A new tile look** — create a `TileSkin` (body sprite + letter/score colors +
 spawn weight) and add it to a mode config's `Tile Skins`. Several in one list

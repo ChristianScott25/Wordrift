@@ -21,10 +21,11 @@ public class LetterSet : ScriptableObject
     [System.Serializable]
     public class Entry
     {
-        [Tooltip("What a tile of this kind spells. Lowercase. Usually one letter, " +
+        [Tooltip("What a tile of this kind is. Lowercase. Usually one letter, " +
                  "but a multi-letter entry (qu, ie) plays both from one square, " +
-                 "and \"*\" is the wild — it spells no letter of its own and " +
-                 "becomes whichever one suits the word.")]
+                 "\"*\" is the wild — it spells no letter of its own and " +
+                 "becomes whichever one suits the word — and \"a/e/i\" is a " +
+                 "choice tile, which becomes one of those three and nothing else.")]
         public string letter = "a";
 
         // Entry is where per-letter base values live. Add future ones (base
@@ -43,14 +44,25 @@ public class LetterSet : ScriptableObject
         [Min(0)] public int price = 0;
 
         /// <summary>
-        /// Does this row spell more than one letter? The shop's whole test for
-        /// "is this a tile you can buy": a new kind of tile is a catalog row,
-        /// not a class, so there is nothing else to ask.
+        /// Does this row put more than one letter into a word from one square?
+        ///
+        /// ⚠️ NOT simply `letter.Length > 1`. A wild ("*") is one character so it
+        /// never tripped this, but a choice tile ("a/e/i") is five — and it plays
+        /// as ONE letter, not three. Left as a length test it would describe
+        /// itself in the shop as spelling every letter it carries, and tell
+        /// LetterSetSetup to derive its score by adding them all up.
         /// </summary>
-        public bool IsMultiLetter => !string.IsNullOrEmpty(letter) && letter.Length > 1;
+        public bool IsMultiLetter =>
+            !string.IsNullOrEmpty(letter) && letter.Length > 1 && !IsWild && !IsChoice;
 
         /// <summary>Spells nothing of its own — see TileSpec.IsWild.</summary>
         public bool IsWild => letter == TileSpec.WildSpelling;
+
+        /// <summary>
+        /// Becomes one of a fixed few letters ("a/e/i") — see TileSpec.IsChoice.
+        /// </summary>
+        public bool IsChoice =>
+            !string.IsNullOrEmpty(letter) && letter.IndexOf(TileSpec.ChoiceSeparator) >= 0;
 
         /// <summary>
         /// The shop's whole test for "is this something you can buy". Deliberately
@@ -58,7 +70,7 @@ public class LetterSet : ScriptableObject
         /// ShopScreen.WarnAboutFreeRows shouts about it, rather than quietly never
         /// being offered by a filter nobody thinks to check.
         /// </summary>
-        public bool IsForSale => IsMultiLetter || IsWild;
+        public bool IsForSale => IsMultiLetter || IsWild || IsChoice;
     }
 
     [SerializeField] private List<Entry> entries = new();

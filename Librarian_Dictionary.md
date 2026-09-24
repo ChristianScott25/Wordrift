@@ -150,7 +150,8 @@ Refusal reads: *"E is banned this round."*
 **⭐ The banned letter is weighted by what's in your bag.** It's drawn from a pool holding **one
 entry per letter you own**, not one entry per distinct letter — so with a standard bag a banned
 E (13 tiles) is thirteen times likelier than a banned Z (1 tile). A multi-letter tile puts in
-every letter it spells, so a `CH` tile counts once toward C and once toward H. A **wild** puts
+every letter it spells, so a `CH` tile counts once toward C and once toward H, and a **choice
+tile** puts in every letter it offers, so an `A/E/I` counts toward all three. A **wild** puts
 in nothing: the pool takes `char.IsLetter` only, and a round that banned `*` would announce a
 rule and then enforce nothing, since a resolved word never contains one. That is the entire point: a banned Z
 is a shrug, and a boss round shouldn't be a shrug. It also means the letter tracks *your* bag —
@@ -173,6 +174,13 @@ kills the whole tile.** A `CH` tile weights both C and H, and a round that bans 
 word played through it — the refusal scans the letters of the word, and the word contains the
 C whether you think of the tile as a C or not. That's the intended reading (the tile really does
 spell a C), but it makes a bought tile fully dead for a round rather than merely awkward.
+
+⚠️ **A CHOICE TILE SURVIVES A BAN ON ONE OF ITS LETTERS — the opposite of a `CH`.** An `A/E/I`
+on an E-banned round is still an A or an I, because the resolver drops refused candidates before
+it picks, exactly as it does for a wild. So a choice tile weights three letters in the pool and
+is killed by none of them individually. A `CH` weights two and is killed by either. That
+asymmetry is real and intended: a pair genuinely spells both letters, a choice tile spells one
+you haven't picked yet.
 
 ⚠️ **A WILD BEATS THIS LIBRARIAN OUTRIGHT.** A wild becomes whichever letter scores best *among
 the ones this round allows* — `GameSession.ResolveSelection` drops every refused candidate

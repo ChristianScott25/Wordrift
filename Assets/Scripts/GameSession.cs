@@ -256,11 +256,11 @@ public class GameSession : MonoBehaviour
     {
         var chain = chainController.Selection;
 
-        // Resolve first: with a wild in the chain the word isn't decided until
-        // the dictionary, the round's rule and the scorer have all had a say.
-        // Without one this is exactly the two questions it always was.
+        // Resolve first: with a wild or a choice tile in the chain the word isn't
+        // decided until the dictionary, the round's rule and the scorer have all
+        // had a say. Without one this is exactly the two questions it always was.
         var resolved = ResolveSelection(chain);
-        ShowResolvedWilds(chain, resolved);
+        ShowResolvedLetters(chain, resolved);
 
         bool isWord = resolved.IsWord;
         string refused = resolved.Refused;
@@ -512,13 +512,19 @@ public class GameSession : MonoBehaviour
     private bool IsValidWord(string word) =>
         word.Length >= Config.minWordLength && validator.Contains(word);
 
-    // ---- Wild tiles ---------------------------------------------------------
+    // ---- Undecided tiles ----------------------------------------------------
     //
-    // A wild spells "*" and becomes whichever single letter suits the word best.
-    // Deciding which needs the dictionary, the round's rule AND the scorer, so it
-    // can't live in ChainController.WordOf — Scripts/Core may not reference
-    // Scripts/Modes. WordOf stays dumb and assembles the word with its "*" still
-    // in it; this is where that word is turned into the one the player gets.
+    // Two kinds of tile arrive without a letter of their own, and both spell "*":
+    // a WILD, which becomes any of the 26, and a CHOICE tile ("a/e/i"), which
+    // becomes one of the handful its catalog row names. Deciding which needs the
+    // dictionary, the round's rule AND the scorer, so it can't live in
+    // ChainController.WordOf — Scripts/Core may not reference Scripts/Modes.
+    // WordOf stays dumb and assembles the word with its "*"s still in it; this is
+    // where that word is turned into the one the player gets.
+    //
+    // The ONLY difference between the two kinds down here is which letters the
+    // dictionary is allowed to try — SlotOptionsFor below — so everything else
+    // (refusing, scoring, the tiebreak, the face flip) is written once.
     //
     // ⚠️ NOTHING HERE MAY DRAW FROM Rng. This runs on every selection change
     // while a finger is moving, and one draw would shift every roll after it and
@@ -544,9 +550,14 @@ public class GameSession : MonoBehaviour
     }
 
     /// <summary>
-    /// Picks the best letter for every wild in the chain, by the rule: of the
-    /// words this chain could spell, throw away the ones the round refuses, and
-    /// take whichever of the rest scores highest.
+    /// Picks the best letter for every undecided tile in the chain, by the rule:
+    /// of the words this chain could spell, throw away the ones the round
+    /// refuses, and take whichever of the rest scores highest.
+    ///
+    /// Two kinds of tile arrive undecided and both spell "*": a WILD, which may
+    /// become any of the 26, and a CHOICE tile, which may become one of the two
+    /// or three its catalog row names. The only difference between them is the
+    /// letters handed to the dictionary, which is why one method covers both.
     ///
     /// When the round refuses ALL of them it still returns one, with the reason —
     /// so the player sees a real word in red and is told why, rather than being
@@ -557,9 +568,10 @@ public class GameSession : MonoBehaviour
         string raw = ChainController.WordOf(chain);
         if (chain.Count == 0) return new Resolved(raw);
 
-        // No wild: exactly what this did before wilds existed, at exactly the
-        // same cost. Every word of every run that hasn't bought one comes
-        // through here, so it must stay a single dictionary probe.
+        // Nothing undecided: exactly what this did before wilds existed, at
+        // exactly the same cost. Every word of every run that hasn't bought one
+        // comes through here, so it must stay a single dictionary probe. A choice
+        // tile spells "*" as well, so it needs no test of its own.
         if (raw.IndexOf(TileSpec.WildSpelling, System.StringComparison.Ordinal) < 0)
         {
             bool plain = IsValidWord(raw);
@@ -571,7 +583,7 @@ public class GameSession : MonoBehaviour
         // until the selection is actually long enough to mean something.
         if (raw.Length < Config.minWordLength) return new Resolved(raw);
 
-        var candidates = validator.Matches(raw);
+        var candidates = validator.Matches(raw, SlotOptionsFor(chain, raw.Length));
         if (candidates.Count == 0) return new Resolved(raw);
 
         // Only the FIRST refused candidate is ever needed, so nothing collects
@@ -613,17 +625,74 @@ public class GameSession : MonoBehaviour
         return new Resolved(firstRefused, true, firstReason);
     }
 
+    // What each position of the word is allowed to be, or null when every
+    // undecided tile in the chain is a plain wild and so may be anything.
+    //
+    // Reused rather than rebuilt: this runs on every selection change while a
+    // finger is moving, and a fresh list per frame is garbage for nothing.
+    private readonly List<string> slotOptions = new();
+
+    /// <summary>
+    /// The letters each position of the word may take, for WordValidator.Matches —
+    /// how a choice tile says it is a wildcard over three letters rather than 26.
+    ///
+    /// Returns NULL when the chain holds no choice tile, which is every chain a
+    /// run without one ever makes: Matches then takes its original unrestricted
+    /// path with no per-letter check at all.
+    ///
+    /// ⚠️ Walks by Letters.Length, not one entry per tile — a "ch" tile eats two
+    /// positions of the word. Same walk as ShowResolvedLetters, and for the same
+    /// reason: a tile's spelling is how many characters it is answerable for.
+    /// </summary>
+    private IReadOnlyList<string> SlotOptionsFor(IReadOnlyList<Tile> chain, int length)
+    {
+        bool anyChoice = false;
+
+        slotOptions.Clear();
+        for (int i = 0; i < length; i++) slotOptions.Add(null);
+
+        int at = 0;
+        for (int i = 0; i < chain.Count && at < length; i++)
+        {
+            var tile = chain[i];
+            if (tile == null) continue;
+
+            // A choice tile spells exactly one "*", so its options belong to the
+            // one position it occupies. Everything else leaves its positions
+            // null, which Matches reads as "any letter" — correct for a plain
+            // wild and irrelevant for a fixed letter, which isn't a slot at all.
+            //
+            // tile.Options, not tile.Spec.Options: the Tile stamped it in Init,
+            // and asking the Spec here would allocate a string per tile per frame.
+            if (tile.Options.Length > 0)
+            {
+                slotOptions[at] = tile.Options;
+                anyChoice = true;
+            }
+
+            at += tile.Letters.Length;
+        }
+
+        return anyChoice ? slotOptions : null;
+    }
+
     /// <summary>
     /// Can anything actually tell two candidate words apart?
     ///
-    /// ⚠️ Usually NOT, and that's the normal case rather than an edge case. A wild
-    /// is worth 0 and carries no modifiers, and every candidate is the same number
-    /// of letters — so ScoreCalculator.Base returns identical Points AND Mult for
-    /// all of them. Only a bookmark that reads the letters (Bookend, Spine, Vowel
-    /// Fanatic, Deja Vu) or a librarian that scores can separate them, and a run
-    /// owns neither until it buys one. When this is false the alphabetical
-    /// tiebreak IS the answer, which is why it's worth asking before doing any
-    /// work at all.
+    /// ⚠️ Usually NOT, and that's the normal case rather than an edge case. The
+    /// candidates are all spelled by the SAME tiles — only the letters they
+    /// resolve to differ — so ScoreCalculator.Base returns identical Points AND
+    /// Mult for every one of them. Only a bookmark that reads the letters
+    /// (Bookend, Spine, Vowel Fanatic, Deja Vu) or a librarian that scores can
+    /// separate them, and a run owns neither until it buys one. When this is
+    /// false the alphabetical tiebreak IS the answer, which is why it's worth
+    /// asking before doing any work at all.
+    ///
+    /// That argument rests on a tile being worth the same whichever letter it
+    /// becomes — true of a wild (always 0) and of a choice tile (its catalog row
+    /// stamps one baseScore for the whole group). ⚠️ A future tile that scored
+    /// the letter it RESOLVED to would break this, and quietly: it would take the
+    /// alphabetically first word rather than the highest-scoring one.
     /// </summary>
     private bool ScoreSeparatesWords =>
         (mode.Bookmarks != null && mode.Bookmarks.Count > 0) || mode.ScoreRule != null;
@@ -664,28 +733,29 @@ public class GameSession : MonoBehaviour
         return best;
     }
 
-    // Wild tiles currently showing a letter that isn't theirs. Kept here rather
-    // than asked of the board, so putting them back costs nothing and doesn't
-    // need Board to grow an enumerator.
-    private readonly List<Tile> wildsShowing = new();
+    // Tiles currently showing a letter that isn't theirs — wilds and choice
+    // tiles alike. Kept here rather than asked of the board, so putting them back
+    // costs nothing and doesn't need Board to grow an enumerator.
+    private readonly List<Tile> resolvedShowing = new();
 
     /// <summary>
-    /// Puts the resolved letter on the face of every wild in the chain, and takes
-    /// it back off the ones that have left it.
+    /// Puts the resolved letter on the face of every undecided tile in the chain
+    /// — a wild or a choice tile — and takes it back off the ones that have left
+    /// it. A choice tile goes back to reading "A/E/I", a wild back to "*".
     ///
     /// ⚠️ Walks by Letters.Length, not one character per tile — a "ch" tile eats
     /// two characters of the word. Resolving never changes the word's LENGTH (each
-    /// "*" becomes exactly one letter), which is what lets the raw chain and the
-    /// resolved string be walked together.
+    /// "*" becomes exactly one letter, and a choice tile spells exactly one "*"),
+    /// which is what lets the raw chain and the resolved string be walked together.
     /// </summary>
-    private void ShowResolvedWilds(IReadOnlyList<Tile> chain, Resolved resolved)
+    private void ShowResolvedLetters(IReadOnlyList<Tile> chain, Resolved resolved)
     {
         // Cleared first and unconditionally: a tile that left the selection has
         // to go back to "*" even when the new selection resolves to nothing.
         // Null-checked because a tile played a moment ago has been destroyed.
-        for (int i = 0; i < wildsShowing.Count; i++)
-            if (wildsShowing[i] != null) wildsShowing[i].ShowLetters(null);
-        wildsShowing.Clear();
+        for (int i = 0; i < resolvedShowing.Count; i++)
+            if (resolvedShowing[i] != null) resolvedShowing[i].ShowLetters(null);
+        resolvedShowing.Clear();
 
         if (!resolved.IsWord || resolved.Word == null) return;
 
@@ -698,10 +768,10 @@ public class GameSession : MonoBehaviour
             int span = tile.Letters.Length;
             if (at + span > resolved.Word.Length) break;
 
-            if (tile.Spec != null && tile.Spec.IsWild)
+            if (tile.IsUndecided)
             {
                 tile.ShowLetters(resolved.Word.Substring(at, span));
-                wildsShowing.Add(tile);
+                resolvedShowing.Add(tile);
             }
 
             at += span;

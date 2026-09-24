@@ -453,7 +453,9 @@ public class Board : MonoBehaviour
         if (spec == null) return null;
 
         var tile = Instantiate(tilePrefab, startPos, Quaternion.identity, transform);
-        tile.name = $"Tile {spec.Spelling.ToUpperInvariant()} ({cell.x},{cell.y})";
+        // Face, not Spelling: a wild and a choice tile both SPELL "*", so the
+        // hierarchy would be a column of identical names while debugging.
+        tile.name = $"Tile {spec.Face.ToUpperInvariant()} ({cell.x},{cell.y})";
         tile.Init(spec, NextLook(), cell, startPos, cellSize);
 
         // Modifiers come from the spec and ONLY the spec: a tile has a

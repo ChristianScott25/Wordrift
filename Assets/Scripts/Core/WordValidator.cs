@@ -32,11 +32,16 @@ public class WordValidator
     private readonly HashSet<string> words = new();
 
     // Words grouped by length, for Matches. BUILT LAZILY, on the first pattern
-    // that actually needs it — three or more wildcards, which takes three wild
-    // tiles adjacent on the board and so may never happen in a whole run.
+    // that actually needs it — three or more PLAIN wildcards, which takes three
+    // wild tiles adjacent on the board and so may never happen in a whole run.
     // Building it eagerly cost a pass over 178,000 words and ~2MB in Awake, and
     // GameSession builds a validator on EVERY Game scene load, so that was a
     // few milliseconds and a couple of megabytes per round bought for nothing.
+    //
+    // Choice tiles deliberately don't push anything here: three of them is 27
+    // probes against a budget of 676, so they stay on the substitution side even
+    // though they're far cheaper to own than a wild. That's the whole reason
+    // Matches counts probes rather than wildcards.
     private Dictionary<int, List<string>> byLength;
 
     // For the one summary line the constructor logs, so the two list passes
@@ -191,9 +196,9 @@ public class WordValidator
 
     /// <summary>
     /// Every word in the dictionary matching a pattern, where TileSpec.WildSpelling
-    /// ('*') stands for any single letter — what a chain holding wild tiles could
-    /// spell. Always ALPHABETICAL, so a caller choosing between equally good
-    /// answers can just take the first and get the same one every time.
+    /// ('*') stands for any single letter — what a chain holding wild or choice
+    /// tiles could spell. Always ALPHABETICAL, so a caller choosing between equally
+    /// good answers can just take the first and get the same one every time.
     ///
     /// Two strategies, because neither wins everywhere. Substituting every letter
     /// is 26^n probes, which is unbeatable at one or two wildcards and hopeless at
@@ -203,15 +208,42 @@ public class WordValidator
     /// ones. The crossover sits between two wildcards (676 probes) and three
     /// (17,576), so that's where it switches.
     /// </summary>
-    public List<string> Matches(string pattern)
+    /// <param name="slotOptions">
+    /// Optionally, the letters each POSITION is allowed to take — how a choice
+    /// tile ("a/e/i") says it is a wildcard over three letters rather than 26.
+    /// Null, short, or a null/empty entry all mean "any letter here", so a chain
+    /// of plain wilds passes nothing and behaves exactly as it always did.
+    ///
+    /// ⚠️ Each entry must be sorted ASCENDING. The substitution walk fills slots
+    /// left to right and inherits its output order from them, so unsorted options
+    /// would return unsorted results — and the same chain would then resolve to a
+    /// different word depending on which of the two strategies ran. Authoring is
+    /// where that is checked (Assets/Editor/LetterSetSetup.cs).
+    /// </param>
+    public List<string> Matches(string pattern, IReadOnlyList<string> slotOptions = null)
     {
         var found = new List<string>();
         if (string.IsNullOrEmpty(pattern)) return found;
 
         pattern = pattern.ToLowerInvariant();
 
+        // Counted together: how many slots there are, and how many probes filling
+        // them would actually cost. They're the same number only when every slot
+        // is a plain wild — three choice tiles are 27 probes, not 17,576, which is
+        // the whole reason a restricted slot is worth telling this method about.
         int wildcards = 0;
-        foreach (char c in pattern) if (c == Wildcard) wildcards++;
+        long combinations = 1;
+        for (int i = 0; i < pattern.Length; i++)
+        {
+            if (pattern[i] != Wildcard) continue;
+            wildcards++;
+
+            // Stops multiplying the moment it's over budget rather than breaking
+            // out, so `wildcards` stays a true count and the product can't run
+            // away: a 25-tile chain of wilds is 26^25, which overflows a long.
+            if (combinations <= SubstitutionBudget)
+                combinations *= OptionsAt(slotOptions, i).Length;
+        }
 
         if (wildcards == 0)
         {
@@ -219,9 +251,9 @@ public class WordValidator
             return found;
         }
 
-        if (wildcards > SubstitutionLimit)
+        if (combinations > SubstitutionBudget)
         {
-            ScanByLength(pattern, found);
+            ScanByLength(pattern, slotOptions, found);
             return found;
         }
 
@@ -229,7 +261,7 @@ public class WordValidator
         for (int i = 0, at = 0; i < pattern.Length; i++)
             if (pattern[i] == Wildcard) slots[at++] = i;
 
-        Substitute(new System.Text.StringBuilder(pattern), slots, 0, found);
+        Substitute(new System.Text.StringBuilder(pattern), slots, 0, slotOptions, found);
         return found;
     }
 
@@ -238,16 +270,39 @@ public class WordValidator
     private static readonly char Wildcard = TileSpec.WildSpelling[0];
 
     /// <summary>
-    /// Wildcards up to which substituting beats scanning. Three is already the
-    /// losing side of the crossover, so this is 2.
+    /// What an unrestricted slot may be. Held as a string so a restricted slot
+    /// and an unrestricted one are the same shape and the walks below need no
+    /// branch between them.
     /// </summary>
-    private const int SubstitutionLimit = 2;
+    private const string EveryLetter = "abcdefghijklmnopqrstuvwxyz";
 
     /// <summary>
-    /// Fills in the wildcards left to right, a-z at each, so the words come out
-    /// already sorted and nothing has to sort them. Recursive rather than nested
-    /// loops because the number of wildcards isn't known until runtime; the depth
-    /// is bounded by SubstitutionLimit.
+    /// How many probes substituting may cost before scanning by length wins
+    /// instead. 26² — exactly where the crossover sat when the only wildcard was
+    /// a wild, so nothing about a wild's behaviour moved when choice tiles made
+    /// this a budget rather than a count of wildcards.
+    /// </summary>
+    private const long SubstitutionBudget = 26 * 26;
+
+    /// <summary>
+    /// What the slot at this position may be — the caller's options, or every
+    /// letter when it didn't name any. A caller may pass a list shorter than the
+    /// pattern, or leave entries null, and both mean the same thing.
+    /// </summary>
+    private static string OptionsAt(IReadOnlyList<string> slotOptions, int index)
+    {
+        if (slotOptions == null || index >= slotOptions.Count) return EveryLetter;
+
+        string options = slotOptions[index];
+        return string.IsNullOrEmpty(options) ? EveryLetter : options;
+    }
+
+    /// <summary>
+    /// Fills in the wildcards left to right, in each slot's own order, so the
+    /// words come out already sorted and nothing has to sort them. Recursive
+    /// rather than nested loops because the number of wildcards isn't known until
+    /// runtime; the depth is bounded by SubstitutionBudget — nine two-option slots
+    /// (512 probes) is the deepest this can go before scanning takes over.
     ///
     /// ONE buffer for the whole walk, and the slots are worked out up front
     /// rather than re-found each level — so the only thing allocated per probe
@@ -256,7 +311,7 @@ public class WordValidator
     /// This runs on every selection change, so the garbage is worth caring about.
     /// </summary>
     private void Substitute(System.Text.StringBuilder buffer, int[] slots, int slot,
-                            List<string> found)
+                            IReadOnlyList<string> slotOptions, List<string> found)
     {
         if (slot == slots.Length)
         {
@@ -265,10 +320,13 @@ public class WordValidator
             return;
         }
 
-        for (char c = 'a'; c <= 'z'; c++)
+        int at = slots[slot];
+        string options = OptionsAt(slotOptions, at);
+
+        for (int i = 0; i < options.Length; i++)
         {
-            buffer[slots[slot]] = c;
-            Substitute(buffer, slots, slot + 1, found);
+            buffer[at] = options[i];
+            Substitute(buffer, slots, slot + 1, slotOptions, found);
         }
     }
 
@@ -276,7 +334,8 @@ public class WordValidator
     /// Walks only the words of the pattern's length. Already alphabetical, since
     /// IndexByLength sorted the buckets.
     /// </summary>
-    private void ScanByLength(string pattern, List<string> found)
+    private void ScanByLength(string pattern, IReadOnlyList<string> slotOptions,
+                              List<string> found)
     {
         if (byLength == null) IndexByLength();
         if (!byLength.TryGetValue(pattern.Length, out var bucket)) return;
@@ -286,7 +345,19 @@ public class WordValidator
             bool fits = true;
             for (int i = 0; i < pattern.Length; i++)
             {
-                if (pattern[i] == Wildcard || pattern[i] == word[i]) continue;
+                if (pattern[i] == Wildcard)
+                {
+                    // The null check is the fast path, not just a guard: a chain
+                    // of plain wilds is every selection a run without choice tiles
+                    // ever makes, and it should cost no letter scan at all.
+                    if (slotOptions == null || OptionsAt(slotOptions, i).IndexOf(word[i]) >= 0)
+                        continue;
+
+                    fits = false;
+                    break;
+                }
+
+                if (pattern[i] == word[i]) continue;
                 fits = false;
                 break;
             }

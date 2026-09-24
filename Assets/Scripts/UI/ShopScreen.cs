@@ -495,6 +495,25 @@ public class ShopScreen : MonoBehaviour
             : $"NEW TILE   {Entry.letter.ToUpperInvariant()}";
 
         /// <summary>
+        /// A choice row's options read out as words — "A, E or I". Built from the
+        /// row rather than written down, so a group retuned in the catalog can't
+        /// be described here by the letters it used to have.
+        /// </summary>
+        private string OptionList
+        {
+            get
+            {
+                if (Entry == null || string.IsNullOrEmpty(Entry.letter)) return "";
+
+                var options = Entry.letter.ToUpperInvariant().Split(TileSpec.ChoiceSeparator);
+                if (options.Length == 1) return options[0];
+
+                return string.Join(", ", options, 0, options.Length - 1) +
+                       " or " + options[options.Length - 1];
+            }
+        }
+
+        /// <summary>
         /// Written from the row's own numbers, the same discipline as
         /// Checkout.PowerText — a hand-authored second copy is how the shop ends
         /// up describing a tile that was retuned last week.
@@ -511,6 +530,18 @@ public class ShopScreen : MonoBehaviour
                            "It becomes whichever letter makes the best word it can " +
                            "— counting the round's rules, so it will dodge a banned " +
                            "letter if any other letter fits. It can't be upgraded.";
+
+                // Deliberately says what it ISN'T. The pairs are the other thing
+                // this row sells, and "does it lengthen my word?" is the one
+                // question that tells the two apart.
+                if (Entry.IsChoice)
+                    return $"A {Entry.letter.ToUpperInvariant()} tile, worth " +
+                           $"{Entry.points} points, added to your bag for the " +
+                           "rest of the run.\n\n" +
+                           $"It becomes {OptionList} — whichever of them makes " +
+                           "the best word it can, counting the round's rules. It " +
+                           "plays as ONE letter, so it won't lengthen a word the " +
+                           "way a letter pair does.";
 
                 string spelling = Entry.letter.ToUpperInvariant();
                 string howMany = Entry.letter.Length == 2 ? "both letters" : "every letter";
@@ -575,8 +606,10 @@ public class ShopScreen : MonoBehaviour
         var taken = new List<TileSpec>(ModifierSlots);
         for (int i = 0; i < ModifierSlots; i++)
         {
+            // Modifier FIRST: the target roll needs to know what would be
+            // stamped, because a 0-point tile is no use to a letter multiplier.
             var modifier = RollModifier();
-            var target = RollTarget(taken);
+            var target = RollTarget(modifier, taken);
             if (target != null) taken.Add(target);
 
             offers.Add(new ModifierOffer
@@ -671,6 +704,10 @@ public class ShopScreen : MonoBehaviour
                     break;
 
                 default:
+                    // Read out rather than built inline: the re-roll below has to
+                    // be handed the same modifier, or a restored 2L row could land
+                    // on a 0-point tile that StockShelves would never have offered.
+                    var modifier = FindByName(run.Template.tileModifiers, entry.assetName);
                     var target = run.TileAt(entry.targetTile);
 
                     // A saved target that's since filled up (it can't within one
@@ -684,8 +721,8 @@ public class ShopScreen : MonoBehaviour
 
                     offers.Add(new ModifierOffer
                     {
-                        Modifier = FindByName(run.Template.tileModifiers, entry.assetName),
-                        Target = target ?? (entry.sold ? null : RollTarget()),
+                        Modifier = modifier,
+                        Target = target ?? (entry.sold ? null : RollTarget(modifier)),
                         ModifierLimit = run.Template.maxModifiersPerTile,
                         Sold = entry.sold,
                     });
@@ -739,23 +776,43 @@ public class ShopScreen : MonoBehaviour
     /// whole bag and retrying: a retry loop's draw count depends on how full the
     /// bag is, and the shop's stream position is saved.
     /// </summary>
+    /// <param name="modifier">
+    /// What this row would stamp on. Needed because a tile worth 0 — a choice
+    /// tile over 1-point letters, say — is a pointless target for a LETTER
+    /// multiplier: 2L on nothing is nothing, and the row would charge for it.
+    /// Word multipliers are fine there, so the test asks the modifier rather than
+    /// its type (TileModifier.WorksOnZeroPointTile).
+    /// </param>
     /// <param name="taken">
     /// Tiles another row on this shelf is already offering, or null for none.
     /// Excluded so two rows can't sell upgrades for the same tile — see
     /// StockShelves. Excluding shrinks the list a single draw indexes into; it
     /// never changes how many draws happen.
     /// </param>
-    private TileSpec RollTarget(List<TileSpec> taken = null)
+    private TileSpec RollTarget(TileModifier modifier, List<TileSpec> taken = null)
     {
         int limit = run.Template.maxModifiersPerTile;
+
+        // Worked out once rather than per tile: it's a property of the modifier,
+        // and the bag is a hundred tiles long.
+        //
+        // It can't empty the list on its own — every one of the starting 104
+        // tiles scores, and RunState.AddTile only ever appends — so this narrows
+        // what the single draw below indexes into without changing whether that
+        // draw happens. Same property the `taken` exclusion relies on, and the
+        // reason neither of them moves an existing seed.
+        bool zeroPointOk = modifier == null || modifier.WorksOnZeroPointTile;
 
         var available = new List<TileSpec>();
         foreach (var tile in run.TileBag)
             // A WILD is skipped outright: it has no letter of its own to gild,
             // and a 3W that fits into any word at all would be the strongest
-            // thing in the game by a distance. Same "nothing to sell" answer as
-            // a bag with no room — the row just doesn't draw.
+            // thing in the game by a distance. A CHOICE tile is fenced in enough
+            // that it stays a legitimate target — a 3W on Q/Z is 21 points, well
+            // under the 3W'd QU the shop already sells. Same "nothing to sell"
+            // answer as a bag with no room — the row just doesn't draw.
             if (tile != null && !tile.IsWild && tile.CanAddModifier(limit) &&
+                (zeroPointOk || tile.baseScore != 0) &&
                 (taken == null || !taken.Contains(tile)))
                 available.Add(tile);
 

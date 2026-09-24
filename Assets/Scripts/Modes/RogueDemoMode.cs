@@ -226,14 +226,20 @@ public class RogueDemoMode : GameMode
         var letters = new System.Collections.Generic.List<char>();
         if (run == null) return letters;
 
-        // Every letter a tile SPELLS, so a "ch" tile weights both c and h. It
-        // has to: BannedLetterLibrarian refuses a word by scanning its letters,
-        // so a c it never put in the pool is a letter it can never ban but would
-        // happily refuse words for.
+        // Every letter a tile could PUT IN A WORD, so a "ch" tile weights both c
+        // and h and a choice tile weights every option it names. It has to:
+        // BannedLetterLibrarian refuses a word by scanning its letters, so a c it
+        // never put in the pool is a letter it can never ban but would happily
+        // refuse words for.
+        //
+        // ⚠️ Face, not Spelling. A choice tile SPELLS "*" — it stands for one
+        // undecided letter — so reading Spelling here would hide its options from
+        // the Censor entirely.
         foreach (var tile in run.TileBag)
             if (tile != null)
-                foreach (char letter in tile.Spelling)
-                    // LETTERS only. A wild spells "*", and a Censor that drew it
+                foreach (char letter in tile.Face)
+                    // LETTERS only, which is also what drops a choice tile's "/"
+                    // separators. A wild spells "*", and a Censor that drew it
                     // would announce "no words containing *" and then ban nothing
                     // at all — a resolved word never contains one. A boss round
                     // that silently does nothing is worse than no boss round.
