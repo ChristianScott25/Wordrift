@@ -285,7 +285,33 @@ public class RunState
         LastPayout = amount;
     }
 
-    public bool CanAfford(int price) => Money >= price;
+    /// <summary>
+    /// 🚧 TEMPORARY — see RogueDemoModeConfig.unlimitedMoney. A test mode where
+    /// nothing in the shop is ever too expensive, so the shelf can be played end to
+    /// end without grinding rounds for money.
+    ///
+    /// DERIVED from the config, so there is nothing to save. The standing rule — state
+    /// added to RunState has to be added to RunSaveData or it silently resets — doesn't
+    /// bite here for the same reason it doesn't bite Perks: the answer is rebuilt from
+    /// the template every time it's asked. And a test run can't be resumed onto the
+    /// ordinary mode anyway; CanResume compares asset names and refuses long before
+    /// this is read.
+    /// </summary>
+    public bool UnlimitedMoney => Template != null && Template.unlimitedMoney;
+
+    /// <summary>
+    /// The balance as the player sees it. THE one place money becomes text, so the
+    /// shop header and the round HUD can't disagree about whether it's a number.
+    /// </summary>
+    public string MoneyText => UnlimitedMoney ? "$∞" : $"${Money}";
+
+    /// <summary>
+    /// Whether a price is within reach. THE one place that question is answered —
+    /// the shelf rows, the BUY button and the reroll button all ask it rather than
+    /// comparing against Money themselves, which is the only reason unlimited money
+    /// is a change here and nowhere else.
+    /// </summary>
+    public bool CanAfford(int price) => UnlimitedMoney || Money >= price;
 
     /// <summary>
     /// Takes money for a purchase, or refuses and changes nothing. The only way
@@ -295,7 +321,10 @@ public class RunState
     public bool TrySpend(int price)
     {
         if (price < 0 || !CanAfford(price)) return false;
-        Money -= price;
+
+        // 🚧 The test mode buys without paying. The guards above still run, so a
+        // negative price is refused on both modes rather than quietly handing out money.
+        if (!UnlimitedMoney) Money -= price;
         return true;
     }
 

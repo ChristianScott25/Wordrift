@@ -989,9 +989,12 @@ public class ShopScreen : MonoBehaviour
     {
         if (moneyLabel != null)
         {
+            // MoneyText, not $"${run.Money}": it reads "$∞" on the unlimited-money
+            // test mode. What the round PAID is still a real number either way, and
+            // it's the half worth seeing when what you're testing is the economy.
             moneyLabel.text = run.LastPayout > 0
-                ? $"${run.Money}   <size=60%>+${run.LastPayout} EARNED</size>"
-                : $"${run.Money}";
+                ? $"{run.MoneyText}   <size=60%>+${run.LastPayout} EARNED</size>"
+                : run.MoneyText;
         }
 
         if (bookmarkLabel != null) bookmarkLabel.text = BuildOwnedLine();

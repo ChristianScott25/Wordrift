@@ -121,6 +121,21 @@ public class RogueDemoModeConfig : ModeConfig
              "Applied before the round payout cap. 0 removes the ceiling.")]
     [Min(0)] public int maxInterest = 25;
 
+    [Header("🚧 Testing")]
+    [Tooltip("🚧 TEMPORARY — A TEST MODE, NOT A GAME RULE.\n\n" +
+             "Nothing in the shop is ever too expensive: RunState.CanAfford always " +
+             "says yes and TrySpend takes nothing. Rounds still pay, so the balance " +
+             "still climbs — it just never goes down, and both money readouts show " +
+             "$∞ instead of a number.\n\n" +
+             "It exists so the shop can be played end to end without grinding rounds " +
+             "for money. Mode_RogueDemo_Unlimited.asset is the only asset that should " +
+             "ever have this ticked — and it is a COPY of Mode_RogueDemo, re-synced by " +
+             "Word Crush > 🚧 Create Unlimited Money Mode, so tick it there and " +
+             "your tuning is the same on both.\n\n" +
+             "To delete the whole test mode: the asset, Editor/UnlimitedMoneyModeSetup.cs, " +
+             "this field, RunState.UnlimitedMoney, and the button block in MainMenuSetup.")]
+    public bool unlimitedMoney = false;
+
     /// <summary>
     /// What clearing a round pays. The seam every later payout idea hangs off —
     /// interest on savings, a flat per-round purse, bookmarks that pay out — so

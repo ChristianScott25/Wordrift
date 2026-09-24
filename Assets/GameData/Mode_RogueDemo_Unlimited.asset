@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0dbdb985e7324ee5890c5f7d7b67f8f, type: 3}
+  m_Name: Mode_RogueDemo_Unlimited
+  m_EditorClassIdentifier: Assembly-CSharp::RogueDemoModeConfig
+  displayName: "Rogue Demo \u2014 Unlimited Money"
+  boardShape: {fileID: 11400000, guid: 6e341966805774ebab975c05bfb0cacd, type: 2}
+  letterSet: {fileID: 11400000, guid: 6d97dafb14cc54f7a8ae45fe2c470957, type: 2}
+  minWordLength: 3
+  lengthMultipliers:
+  - 1
+  - 1.5
+  - 2
+  multiplierPerExtraLetter: 0.5
+  scoreMultiplier: 1
+  tileSkins:
+  - {fileID: 11400000, guid: 92229840c2a714561b5ae7a8519bea58, type: 2}
+  letterFont: {fileID: 0}
+  tileModifiers:
+  - {fileID: 11400000, guid: 4feeb697aa4bc4d6a8a5e0b449256678, type: 2}
+  - {fileID: 11400000, guid: 728ccfa980b654c07a56408590f52235, type: 2}
+  - {fileID: 11400000, guid: 157f5c144f75145678553219bd43dc63, type: 2}
+  - {fileID: 11400000, guid: 3e5e91049c5b3404e959e1e8974ffc94, type: 2}
+  maxModifiersPerTile: 3
+  bookmarks:
+  - {fileID: 11400000, guid: ec1dab9a3f28844b291476291231e9f1, type: 2}
+  - {fileID: 11400000, guid: 6a3c724c8ace444d79e51f50b1cea56f, type: 2}
+  - {fileID: 11400000, guid: 88f06e66d4a184746bf51ab65373fe51, type: 2}
+  - {fileID: 11400000, guid: 356fdfd326cee467ca20768fdc8cd5f3, type: 2}
+  - {fileID: 11400000, guid: fc8dc52dae4914ba5b622080e09db056, type: 2}
+  - {fileID: 11400000, guid: f8c6b6fc6a892461ba65dd182a44c20f, type: 2}
+  moves: 20
+  endOnTargetReached: 1
+  rejectedWordsCostMoves: 0
+  urgentMoves: 3
+  discardsPerRound: 5
+  shopSceneName: Shop
+  roundTargets: 1e0000002d00000041000000
+  targetGrowth: 1.5
+  targetScore: 30
+  tileBagSize: 104
+  librarians:
+  - {fileID: 11400000, guid: 8341f942997904750a1fcd1048323ae3, type: 2}
+  - {fileID: 11400000, guid: 1f3aaa8e569614b7497b2acee17d71d4, type: 2}
+  - {fileID: 11400000, guid: 9f8f2c252f6814188b6076df309b503d, type: 2}
+  - {fileID: 11400000, guid: 2c75433a116ae4e9db27dc5a47a1c1cc, type: 2}
+  - {fileID: 11400000, guid: e9a42704c21504cefaff7ace1b5a046c, type: 2}
+  - {fileID: 11400000, guid: 0453411ee0fc942978d05403049d1830, type: 2}
+  - {fileID: 11400000, guid: 39d15647ba86d4e9982c8c7a05637f7a, type: 2}
+  - {fileID: 11400000, guid: e2c9aede4eeec49adb420207b0d902ab, type: 2}
+  librarianEveryRounds: 3
+  librarianPayoutMultiplier: 2
+  librarianLabel: LIBRARIAN
+  checkouts:
+  - {fileID: 11400000, guid: d4a11782566574e67b8f3c72d0250708, type: 2}
+  - {fileID: 11400000, guid: b9964fba344d94d68b425a6d09424a7d, type: 2}
+  - {fileID: 11400000, guid: eb78b57d4377c4eab9fe66053a248914, type: 2}
+  - {fileID: 11400000, guid: c8f61a858a2b84dfb8706de6d4aa6f5d, type: 2}
+  - {fileID: 11400000, guid: d54f12bc8630948b385f3b71c3c2876e, type: 2}
+  - {fileID: 11400000, guid: 39f933cbcd63f45fda9a0254be38983c, type: 2}
+  rerollBasePrice: 5
+  rerollPriceGrowth: 1.5
+  pointsPerCoin: 10
+  coinsPerUnusedMove: 1
+  maxRoundPayout: 200
+  maxInterest: 25
+  unlimitedMoney: 1

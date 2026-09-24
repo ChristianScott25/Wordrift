@@ -390,7 +390,7 @@ public class RogueDemoMode : GameMode
         // so the player can plan the next shop. A real multi-readout HUD is
         // overdue, but it's a HUD job: wire StatusWidget.goalLabel.
         Goal = $"R{run.Round}   {session.Score} / {roundTarget}   " +
-               $"BAG {bag.Remaining}   ${run.Money}",
+               $"BAG {bag.Remaining}   {run.MoneyText}",
 
         // Whatever bookmarks the run is carrying. Drawn on its own HUD line, or
         // dropped entirely if the widget has no label for it.

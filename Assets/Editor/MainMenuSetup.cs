@@ -23,9 +23,15 @@ public static class MainMenuSetup
     private const string ScenePath = "Assets/Scenes/Main Menu.unity";
     private const string ContinueName = "Continue Button";
 
+    /// <summary>🚧 TEMPORARY — see the block at the bottom of this file.</summary>
+    private const string UnlimitedName = "Unlimited Money Button";
+
     // Absolute, not relative: a re-run must land the buttons in the same place.
+    // The menu's buttons are 300x100, so a pitch of 140 leaves a 40px gap between
+    // them. Keep any new one on that pitch.
     private static readonly Vector2 ContinueAt = new Vector2(0f, 70f);
     private static readonly Vector2 PlayAt = new Vector2(0f, -70f);
+    private static readonly Vector2 UnlimitedAt = new Vector2(0f, -210f);
 
     [MenuItem("Word Crush/Set Up Main Menu")]
     public static void SetUp()
@@ -63,28 +69,47 @@ public static class MainMenuSetup
 
         var resume = EnsureContinueButton(menu, play);
         WordCrushSetup.SetRef(menu, "continueButton", resume);
+        bool testMode = EnsureUnlimitedButton(menu, play);
         WireModes(menu);
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
-        Debug.Log("Main menu ready: CONTINUE added, PLAY relabelled NEW RUN.");
+        Debug.Log("Main menu ready: CONTINUE added, PLAY relabelled NEW RUN." +
+                  (testMode ? " 🚧 UNLIMITED MONEY added below it." : ""));
     }
 
     /// <summary>
-    /// The button that starts a run: whichever one isn't ours. Found by
-    /// elimination rather than by name, since the scene's play button was
-    /// authored by hand and could be called anything.
+    /// The button that starts a run: whichever one isn't ours. Still found by
+    /// elimination rather than by name, since the scene's play button was authored
+    /// by hand and could be called anything.
+    ///
+    /// ⚠️ EVERY BUTTON THIS SCRIPT MAKES HAS TO BE NAMED IN <see cref="IsOurs"/>.
+    /// Miss one and this returns it, and the caller then relabels it NEW RUN and
+    /// moves it onto the play button — two buttons stacked in one place, both saying
+    /// the same thing, one of them starting the wrong mode. That is exactly what
+    /// adding the unlimited-money button would have done.
     /// </summary>
     private static Button FindPlayButton(MainMenu menu)
     {
         foreach (var button in menu.GetComponentsInChildren<Button>(true))
-            if (button.name != ContinueName) return button;
+            if (!IsOurs(button.name)) return button;
+        return null;
+    }
+
+    /// <summary>A button this script generated, as opposed to the hand-authored one.</summary>
+    private static bool IsOurs(string name) => name == ContinueName || name == UnlimitedName;
+
+    private static Button FindByName(MainMenu menu, string name)
+    {
+        foreach (var button in menu.GetComponentsInChildren<Button>(true))
+            if (button.name == name) return button;
         return null;
     }
 
     private static Button EnsureContinueButton(MainMenu menu, Button play)
     {
-        var button = FindContinueButton(menu) ?? BuildContinueButton(play);
+        var button = FindByName(menu, ContinueName) ?? BuildCopyOfPlayButton(
+            play, ContinueName, "CONTINUE", ContinueAt, play.transform.GetSiblingIndex());
 
         Place(button.gameObject, ContinueAt);
         Relabel(button, "CONTINUE");
@@ -100,23 +125,21 @@ public static class MainMenuSetup
         return button;
     }
 
-    private static Button FindContinueButton(MainMenu menu)
-    {
-        foreach (var button in menu.GetComponentsInChildren<Button>(true))
-            if (button.name == ContinueName) return button;
-        return null;
-    }
 
-    private static Button BuildContinueButton(Button play)
+    /// <summary>
+    /// A new button matching the hand-authored play button's look. Copying it
+    /// rather than picking colours here is deliberate: the menu was styled by hand,
+    /// and a generated button in different colours would be an obvious regression
+    /// the moment that styling changes.
+    /// </summary>
+    private static Button BuildCopyOfPlayButton(
+        Button play, string name, string label, Vector2 at, int siblingIndex)
     {
-        // Copy the play button's look rather than picking colours here: the menu
-        // was styled by hand, and a second button in different colours would be
-        // an obvious regression the moment that styling changes.
         var playImage = play.GetComponent<Image>();
         var playLabel = play.GetComponentInChildren<TMP_Text>(true);
 
         var made = WordCrushSetup.MakeButton(
-            play.transform.parent, ContinueName, "CONTINUE", ContinueAt,
+            play.transform.parent, name, label, at,
             playImage != null ? playImage.color : Color.white,
             playLabel != null ? playLabel.color : Color.black);
 
@@ -125,15 +148,111 @@ public static class MainMenuSetup
         madeRect.sizeDelta = playRect.sizeDelta;
         if (playLabel != null)
         {
-            var label = made.GetComponentInChildren<TMP_Text>(true);
-            label.font = playLabel.font;
-            label.fontSize = playLabel.fontSize;
+            var text = made.GetComponentInChildren<TMP_Text>(true);
+            text.font = playLabel.font;
+            text.fontSize = playLabel.fontSize;
         }
 
-        // Above the play button in the hierarchy as well as on screen, so tab
-        // order and the inspector read the way the screen does.
-        made.transform.SetSiblingIndex(play.transform.GetSiblingIndex());
+        // Placed in the hierarchy the way it sits on screen, so tab order and the
+        // inspector read top-to-bottom like the menu does. The caller decides, since
+        // CONTINUE goes above the play button and the test mode's button goes below.
+        made.transform.SetSiblingIndex(siblingIndex);
         return made;
+    }
+
+    // ---- 🚧 TEMPORARY: the unlimited-money test mode's button ------------------
+    //
+    // A THIRD BUTTON, BELOW NEW RUN, THAT STARTS THE TEST MODE. Unlike the Librarian
+    // Lab — which lives in Assets/Editor and so physically cannot ship — this writes a
+    // real button into the real menu scene, so it CAN reach a build. That was a
+    // deliberate call: it's meant to be startable from the menu like any other mode.
+    //
+    // Deleting it is this block, the two constants at the top, the call in Run(), the
+    // button in Main Menu.unity, Editor/UnlimitedMoneyModeSetup.cs, the asset, and
+    // RogueDemoModeConfig.unlimitedMoney with its readers in RunState.
+    //
+    // ⚠️ UnlimitedName must stay listed in IsOurs, or FindPlayButton starts returning
+    // THIS button and relabelling it NEW RUN.
+
+    /// <summary>
+    /// Adds (or re-wires) the test mode's button. Silently does nothing when the
+    /// asset isn't there, so this menu item still works on a project where
+    /// 🚧 Create Unlimited Money Mode has never been run.
+    /// </summary>
+    private static bool EnsureUnlimitedButton(MainMenu menu, Button play)
+    {
+        var config = AssetDatabase.LoadAssetAtPath<RogueDemoModeConfig>(
+            UnlimitedMoneyModeSetup.AssetPath);
+
+        if (config == null)
+        {
+            Debug.Log("No Mode_RogueDemo_Unlimited.asset, so no test-mode button. " +
+                      "Run Word Crush > 🚧 Create Unlimited Money Mode first if you want one.");
+            return false;
+        }
+
+        // +1: below the play button, matching where it sits on screen. CONTINUE has
+        // already been inserted above it by now, so this index is the settled one.
+        var button = FindByName(menu, UnlimitedName) ?? BuildCopyOfPlayButton(
+            play, UnlimitedName, "UNLIMITED MONEY", UnlimitedAt,
+            play.transform.GetSiblingIndex() + 1);
+
+        Place(button.gameObject, UnlimitedAt);
+        Relabel(button, "UNLIMITED MONEY");
+
+        // Rewired from scratch every run rather than only when empty, unlike
+        // CONTINUE: this listener carries the mode ASSET as its argument, and a
+        // button still pointing at a stale one would start the wrong mode while
+        // looking perfectly correct. Cheap to redo, expensive to debug.
+        for (int i = button.onClick.GetPersistentEventCount() - 1; i >= 0; i--)
+            UnityEditor.Events.UnityEventTools.RemovePersistentListener(button.onClick, i);
+
+        UnityEditor.Events.UnityEventTools.AddObjectPersistentListener<ModeConfig>(
+            button.onClick, menu.PlayMode, config);
+
+        // ⚠️ AND THEN FIX THE TYPE IT JUST SAVED. AddObjectPersistentListener
+        // ignores T and stores the ARGUMENT'S RUNTIME TYPE (it calls argument.GetType()
+        // internally), so spelling out <ModeConfig> above buys nothing: the call is
+        // written as taking a "RogueDemoModeConfig". PlayMode takes a ModeConfig, and
+        // the hand-authored NEW RUN button stores "ModeConfig, Assembly-CSharp".
+        // Whether that mismatch still resolves comes down to reflection binder rules —
+        // precisely the kind of thing that can behave one way in the Mono editor and
+        // another in an IL2CPP iOS build, which is a bug you'd only meet on device.
+        // Make the two buttons identical instead of finding out.
+        SetObjectArgumentType(button, typeof(ModeConfig));
+        return true;
+    }
+
+    /// <summary>
+    /// Rewrites the saved object-argument type on every persistent call of a button,
+    /// so it names the handler's PARAMETER type rather than the argument's runtime
+    /// type. See the caller for why that isn't the same thing.
+    /// </summary>
+    private static void SetObjectArgumentType(Button button, System.Type parameterType)
+    {
+        // "ModeConfig, Assembly-CSharp" — full name plus the SHORT assembly name, which
+        // is the form Unity serializes. AssemblyQualifiedName drags a version, culture
+        // and public key token along and does not match what the Inspector writes.
+        string typeName = $"{parameterType.FullName}, {parameterType.Assembly.GetName().Name}";
+
+        var so = new SerializedObject(button);
+        var calls = so.FindProperty("m_OnClick.m_PersistentCalls.m_Calls");
+        if (calls == null)
+        {
+            Debug.LogError("Button.onClick has no m_PersistentCalls.m_Calls — Unity changed the " +
+                           "serialized layout, so the test-mode button's argument type is unfixed " +
+                           "and the button may do nothing.", button);
+            return;
+        }
+
+        for (int i = 0; i < calls.arraySize; i++)
+        {
+            var stored = calls.GetArrayElementAtIndex(i)
+                .FindPropertyRelative("m_Arguments.m_ObjectArgumentAssemblyTypeName");
+            if (stored != null) stored.stringValue = typeName;
+        }
+
+        so.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static void Relabel(Button button, string text)

@@ -668,6 +668,10 @@ everything is one purchase only.
 **Interest exists now**, as a checkout rather than a rule — so saving is a *build*, not
 something the game does for you. ❓ Still no per-round purse and no sink other than the shop.
 
+🚧 **There is a test mode where money doesn't bind at all** — see §10. Nothing in the shop is
+ever too expensive and the readout says `$∞`. Rounds still pay normally underneath, so it's also
+the quickest way to watch what the payout formula actually hands out.
+
 ---
 
 ## 8. The shop
@@ -859,11 +863,19 @@ version. Nothing here unlocks anything, and whether that's the shape this wants 
 
 | Mode | What it is |
 |---|---|
-| **Rogue Demo** | Everything described in this document. The only mode there is. |
+| **Rogue Demo** | Everything described in this document. The only mode you'd actually play. |
+| 🚧 **Unlimited Money** | A TEST MODE. Identical to Rogue Demo except nothing is ever too expensive — buy every row, reroll as often as you like, stack checkouts in one visit. Both money readouts say `$∞`. |
 
 *Timed and Overflow modes were cut on 2026-08-25, and Moves — the last arcade round — on
-2026-08-28. This is a roguelike now, not an arcade collection. The code still has the seam a
-second mode would slot into; there just isn't one.*
+2026-08-28. This is a roguelike now, not an arcade collection.*
+
+🚧 **About Unlimited Money.** It exists because the shop is the newest and least-played part
+of the game, and seeing all of it the honest way means grinding rounds for money — clearing round
+1 pays about $19, which buys one bookmark. The mode is a straight **copy** of Rogue Demo's asset
+with one flag flipped, re-made by an editor menu item, so its targets and tile bag can't quietly
+drift away from the real game's. It is **not a design idea** and nothing about the economy should
+be judged from it. It also shares the one save slot, so starting a test run throws away a real
+one. It comes out before release.
 
 ---
 
@@ -895,6 +907,7 @@ second mode would slot into; there just isn't one.*
 | $ per unused move | 1 | `Mode_RogueDemo.asset` |
 | Max payout per round | $200 (0 = no cap) | `Mode_RogueDemo.asset` |
 | Max interest per round | $25 (0 = no cap) | `Mode_RogueDemo.asset` |
+| 🚧 Unlimited money | off | `Mode_RogueDemo.asset` — on in `Mode_RogueDemo_Unlimited.asset` |
 | Shop slots | 2 upgrades · 2 bookmarks · 1 checkout · 1 new tile | `ShopScreen` (code, not an asset) |
 | Modifier prices | 5 / 9 / 14 / 22 | each asset in `GameData/Modifiers/` |
 | Bookmark prices | 10 / 12 / 13 / 13 / 14 / 16 | each asset in `GameData/Bookmarks/` |
