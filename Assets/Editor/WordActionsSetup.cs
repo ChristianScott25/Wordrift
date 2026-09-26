@@ -94,17 +94,21 @@ public static class WordActionsSetup
         var widget = widgetRoot.GetComponent<WordActionsWidget>()
                      ?? widgetRoot.AddComponent<WordActionsWidget>();
 
-        // A child container, never the widget itself: the widget has to stay
-        // active to keep hearing SelectionChanged, so it hides this instead.
+        // ⚠️ EVERYTHING HERE IS SIZED IN FRACTIONS OF THE PARENT, NOT PIXELS.
+        // The widget used to be a fixed 1040x170 strip floating over the board,
+        // so its two buttons could sit at a hardcoded +/-265 and be 490 wide. It
+        // lives in a BAND now and GameLayout gives it whatever width the band
+        // and its share of it work out to — roughly 700 on a phone. Absolute
+        // offsets against that overflowed the root in both directions: DISCARD
+        // slid left under the info/settings buttons, and PLAY ran off the screen.
         var shown = FindOrCreate(widgetRoot.transform, RootName);
-        WordCrushSetup.Anchor(shown, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1040f, 170f));
+        WordCrushSetup.Stretch(shown);
 
         var discard = FindOrCreateButton(shown.transform, DiscardName, "DISCARD",
-                                         new Vector2(-265f, 0f), DiscardColor);
-        var submit = FindOrCreateButton(shown.transform, SubmitName, "ENTER",
-                                        new Vector2(265f, 0f), SubmitColor);
+                                         0f, 0.48f, DiscardColor);
+        var submit = FindOrCreateButton(shown.transform, SubmitName, "PLAY",
+                                        0.52f, 1f, SubmitColor);
 
-        WordCrushSetup.SetRef(widget, "root", shown);
         WordCrushSetup.SetRef(widget, "discardButton", discard);
         WordCrushSetup.SetRef(widget, "discardLabel", LabelOf(discard));
         WordCrushSetup.SetRef(widget, "submitButton", submit);
@@ -122,16 +126,26 @@ public static class WordActionsSetup
     }
 
     private static Button FindOrCreateButton(Transform parent, string name, string label,
-                                             Vector2 offset, Color background)
+                                             float xMin, float xMax, Color background)
     {
         var existing = parent.Find(name);
         Button button = existing != null ? existing.GetComponent<Button>() : null;
 
         if (button == null)
-            button = WordCrushSetup.MakeButton(parent, name, label, offset, background, Color.white);
+            button = WordCrushSetup.MakeButton(parent, name, label, Vector2.zero,
+                                               background, Color.white);
 
         // Position is ours; colour and text are not, once they exist.
-        WordCrushSetup.Anchor(button.gameObject, new Vector2(0.5f, 0.5f), offset, new Vector2(490f, 150f));
+        var rect = button.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(xMin, 0f);
+        rect.anchorMax = new Vector2(xMax, 1f);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        // The label fills the button, for the same reason — a fixed-size label on
+        // a button that changed width clips its own text.
+        var text = LabelOf(button);
+        if (text != null) WordCrushSetup.Stretch(text.gameObject);
         return button;
     }
 

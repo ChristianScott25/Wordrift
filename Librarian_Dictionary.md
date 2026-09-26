@@ -64,7 +64,7 @@ is being forced, and **Stop forcing** puts rounds back to normal.
 - **Which one turns up is part of the run's seed**, and **none repeats until all eight have been
   seen.** So rounds 3, 6, 9 … 24 are all different, and the cycle restarts at 27.
 - **A word a librarian won't take can't be played at all.** It doesn't score zero and it doesn't
-  cost a move — ENTER simply won't light up, and the librarian's reason is written under the
+  cost a move — PLAY simply won't light up, and the librarian's reason is written in the
   selected word. Nothing is spent finding out.
 - **A librarian is only ever asked about words the dictionary already accepted**, so a reason
   never ends up captioning a plain non-word.
@@ -252,7 +252,7 @@ Four things about how the cut is taken:
 - **Neither number goes below 1** *(`floor`)*, so a word is always worth something.
 
 **It is not previewed.** The live POINTS × MULT readout shows the word untaxed; the cut lands as
-its own named beat — **THE CRITIC −25%** — in the score walk-through after ENTER. That's the same
+its own named beat — **THE CRITIC −25%** — in the score walk-through after PLAY. That's the same
 bargain bookmarks make, but ❓ it's a more questionable one for a *penalty*: you plan every word
 against a number that is always 25% too high. See [Open](#open).
 

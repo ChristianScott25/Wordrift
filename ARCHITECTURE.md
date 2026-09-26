@@ -160,8 +160,28 @@ beats a checkout that raised it — the boss beats the shop, without either one
 knowing the other exists.
 
 **A new HUD element** — a MonoBehaviour that subscribes to a `GameEvents` event
-in `OnEnable` and unsubscribes in `OnDisable`. Drop it on the HUD Canvas. The
-session doesn't need to know it exists.
+in `OnEnable` and unsubscribes in `OnDisable`. The session doesn't need to know
+it exists.
+
+It also has to say WHERE it goes, which since 2026-09-25 means naming a band
+rather than picking a corner. The screen is a vertical stack — round header,
+resource strip, score, word row, bookmarks, board, buttons — resolved by
+`GameLayout` on the HUD Canvas. (The bookmarks band is a SPACER: nothing attaches
+to it, it just stops the word row sitting where the card tips are.) A widget calls `GameLayout.Attach(rect, band)` (optionally with a
+left/right share, for the bands several widgets divide) and re-attaches on
+`GameLayout.Changed`.
+
+⚠️ **Attach in `Start`, never `OnEnable`.** Every `OnEnable` runs before any
+`Start`, and `GameSession.Awake` resolves the layout between the two — an
+`OnEnable` would read a band that doesn't exist yet. This is the same ordering
+`GameEvents` already relies on, used the other way round.
+
+⚠️ **The board is sized to fit its band, not the other way round.** `GameLayout`
+zooms the camera so the board fills the board band; `Board.cellSize` never
+changes. Anything world-space that needs a band's rectangle asks
+`GameLayout.WorldRectOf`, and anything converting the other way asks
+`CanvasYOf` — those are the only two places the camera and the canvas are
+reconciled, which is what stops a second copy of that arithmetic drifting.
 
 **A special tile** — for another multiplier, just duplicate one of the four
 assets in `Assets/GameData/Modifiers/` and change its `multiplier`, `badgeLabel`
@@ -270,7 +290,7 @@ payoutMultiplier, perks, moneyHeld)`: one method on the authored asset, called
 from `RogueDemoMode.End` before the scene change, and the seam every payout idea
 hangs off — interest and the payout bonus both landed there rather than in the
 mode. `GameSession`, `GameEvents` and everything in Core stay ignorant of
-currency — the money readout rides the `ModeStatus.Goal` string the mode already
+currency — the money readout is a `StatusChip` the mode already
 fills in.
 What a shop row COSTS goes through `RunState.PriceOf` and nowhere else, so the
 price shown and the price charged cannot drift apart when a discount is in play.
@@ -302,22 +322,32 @@ lowercase word per line.
   across a tile and sit over the letter, so it isn't the final treatment.
 - **Wild tiles.** Not designed yet: a special `TileSpec.letters` value ("?") or
   a `TileModifier` are both plausible. Decide before building.
-- **The HUD's one spare slot.** Round, target, bag AND money now share
-  `ModeStatus.Goal`, one shrunken string four readouts wide — close to
-  overflowing the 400px name label. A run HUD needs a real multi-readout
-  `ModeStatus` and widget; wiring `StatusWidget.goalLabel` to a dedicated label
-  is the cheap interim fix. `ModeStatus.Extra` is free again — it used to list
-  the bookmarks, which are cards below the board now.
-- **The screen is full, and the bookmark row is what proved it.** At 1080×1920
-  the board is framed by WIDTH (`max(halfHeight, halfWidth / aspect)`, and the
-  second term wins in portrait), so it takes 884 of 1920px and leaves 641 above
-  / 395 below — against roughly 590px of top stack and, now, 460 of bottom. It
-  fits on the 19.5:9 phones this is built for, where the board takes a smaller
-  share of the height, and doesn't at 16:9. `BookmarkRowWidget` handles that by
-  pinning itself to the board's real bottom edge and clamping at a floor, which
-  is a workaround and not an answer: the next widget that wants a band will have
-  to move something. `GameSession.verticalOffset` is the one knob, and it only
-  trades room above for room below.
+- ~~**The HUD's one spare slot.**~~ **Answered 2026-09-25.** `ModeStatus` is a
+  real multi-readout now: a reusable list of `StatusChip`s for the strip, plus
+  `Score` / `Target` / `BagRemaining` / `BagTotal` and the librarian's name and
+  power as separate fields. `Goal`, `Extra` and `Banner` are gone with the
+  widgets that read them. ⚠️ `Status` is still rebuilt every frame, so the chip
+  list must be one the mode owns and refills — never a fresh one per frame.
+- ~~**The screen is full.**~~ **Answered 2026-09-25**, by inverting it. The board
+  no longer takes whatever the aspect ratio gives it and leaves the HUD to fight
+  over the rest: `GameLayout` shares the height out among seven bands by weight,
+  and the board is zoomed to fit the band that's left. On a 19.5:9 phone the
+  board's width binds and it runs edge to edge; at 16:9 its height binds and it
+  sits narrower with a margin either side, instead of squeezing everything else.
+  The weights are the knob, on the `GameLayout` component.
+  Still open underneath it: **the bands are portrait-only.** They're containers,
+  so a landscape re-flow is a matter of re-anchoring six of them rather than
+  hunting twelve widgets — but nothing has done it, and at 4:3 the band that
+  suffers is the board.
+- **The bookmark cards are not really behind the board.** They're pinned so their
+  bottom edge meets the board's top edge and drawn with a flat bottom, which
+  looks identical as long as nothing lifts a card clear of the board. The HUD is
+  a Screen Space - Overlay canvas, so UI always draws over world sprites and a
+  real occlusion is impossible without moving the row to a World Space canvas
+  sorted under `BoardBackground` (−10). That's the fix if the fake stops holding;
+  switching the MAIN canvas to Screen Space - Camera is not, because
+  `BookmarkCard`'s drag code reads `pressEventCamera`, which is null only in
+  overlay mode.
 - **Price lives on the thing being sold** — `TileModifier.price`, `Bookmark.price`,
   `Checkout.price` — rather than on an *offer* asset. Three copies of the same
   field now, and the shop's `Offer.ListPrice` is the seam that hides it. It holds

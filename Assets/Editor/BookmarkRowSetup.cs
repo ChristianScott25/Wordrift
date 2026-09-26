@@ -36,18 +36,23 @@ public static class BookmarkRowSetup
     private static readonly Vector2 BottomCenter = new Vector2(0.5f, 0f);
     private static readonly Vector2 Center = new Vector2(0.5f, 0.5f);
 
-    private static readonly Vector2 RowSize = new Vector2(1000f, 110f);
-
-    // GAME SCENE: the band directly under the board, bottom-anchored. It used to
-    // be the round banner's — the banner has moved below the action buttons, so
-    // each has a permanent slot and nothing jumps when a librarian round starts.
+    // ⚠️ THE ROW'S HEIGHT IS THE VISIBLE TIP, NOT THE WHOLE CARD. The cards sit
+    // ON TOP of the board's upper edge and every pixel of them is visible — the
+    // HUD canvas draws over world sprites, so the board can never hide part of a
+    // card. The "bookmark in a book" look comes from the card being SHORT and
+    // flat-bottomed, meeting the board's edge as if it continued behind it.
     //
-    // Only the STARTING position: the widget re-pins itself under the board's
-    // real bottom edge at runtime, because the board is camera-framed and how
-    // much room sits below it changes with the shape of the screen. This is
-    // where it lands on a 16:9 editor Game view, where the board is big enough
-    // that the pin bottoms out against its floor.
-    private static readonly Vector2 RowAtInGame = new Vector2(0f, 372f);
+    // Making the row tall enough for a whole card is the trap: it would put a
+    // full row of cards above the board and punch into the word row.
+    private static readonly Vector2 RowSize = new Vector2(1000f, 100f);
+
+    // GAME SCENE: the row's bottom edge meets the board's TOP edge, so the cards
+    // rise out of it. It used to sit under the board.
+    //
+    // Only the STARTING position: the widget re-pins itself against the board's
+    // real top edge at runtime, because the board is camera-framed to fill its
+    // band and where that edge lands changes with the shape of the screen.
+    private static readonly Vector2 RowAtInGame = new Vector2(0f, 1100f);
 
     // SHOP: centre-anchored like everything else in that scene, in the band
     // between the owned line and the top shelf row.
@@ -58,8 +63,13 @@ public static class BookmarkRowSetup
     // each end. Move either and check the other.
     private static readonly Vector2 RowAtInShop = new Vector2(0f, 385f);
 
-    // One card as it sits in the prefab. The real size is computed at runtime.
-    private static readonly Vector2 CardSize = new Vector2(190f, 100f);
+    // One card as it sits in the prefab. The real WIDTH is computed at runtime
+    // from how many the run may hold; the height is the ROW's, which is the tip.
+    //
+    // ⚠️ Much below about 90 units of tip and a card stops being a reliable drag
+    // target on a phone — roughly 10mm. That is the floor this trades against
+    // when the tip is made subtler.
+    private static readonly Vector2 CardSize = new Vector2(150f, 100f);
 
     private static readonly Color CardColor = new Color(0.94f, 0.90f, 0.78f);
     private static readonly Color CardTextColor = new Color(0.16f, 0.17f, 0.23f);

@@ -468,6 +468,42 @@ public class Board : MonoBehaviour
     }
 
     /// <summary>
+    /// A tile that is NOT on the board — a display copy, for a readout that wants
+    /// to show real tiles rather than imitate them (the word row).
+    ///
+    /// Deliberately never entered into `tiles`, so nothing that plays, falls,
+    /// clears or saves can see it: the board's idea of what is on it is exactly
+    /// the cells it dealt. The caller owns the object's lifetime.
+    /// </summary>
+    public Tile CreateDisplayTile(Transform parent)
+    {
+        if (tilePrefab == null) return null;
+
+        var tile = Instantiate(tilePrefab, Vector3.zero, Quaternion.identity, parent);
+        tile.name = "Display Tile";
+        return tile;
+    }
+
+    /// <summary>
+    /// Gives a display tile a spec, a place and a size, in the round's own look.
+    ///
+    /// Separate from creating it because the word row RESIZES its tiles as the
+    /// word grows, and re-Init is what moves the body, the labels and the badge
+    /// fan together — nudging a scale would move only one of the three.
+    ///
+    /// Safe to call repeatedly: Init clears the modifier list before this puts
+    /// the spec's own back on, so re-dressing can't stack duplicates.
+    /// </summary>
+    public void DressDisplayTile(Tile tile, TileSpec spec, Vector3 at, float size)
+    {
+        if (tile == null || spec == null) return;
+
+        tile.name = $"Display {spec.Face.ToUpperInvariant()}";
+        tile.Init(spec, NextLook(), Vector2Int.zero, at, size);
+        ApplySpecModifiers(tile, spec);
+    }
+
+    /// <summary>
     /// The look for the next tile. Both parts are fixed for the round — a null
     /// skin leaves the prefab's own art.
     /// </summary>

@@ -40,10 +40,6 @@ public class BookmarkRowWidget : MonoBehaviour
              "slots, so cards don't change size as you buy them.")]
     [SerializeField] private float cardGap = 12f;
 
-    [Tooltip("Card height. The row's own height is what the board sits above, " +
-             "so keep them in step.")]
-    [SerializeField] private float cardHeight = 100f;
-
     [Tooltip("Body tint. The tile sprite is near-white so it can be tinted; " +
              "this is what stops the cards reading as blank tiles.")]
     [SerializeField] private Color cardColor = new Color(0.94f, 0.90f, 0.78f, 1f);
@@ -52,19 +48,20 @@ public class BookmarkRowWidget : MonoBehaviour
     [SerializeField] private Color cardTextColor = new Color(0.16f, 0.17f, 0.23f, 1f);
 
     [Header("Game scene only")]
-    [Tooltip("Optional. When set, the row pins itself just under the board's " +
-             "bottom edge instead of sitting at a fixed height — the board is " +
-             "camera-framed, so how much room is below it changes with the " +
-             "screen's shape. Leave empty in the Shop, which has no board.")]
+    [Tooltip("Optional. When set, the row pins its BOTTOM edge to the board's " +
+             "TOP edge, so the cards look like bookmarks sticking out of a book. " +
+             "The board is camera-framed, so where that edge falls changes with " +
+             "the screen's shape. Leave empty in the Shop, which has no board.")]
     [SerializeField] private Board board;
 
-    [Tooltip("How far below the board's bottom edge the row's top edge sits.")]
-    [SerializeField] private float boardGap = 12f;
+    [Tooltip("Nudge off the board's top edge. Negative tucks the cards further " +
+             "into the board, which is what sells the illusion when the board " +
+             "has a border drawn outside its cells.")]
+    [SerializeField] private float boardGap = -6f;
 
-    [Tooltip("The lowest the row may be pinned, whatever the board says. This is " +
-             "the floor that stops it landing on the ENTER / DISCARD buttons on " +
-             "a short screen \u2014 see PinBelowBoard.")]
-    [SerializeField] private float minY = 362f;
+    [Tooltip("The highest the row may be pinned. The ceiling that stops the " +
+             "cards climbing into the word row above them \u2014 see PinAboveBoard.")]
+    [SerializeField] private float maxY = 2400f;
 
     // Live cards, in SLOT ORDER — index 0 is the leftmost, which is the first to
     // score. During a drag this list is reordered as the finger moves so the row
@@ -72,7 +69,6 @@ public class BookmarkRowWidget : MonoBehaviour
     private readonly List<BookmarkCard> cards = new();
 
     private RectTransform self;
-    private Canvas canvas;
 
     // Where the drag started and where it has got to. -1 means no drag.
     private int dragFrom = -1;
@@ -123,10 +119,17 @@ public class BookmarkRowWidget : MonoBehaviour
 
         GameEvents.RoundStarted += Refresh;
         RunState.Changed += OnRunChanged;
+
+        // The board's top edge moves when the bands are re-resolved, so the row
+        // has to follow it. Refresh (above) runs before the layout exists on the
+        // first frame; this is what puts the row in the right place once it does.
+        GameLayout.Changed += PinAboveBoard;
     }
 
     private void OnDisable()
     {
+        GameLayout.Changed -= PinAboveBoard;
+
         GameEvents.RoundStarted -= Refresh;
         RunState.Changed -= OnRunChanged;
 
@@ -186,7 +189,7 @@ public class BookmarkRowWidget : MonoBehaviour
             cards[i].Bind(this, owned[i].Name, sprite, cardColor, cardTextColor);
 
         LayOut(-1);
-        PinBelowBoard();
+        PinAboveBoard();
     }
 
     /// <summary>
@@ -268,7 +271,10 @@ public class BookmarkRowWidget : MonoBehaviour
             var rect = cards[i].Rect;
             if (rect == null) continue;
 
-            rect.sizeDelta = new Vector2(slot, cardHeight);
+            // The row's own height, not a field of its own: a card is exactly as
+            // tall as the strip it lives in, and the two being separate numbers
+            // that had to be "kept in step" was a standing invitation to desync.
+            rect.sizeDelta = new Vector2(slot, row.rect.height);
             if (i != held) rect.anchoredPosition = new Vector2(first + i * pitch, 0f);
         }
     }
@@ -282,33 +288,33 @@ public class BookmarkRowWidget : MonoBehaviour
     }
 
     /// <summary>
-    /// Sits the row just under the board's bottom edge.
+    /// Sits the row so its BOTTOM edge meets the board's TOP edge — the cards
+    /// stand up out of the board like bookmarks out of a book.
     ///
-    /// Worth the arithmetic because the board is framed by the camera — its
-    /// ortho size is max(halfHeight, halfWidth / aspect), and on a portrait phone
-    /// the WIDTH is what binds — so the board's share of the screen's height, and
-    /// therefore the room below it, changes with the shape of the screen. A
-    /// hardcoded Y would be right on the one aspect it was measured on.
+    /// ⚠️ THE CARDS ARE NOT ACTUALLY BEHIND THE BOARD, AND CAN'T BE. The HUD is
+    /// a Screen Space - Overlay canvas, so it draws over every world sprite there
+    /// is; the board could never cover a card. The illusion is that the card ENDS
+    /// exactly where the board begins and has no bottom edge drawn, which is
+    /// indistinguishable from one that continues behind it — as long as nothing
+    /// lifts a card clear of the board while dragging.
     ///
-    /// ⚠️ It only ever moves the row UP, never below minY. On a 16:9 screen
-    /// the board is big enough that there genuinely isn't room for the row, the
-    /// banner AND the buttons below it, and the honest arithmetic would put the
-    /// row on top of ENTER and DISCARD. Covering a little of the board's bottom
-    /// row is the better of the two failures: the buttons are the thing you have
-    /// to be able to hit. On the 19.5:9 phones this is built for the board takes
-    /// a smaller share of the height and the floor never binds.
+    /// If that stops being good enough, the real fix is a second World Space
+    /// canvas sorted under BoardBackground (-10), which keeps BookmarkCard's
+    /// drag handling exactly as it is. Switching THIS canvas to Screen Space -
+    /// Camera would not: the drag code reads pressEventCamera, which is null only
+    /// in overlay mode.
+    ///
+    /// Worth the arithmetic because the board is camera-framed to fill its band,
+    /// so its top edge moves with the screen's shape. A hardcoded Y would be
+    /// right on the one aspect it was measured on.
     ///
     /// ⚠️ Assumes the row is anchored to the canvas's BOTTOM with its pivot
     /// there too, which is how the setup script places it: anchoredPosition.y is
     /// then simply the gap between the canvas's bottom edge and the row's.
     /// </summary>
-    private void PinBelowBoard()
+    private void PinAboveBoard()
     {
         if (board == null || self == null) return;
-
-        if (canvas == null) canvas = GetComponentInParent<Canvas>();
-        var cam = Camera.main;
-        if (canvas == null || cam == null || canvas.scaleFactor <= 0f) return;
 
         if (!Mathf.Approximately(self.anchorMin.y, 0f) ||
             !Mathf.Approximately(self.anchorMax.y, 0f) ||
@@ -321,15 +327,34 @@ public class BookmarkRowWidget : MonoBehaviour
             return;
         }
 
-        float boardBottom = board.BoardCenter.y - board.BoardSize.y * 0.5f;
-        float screenY = cam.WorldToScreenPoint(new Vector3(board.BoardCenter.x, boardBottom, 0f)).y;
+        // Through GameLayout rather than the camera directly: it owns the
+        // conversion between world and canvas space, and a second copy of that
+        // arithmetic is a second thing to get wrong when the framing changes.
+        var layout = GameLayout.Current;
+        if (layout == null || !layout.IsResolved) return;
 
-        // Screen pixels up from the bottom -> canvas pixels up from the bottom.
-        float bottomEdge = screenY / canvas.scaleFactor;
+        // The row is as tall as the band reserved for it, so the card tips can't
+        // grow into the word row above on a short screen. The band is a SPACER
+        // and nothing attaches to it — the row still pins against the board's
+        // REAL top edge, which can sit slightly inside the board's own band when
+        // the board is width-bound.
+        Rect reserved = layout.CanvasRectOf(LayoutBand.Bookmarks);
+        if (reserved.height > 0f)
+            self.sizeDelta = new Vector2(self.sizeDelta.x, reserved.height);
+
+        float boardTop = board.BoardCenter.y + board.BoardSize.y * 0.5f;
+        float topEdge = layout.CanvasYOf(boardTop);
 
         self.anchoredPosition = new Vector2(
             self.anchoredPosition.x,
-            Mathf.Max(minY, bottomEdge - self.rect.height - boardGap));
+            Mathf.Min(maxY, topEdge + boardGap));
+
+        // The cards take their height from the row, so they have to be re-laid
+        // out after it changes — LayOut ran before this, on the old height.
+        // Not mid-drag: a resize while a card is held is vanishingly rare, and
+        // snapping the held card back to its slot would be worse than a card
+        // that is briefly the wrong height.
+        if (!Dragging) LayOut(-1);
     }
 
     // ------------------------------------------------------------------------

@@ -5,23 +5,28 @@ using UnityEngine.UI;
 /// <summary>
 /// The two things you can do with a selection: play it, or throw it away.
 ///
-/// It appears only when tiles are selected, and it is the ONLY way a word gets
-/// submitted — lifting your finger off a drag no longer plays anything. Both
+/// ⚠️ IT NO LONGER COMES AND GOES. It used to appear only with a selection,
+/// which suited a widget floating over the board and does not suit one that owns
+/// a band: an empty band reads as a layout bug, and buttons that appear under
+/// your thumb mid-drag are buttons you press by accident. Both sit there greyed
+/// out instead, which is also how the discard allowance stays readable.
+///
+/// It is the ONLY way a word gets submitted — lifting your finger off a drag
+/// plays nothing. Both
 /// buttons are pure obedience: every enable/disable decision arrives inside a
 /// SelectionState that the session already worked out, so this widget never
 /// consults the dictionary or the discard rule itself.
 /// </summary>
 public class WordActionsWidget : MonoBehaviour
 {
-    [Tooltip("The visuals to show/hide with the selection. Must NOT be this " +
-             "object — deactivating ourselves would stop us hearing events.")]
-    [SerializeField] private GameObject root;
-
     [SerializeField] private GameSession session;
 
-    [Header("Enter")]
+    [Header("Play")]
     [SerializeField] private Button submitButton;
     [SerializeField] private TMP_Text submitLabel;
+
+    [Tooltip("What the submit button says.")]
+    [SerializeField] private string submitText = "PLAY";
 
     [Header("Discard")]
     [SerializeField] private Button discardButton;
@@ -33,14 +38,13 @@ public class WordActionsWidget : MonoBehaviour
     [SerializeField] private Color disabledTint = new Color(1f, 1f, 1f, 0.35f);
     [SerializeField] private Color enabledTint = Color.white;
 
+    [Header("Place in band")]
+    [Range(0f, 1f)][SerializeField] private float bandXMin = 0.3f;
+
+    [Range(0f, 1f)][SerializeField] private float bandXMax = 1f;
+
     private void Awake()
     {
-        if (root == gameObject)
-        {
-            Debug.LogError("WordActionsWidget's 'root' must be a child object, not itself.", this);
-            root = null;
-        }
-
         // The session is a scene object, so a prefab can't carry the reference —
         // it's wired when the widget is placed, and found here if that was missed.
         if (session == null) session = FindFirstObjectByType<GameSession>();
@@ -52,21 +56,27 @@ public class WordActionsWidget : MonoBehaviour
         // survive being saved into a prefab.
         if (submitButton != null) submitButton.onClick.AddListener(OnSubmit);
         if (discardButton != null) discardButton.onClick.AddListener(OnDiscard);
-
-        Show(false);
     }
 
     private void OnEnable()
     {
+        GameLayout.Changed += PlaceSelf;
         GameEvents.SelectionChanged += OnSelectionChanged;
         GameEvents.RoundEnded += OnRoundEnded;
     }
 
     private void OnDisable()
     {
+        GameLayout.Changed -= PlaceSelf;
         GameEvents.SelectionChanged -= OnSelectionChanged;
         GameEvents.RoundEnded -= OnRoundEnded;
     }
+
+    // Start, not OnEnable — the layout resolves between the two. See GameLayout.
+    private void Start() => PlaceSelf();
+
+    private void PlaceSelf() =>
+        GameLayout.Attach((RectTransform)transform, LayoutBand.Buttons, bandXMin, bandXMax);
 
     private void OnSubmit()
     {
@@ -78,14 +88,20 @@ public class WordActionsWidget : MonoBehaviour
         if (session != null) session.DiscardSelection();
     }
 
-    private void OnRoundEnded(RoundSummary summary) => Show(false);
+    // The round is over: both buttons go dead, but they stay on screen. There is
+    // nothing behind them to reveal, and the band would otherwise empty out at
+    // exactly the moment the game-over panel wants a settled screen behind it.
+    private void OnRoundEnded(RoundSummary summary) => SetIdle();
 
     private void OnSelectionChanged(SelectionState selection)
     {
-        Show(!selection.IsEmpty);
-        if (selection.IsEmpty) return;
+        if (selection.IsEmpty)
+        {
+            SetIdle();
+            return;
+        }
 
-        SetButton(submitButton, submitLabel, selection.CanSubmit, "ENTER");
+        SetButton(submitButton, submitLabel, selection.CanSubmit, submitText);
 
         // The count is on the button because it's the number that decides
         // whether the press will work — "DISCARD 3" against "2 LEFT" is the
@@ -95,9 +111,11 @@ public class WordActionsWidget : MonoBehaviour
                   $"   <size=60%>{selection.DiscardsLeft} LEFT</size>");
     }
 
-    private void Show(bool visible)
+    /// <summary>Nothing selected: both buttons present, both refusing.</summary>
+    private void SetIdle()
     {
-        if (root != null) root.SetActive(visible);
+        SetButton(submitButton, submitLabel, false, submitText);
+        SetButton(discardButton, discardLabel, false, "DISCARD");
     }
 
     private void SetButton(Button button, TMP_Text label, bool usable, string text)

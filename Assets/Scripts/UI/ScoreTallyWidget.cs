@@ -19,8 +19,11 @@ using UnityEngine;
 /// that class exists: the session waits exactly as long as this animates, and
 /// two Inspector copies of the same numbers would eventually disagree.
 ///
-/// It hides itself the moment the walk-through ends — the same moment the board
-/// clears — so a scored word never lingers over the next selection.
+/// ⚠️ IT NEVER HIDES. It used to disappear whenever nothing was selected, which
+/// was right when it floated in the middle of the screen and wrong now that it
+/// owns a band: a box that empties out leaves a hole, and a box that comes and
+/// goes makes the bands around it look like they moved. It rests at 0 x 0
+/// instead.
 /// </summary>
 public class ScoreTallyWidget : MonoBehaviour
 {
@@ -37,6 +40,16 @@ public class ScoreTallyWidget : MonoBehaviour
     [Tooltip("Names the bookmark firing during the walk-through. Blank the rest of the time.")]
     [SerializeField] private TMP_Text stepLabel;
 
+    [Tooltip("Where the multiplier comes from — \"5 LETTERS\". Without it that " +
+             "number is magic; Balatro names the poker hand over its own for the " +
+             "same reason.")]
+    [SerializeField] private TMP_Text lengthLabel;
+
+    [Header("Place in band")]
+    [Range(0f, 1f)][SerializeField] private float bandXMin = 0f;
+
+    [Range(0f, 1f)][SerializeField] private float bandXMax = 1f;
+
     [Header("Look")]
     [SerializeField] private Color restingColor = Color.white;
 
@@ -52,11 +65,15 @@ public class ScoreTallyWidget : MonoBehaviour
             Debug.LogError("ScoreTallyWidget's 'root' must be a child object, not itself.", this);
             root = null;
         }
-        Show(false);
+        // The box is permanent now, so this runs once and only guards against a
+        // prefab whose root was saved switched off.
+        if (root != null && !root.activeSelf) root.SetActive(true);
+        DrawResting();
     }
 
     private void OnEnable()
     {
+        GameLayout.Changed += PlaceSelf;
         GameEvents.SelectionChanged += OnSelectionChanged;
         GameEvents.WordSubmitted += OnWordSubmitted;
         GameEvents.RoundStarted += OnRoundStarted;
@@ -65,11 +82,18 @@ public class ScoreTallyWidget : MonoBehaviour
 
     private void OnDisable()
     {
+        GameLayout.Changed -= PlaceSelf;
         GameEvents.SelectionChanged -= OnSelectionChanged;
         GameEvents.WordSubmitted -= OnWordSubmitted;
         GameEvents.RoundStarted -= OnRoundStarted;
         GameEvents.RoundEnded -= OnRoundEnded;
     }
+
+    // Start, not OnEnable — the layout resolves between the two. See GameLayout.
+    private void Start() => PlaceSelf();
+
+    private void PlaceSelf() =>
+        GameLayout.Attach((RectTransform)transform, LayoutBand.Score, bandXMin, bandXMax);
 
     private void OnSelectionChanged(SelectionState selection)
     {
@@ -80,12 +104,12 @@ public class ScoreTallyWidget : MonoBehaviour
 
         if (selection.IsEmpty)
         {
-            Show(false);
+            DrawResting();
             return;
         }
 
-        Show(true);
         Draw(selection.Preview.Points, selection.Preview.Mult, "");
+        DrawLength(selection.Word);
     }
 
     private void OnWordSubmitted(WordResult result)
@@ -103,7 +127,27 @@ public class ScoreTallyWidget : MonoBehaviour
     {
         if (tally != null) StopCoroutine(tally);
         tally = null;
-        Show(false);
+        DrawResting();
+    }
+
+    /// <summary>The box with nothing selected: zeros, not a blank.</summary>
+    private void DrawResting()
+    {
+        Draw(0, 0f, "");
+        DrawLength("");
+    }
+
+    /// <summary>
+    /// Says where the multiplier came from. Counted in LETTERS, not tiles — a
+    /// "ch" tile is two, which is the same distinction ScoreCalculator draws and
+    /// the same one two bookmarks once got wrong.
+    /// </summary>
+    private void DrawLength(string word)
+    {
+        if (lengthLabel == null) return;
+
+        int letters = string.IsNullOrEmpty(word) ? 0 : word.Length;
+        lengthLabel.text = letters == 0 ? "" : $"{letters} LETTER{(letters == 1 ? "" : "S")}";
     }
 
     /// <summary>
@@ -113,8 +157,8 @@ public class ScoreTallyWidget : MonoBehaviour
     /// </summary>
     private IEnumerator Walk(WordResult result)
     {
-        Show(true);
         Draw(result.Base.Points, result.Base.Mult, "");
+        DrawLength(result.Word);
 
         if (result.HasSteps)
         {
@@ -130,11 +174,11 @@ public class ScoreTallyWidget : MonoBehaviour
         // vanishing the instant ENTER is pressed.
         yield return new WaitForSeconds(ScoreTallyTiming.FinishSeconds);
 
-        // Clear tally BEFORE hiding: the session raises an empty selection at
+        // Clear tally BEFORE resting: the session raises an empty selection at
         // the same moment, and whichever of the two lands first must reach the
-        // same place. Both hide, so the order can't matter.
+        // same place. Both rest, so the order can't matter.
         tally = null;
-        Show(false);
+        DrawResting();
     }
 
     private void Draw(int points, float mult, string step)
@@ -162,8 +206,4 @@ public class ScoreTallyWidget : MonoBehaviour
         if (label != null) label.color = hitColor;
     }
 
-    private void Show(bool visible)
-    {
-        if (root != null) root.SetActive(visible);
-    }
 }

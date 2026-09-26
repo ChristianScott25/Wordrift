@@ -171,7 +171,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1000, y: 110}
+  m_SizeDelta: {x: 1000, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &7449855315677550816
 GameObject:
@@ -210,7 +210,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 190, y: 100}
+  m_SizeDelta: {x: 150, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7296512758590651618
 CanvasRenderer:
@@ -317,9 +317,8 @@ MonoBehaviour:
   cardTemplate: {fileID: 4924348710967605451}
   cardSkin: {fileID: 11400000, guid: 92229840c2a714561b5ae7a8519bea58, type: 2}
   cardGap: 12
-  cardHeight: 100
   cardColor: {r: 0.94, g: 0.9, b: 0.78, a: 1}
   cardTextColor: {r: 0.16, g: 0.17, b: 0.23, a: 1}
   board: {fileID: 0}
   boardGap: 12
-  minY: 362
+  maxY: 2400

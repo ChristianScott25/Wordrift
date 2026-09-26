@@ -108,6 +108,39 @@ nothing dies around the point the targets start compounding.
 A run is currently open-ended: there is no boss round and no "you win" — you play until a
 target beats you. ❓ That ending is undesigned.
 
+### What's on screen
+
+*(Rebuilt on 2026-09-25. Everything below is 🚧 **TEMPORARY** placeholder art — flat
+coloured blocks and plain text. The LAYOUT is the real thing; the look is not.)*
+
+The screen is a stack of bands, top to bottom:
+
+| Band | What's in it |
+|---|---|
+| **Round header** | Who you're up against — the librarian's name, portrait and rule — and your score over the round's target. On a round with no librarian the box stays exactly the same size and shows the round number instead. Beside it, the **tile bag** (how many tiles are left to draw, out of your whole bag) and an **items area**. |
+| **Resource strip** | Small readouts: money, moves, discards, round. |
+| **Score × mult** | What the current selection is worth — the tiles' points, times the multiplier your word's length earns. After you hit PLAY this is where the bookmarks are counted in, one at a time. |
+| **Word row** | The word you're spelling, laid out left to right as tiles. When the selection won't score it says **WON'T SCORE** here instead, with the librarian's reason underneath when a librarian is the reason. |
+| **The board** | Where you drag. |
+| **Buttons** | Info, settings, DISCARD, PLAY. |
+
+Two of those are worth explaining, because they're new:
+
+**The word row** exists because the board is hard to read while you're using it. A word
+snakes through a 5×5 grid in whatever order your finger went, and your thumb is over part of
+it. The row lays the same tiles out in a line, above the board and out of the way — with
+their score corners and their multiplier badges, so you can see what you're about to play.
+A long word shrinks its tiles to fit rather than running off the side.
+
+**The bookmarks** stand up out of the top edge of the board like bookmarks in a book — only
+their tops show. They're still dragged left and right to reorder, and that order is still the
+order they score in.
+
+🚧 The **items area** is empty and does nothing. Consumables — one-shot items you'd buy and
+spend during a round — are an idea, not a feature. The space is reserved so the layout can be
+judged at its real size. The **tile bag** is tappable but doesn't open yet, and the **info**
+and **settings** buttons don't open anything either.
+
 ### Where the fun is supposed to come from
 
 - **Recognition** — spotting a word nobody would find, in a grid that only exists for a second.
@@ -147,9 +180,12 @@ slides out from under your finger mid-word.
 
 ### The two buttons
 
-They appear as soon as anything is selected, and they are the only way to act on it.
+They sit at the bottom of the screen all the time, and they are the only way to act on a
+selection. *(They used to appear only once you'd selected something. They stopped doing that
+on 2026-09-25, when the screen was laid out in bands: a row of buttons that pops into
+existence under your thumb mid-drag is a row of buttons you press by accident.)*
 
-**ENTER** plays the selection as a word. It is **disabled unless the selection is a valid
+**PLAY** plays the selection as a word. It is **disabled unless the selection is a valid
 word** — at least **3 letters** *(`minWordLength`)* — letters, so a `CH` tile and an `A` are
 enough — and in the dictionary, about 178,800
 English words. You can no longer submit a bad word at all, so nothing flashes red any more and
@@ -231,7 +267,7 @@ what a word pays before you commit to it.
 
 ### Then your bookmarks, one at a time
 
-When you press ENTER the two numbers are locked in, and each bookmark you own takes its turn
+When you press PLAY the two numbers are locked in, and each bookmark you own takes its turn
 **in the order their cards sit, left to right**, pushing one side or the other. Each is called out as it
 lands — `BOOKEND   ×2 MULT` — and the numbers move as you watch.
 
@@ -500,7 +536,7 @@ Details worth knowing:
 - **Deja Vu counts repeats within a round only** — the list resets when a new round starts.
   Nothing in the game stops you playing the same word twice, so this turns a quirk into a
   tactic: spell `EYE`, then spell it again for +10.
-- **Each bookmark is named as it fires.** Pressing ENTER walks the two numbers forward one
+- **Each bookmark is named as it fires.** Pressing PLAY walks the two numbers forward one
   bookmark at a time — `BOOKEND   ×2 MULT` — rather than jumping to a total.
 
 ❓ **Editions** — Balatro's holographic / negative / foil upgrades applied to a joker — are
@@ -599,7 +635,7 @@ what they've decided. Clear it and it **pays double** *(`librarianPayoutMultipli
 | **The Dilapidated** | **Three spaces on the board are closed**, drawn when the round starts | The first librarian that changes the board rather than the rules. You route words around the holes, and tiles fall straight through them. |
 
 **A word they won't take can't be played at all.** It doesn't score zero and it doesn't cost a
-word — ENTER simply won't light up, and the reason is written under the word you selected
+word — PLAY simply won't light up, and the reason is written in the word row
 ("Too short — 5 letters or longer"). Nothing is spent finding out.
 
 **Which librarian turns up is part of your seed**, and **none repeats until you've met them
@@ -624,7 +660,7 @@ space below and stop above it once that space is full. The hole never fills.
 
 **The Critic is taken after your bookmarks**, not before — it taxes what you built. It also
 doesn't show in the live POINTS × MULT preview; you see the cut land as its own beat in the
-score walk-through after ENTER, the same way bookmarks do.
+score walk-through after PLAY, the same way bookmarks do.
 
 📕 **`Librarian_Dictionary.md` has all eight in full** — each one's numbers, how it plays, and
 the details that don't fit a table. The rest of this section is what's true of them all.
@@ -1011,7 +1047,7 @@ one. It comes out before release.
 
 ### ✅ Built and playable
 
-The board, tap-or-drag selection and the ENTER / DISCARD buttons · scoring with stacking
+The board, tap-or-drag selection and the PLAY / DISCARD buttons · scoring with stacking
 multipliers · the run (rounds, escalating
 targets, a persistent finite tile bag) · money · **multi-letter tiles** — eight of them, bought
 outright, spelling two letters from one square (§4) · **wild tiles**, which become whichever
@@ -1021,7 +1057,10 @@ pipeline built to take many more) · a shop of six slots with set prices, one pu
 description you read before you buy (§8) · **paying to reroll the shelf**, at a price that
 climbs within a visit and resets between them (§8) · **checkouts** — six permanent run-wide
 perks, including interest on savings and a cheaper reroll (§9) · runs that save and resume themselves (§6) ·
-**librarians** — rule-warping rounds every third round, eight of them, paying double (§6).
+**librarians** — rule-warping rounds every third round, eight of them, paying double (§6) ·
+🚧 **the banded screen layout** — round header, resource strip, score, word row, board,
+buttons, with the word you're spelling shown as tiles above the board (§2). The structure is
+real; every pixel of the art is placeholder.
 
 ### 📋 Decided, not built
 
@@ -1029,6 +1068,10 @@ perks, including interest on savings and a cheaper reroll (§9) · runs that sav
   flows differently**. All three have seams in the code; no content uses them.
 - **Tile skins as a player-facing thing** — several looks can already share a board, but
   nothing decides which ones a player *has*.
+- **Consumables** — one-shot items bought in the shop and spent during a round. The area is
+  reserved on screen (§2) and nothing else exists: no item, no shop slot, nothing in the run.
+- **The run-info and settings panels**, behind the two buttons at the bottom left, and **the
+  tile-bag view** behind the bag. All three are buttons that log and do nothing.
 
 ### ❓ Open questions
 

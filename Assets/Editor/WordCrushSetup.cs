@@ -71,11 +71,9 @@ public static class WordCrushSetup
         WordActionsSetup.Run();
         ScoreTallySetup.Run();
         SeedWidgetSetup.Run();
-        RoundBannerSetup.Run();
-
-        // After the banner, because the two share the bottom of the screen and
-        // this one is placed relative to the board rather than to a fixed height.
-        BookmarkRowSetup.Run();
+        // Last, because it owns the canvas: it lays out the bands and reparents
+        // every widget the calls above just placed into the band each belongs to.
+        GameLayoutSetup.Run();
 
         RegisterScenes();
 
@@ -145,83 +143,24 @@ public static class WordCrushSetup
         return AssetDatabase.LoadAssetAtPath<GameObject>(path).GetComponent<Tile>();
     }
 
+    /// <summary>
+    /// The HUD prefabs this script still owns.
+    ///
+    /// It used to build four more — the status readout, the score, the current
+    /// word and the word result. The banded layout replaced all four, and the
+    /// HUD is now built by GameLayoutSetup, which this calls at the end of a
+    /// rebuild. The game-over panel stays because it is a full-screen overlay
+    /// that belongs to no band.
+    /// </summary>
     private class HudPrefabs
     {
-        public GameObject Status;
-        public GameObject Score;
-        public GameObject CurrentWord;
-        public GameObject WordResult;
         public GameObject GameOver;
     }
 
     private static HudPrefabs BuildHudPrefabs() => new HudPrefabs
     {
-        Status = BuildStatusWidget(),
-        Score = BuildScoreWidget(),
-        CurrentWord = BuildCurrentWordWidget(),
-        WordResult = BuildWordResultWidget(),
         GameOver = BuildGameOverPanel(),
     };
-
-    private static GameObject BuildStatusWidget()
-    {
-        var root = NewUI("StatusWidget", typeof(StatusWidget));
-        Anchor(root, new Vector2(0f, 1f), new Vector2(40f, -30f), new Vector2(400f, 140f));
-
-        var name = MakeText(root.transform, "Label", 40, TextAlignmentOptions.TopLeft);
-        Anchor(name.gameObject, new Vector2(0f, 1f), Vector2.zero, new Vector2(400f, 50f));
-        name.color = new Color(1f, 1f, 1f, 0.6f);
-
-        var value = MakeText(root.transform, "Value", 80, TextAlignmentOptions.TopLeft);
-        Anchor(value.gameObject, new Vector2(0f, 1f), new Vector2(0f, -46f), new Vector2(400f, 100f));
-
-        var widget = root.GetComponent<StatusWidget>();
-        SetRef(widget, "nameLabel", name);
-        SetRef(widget, "valueLabel", value);
-        return SavePrefab(root, $"{HudPrefabFolder}/StatusWidget.prefab");
-    }
-
-    private static GameObject BuildScoreWidget()
-    {
-        var root = NewUI("ScoreWidget", typeof(ScoreWidget));
-        Anchor(root, new Vector2(1f, 1f), new Vector2(-40f, -30f), new Vector2(400f, 140f));
-
-        var caption = MakeText(root.transform, "Label", 40, TextAlignmentOptions.TopRight);
-        Anchor(caption.gameObject, new Vector2(1f, 1f), Vector2.zero, new Vector2(400f, 50f));
-        caption.text = "SCORE";
-        caption.color = new Color(1f, 1f, 1f, 0.6f);
-
-        var value = MakeText(root.transform, "Value", 80, TextAlignmentOptions.TopRight);
-        Anchor(value.gameObject, new Vector2(1f, 1f), new Vector2(0f, -46f), new Vector2(400f, 100f));
-        value.text = "0";
-
-        SetRef(root.GetComponent<ScoreWidget>(), "label", value);
-        return SavePrefab(root, $"{HudPrefabFolder}/ScoreWidget.prefab");
-    }
-
-    private static GameObject BuildCurrentWordWidget()
-    {
-        var root = NewUI("CurrentWordWidget", typeof(CurrentWordWidget));
-        Anchor(root, new Vector2(0.5f, 1f), new Vector2(0f, -210f), new Vector2(1000f, 120f));
-
-        var label = MakeText(root.transform, "Word", 90, TextAlignmentOptions.Top);
-        Anchor(label.gameObject, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(1000f, 120f));
-
-        SetRef(root.GetComponent<CurrentWordWidget>(), "label", label);
-        return SavePrefab(root, $"{HudPrefabFolder}/CurrentWordWidget.prefab");
-    }
-
-    private static GameObject BuildWordResultWidget()
-    {
-        var root = NewUI("WordResultWidget", typeof(WordResultWidget));
-        Anchor(root, new Vector2(0.5f, 1f), new Vector2(0f, -320f), new Vector2(1000f, 80f));
-
-        var label = MakeText(root.transform, "Result", 50, TextAlignmentOptions.Top);
-        Anchor(label.gameObject, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(1000f, 80f));
-
-        SetRef(root.GetComponent<WordResultWidget>(), "label", label);
-        return SavePrefab(root, $"{HudPrefabFolder}/WordResultWidget.prefab");
-    }
 
     private static GameObject BuildGameOverPanel()
     {
@@ -278,15 +217,10 @@ public static class WordCrushSetup
 
         var hud = new HudPrefabs
         {
-            Status = Require<GameObject>($"{HudPrefabFolder}/StatusWidget.prefab"),
-            Score = Require<GameObject>($"{HudPrefabFolder}/ScoreWidget.prefab"),
-            CurrentWord = Require<GameObject>($"{HudPrefabFolder}/CurrentWordWidget.prefab"),
-            WordResult = Require<GameObject>($"{HudPrefabFolder}/WordResultWidget.prefab"),
             GameOver = Require<GameObject>($"{HudPrefabFolder}/GameOverPanel.prefab"),
         };
 
-        if (hud.Status == null || hud.Score == null || hud.CurrentWord == null ||
-            hud.WordResult == null || hud.GameOver == null)
+        if (hud.GameOver == null)
         {
             Debug.LogError("Word Crush: aborting scene build — HUD prefabs are missing (see errors above).");
             return;
@@ -326,10 +260,7 @@ public static class WordCrushSetup
         scaler.referenceResolution = new Vector2(1080f, 1920f);
         scaler.matchWidthOrHeight = 0.5f;
 
-        InstantiateInto(hud.Status, canvasGo.transform);
-        InstantiateInto(hud.Score, canvasGo.transform);
-        InstantiateInto(hud.CurrentWord, canvasGo.transform);
-        InstantiateInto(hud.WordResult, canvasGo.transform);
+        // Everything else on the canvas is placed by GameLayoutSetup, below.
         var gameOver = InstantiateInto(hud.GameOver, canvasGo.transform);
 
         if (Object.FindFirstObjectByType<EventSystem>() == null)

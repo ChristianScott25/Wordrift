@@ -57,39 +57,77 @@ public struct WordResult
 }
 
 /// <summary>
-/// Whatever resource the current mode is counting down: seconds, moves, lives...
-/// The HUD renders this generically, so a new mode needs no new HUD code.
+/// One readout in the HUD's resource strip — "$ 25", "MOVES 12/15", "ROUND 2".
+///
+/// A strip of these replaced the single crammed string RogueDemoMode used to
+/// build ("R2   60 / 120   BAG 12   $25"), which existed only because the HUD
+/// had exactly one spare slot for it. A mode publishes as many as it has.
+/// </summary>
+public struct StatusChip
+{
+    public string Label;
+    public string Value;
+
+    /// <summary>1 = full, 0 = spent. Negative means "no bar, just the number".</summary>
+    public float Fraction;
+
+    /// <summary>Running out, so the chip can go red.</summary>
+    public bool Urgent;
+
+    public StatusChip(string label, string value, float fraction = -1f, bool urgent = false)
+    {
+        Label = label;
+        Value = value;
+        Fraction = fraction;
+        Urgent = urgent;
+    }
+}
+
+/// <summary>
+/// Everything the HUD shows about the round in progress. The mode fills it; the
+/// widgets read the field they care about.
+///
+/// Every readout is its OWN field or chip — deliberately, after a spell where
+/// four of them shared one pre-formatted string and the HUD had to take what it
+/// was given. A widget that has to parse text to find a number is a widget that
+/// can't lay it out.
 /// </summary>
 public struct ModeStatus
 {
-    public string Label;    // "TIME", "MOVES"
-    public string Value;    // "0:47", "12"
-    public float Fraction;  // 1 = full, 0 = spent (for a progress bar)
-    public bool Urgent;     // true when running out, so the HUD can go red
+    /// <summary>
+    /// The resource strip, in display order.
+    ///
+    /// ⚠️ A mode's Status property is rebuilt EVERY FRAME (GameSession.Update
+    /// raises StatusChanged), so this must point at a list the mode owns and
+    /// refills — never a fresh one per frame.
+    /// </summary>
+    public IReadOnlyList<StatusChip> Chips;
+
+    /// <summary>Where the round stands. Shown as "25 / 100" in the header.</summary>
+    public int Score;
+    public int Target;
 
     /// <summary>
-    /// A second readout, for a mode that is chasing something as well as
-    /// spending something — "R2   60 / 120   BAG 12". Empty for the modes with only
-    /// one number to show, which is most of them.
+    /// Which round this is. In the strip as a chip, and in the header's title
+    /// bar on a round with no librarian — where "ROUND" alone says nothing.
     /// </summary>
-    public string Goal;
+    public int Round;
+
+    /// <summary>Tiles left to draw, and how many the run's bag holds in total.</summary>
+    public int BagRemaining;
+    public int BagTotal;
 
     /// <summary>
-    /// A third readout, for whatever a mode wants a standing line of text for —
-    /// the run's bookmarks today. Deliberately generic: it's a slot, not a
-    /// bookmark field, so the next mode that needs a line can use it too. Empty
-    /// for most modes, and simply not drawn if the HUD has no label wired.
+    /// This round's librarian, split into the two things the header draws in
+    /// separate places — the name in its title bar, the rule in the body under
+    /// it. Both empty on an ordinary round, which is what puts the header's
+    /// placeholder up instead. They used to be one string glued together with
+    /// size markup, which only worked while a single label drew both.
     /// </summary>
-    public string Extra;
+    public string LibrarianName;
+    public string LibrarianPower;
 
-    /// <summary>
-    /// What makes THIS round different, when something does — the librarian's
-    /// name and power today. A separate slot from Extra rather than more text
-    /// crammed into it: Extra is a standing line the mode always shows, and this
-    /// appears only on the rounds that have something to announce, which is what
-    /// lets the HUD give it its own weight. Empty on an ordinary round.
-    /// </summary>
-    public string Banner;
+    public bool HasLibrarian => !string.IsNullOrEmpty(LibrarianName);
 }
 
 /// <summary>
@@ -105,6 +143,18 @@ public struct SelectionState
 {
     public string Word;      // what the selected tiles spell, lowercase
     public int TileCount;
+
+    /// <summary>
+    /// The selected tiles themselves, in chain order — what the word row draws
+    /// copies of, so it can show the same faces, score corners and badges the
+    /// board is showing rather than an imitation built from Word alone.
+    ///
+    /// ⚠️ Borrowed, not given: this points at the session's live chain list and
+    /// is only valid for the duration of the callback. A widget that wants to
+    /// keep it must copy what it needs. Raised on EVERY frame of a drag, which
+    /// is also why nothing here allocates.
+    /// </summary>
+    public IReadOnlyList<Tile> Tiles;
 
     /// <summary>The selection is a word the session would accept.</summary>
     public bool CanSubmit;

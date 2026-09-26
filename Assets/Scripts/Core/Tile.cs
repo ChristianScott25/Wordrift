@@ -286,6 +286,18 @@ public class Tile : MonoBehaviour
     }
 
     /// <summary>
+    /// What ShowLetters was last given — null when the tile is showing its own
+    /// face.
+    ///
+    /// Exists so a DISPLAY COPY of this tile can be made to agree with it. The
+    /// word row draws copies of the selected tiles, and re-deriving which letter
+    /// a wild resolved to would be a second answer to a question GameSession has
+    /// already answered — the two would eventually disagree, on screen, side by
+    /// side. Copying this across can't.
+    /// </summary>
+    public string Shown => shownLetters;
+
+    /// <summary>
     /// How much to shrink the letter for a tile that spells this many characters.
     /// Off the end of the table means "as small as the table goes" rather than
     /// full size: a longer tile than anyone planned for should come out cramped,

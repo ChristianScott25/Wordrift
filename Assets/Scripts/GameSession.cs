@@ -39,10 +39,9 @@ public class GameSession : MonoBehaviour
     [Tooltip("Used when this scene is played directly. The main menu overrides it.")]
     [SerializeField] private ModeConfig fallbackMode;
 
-    [Header("Camera framing")]
-    [SerializeField] private float paddingAbove = 1.6f;
-    [SerializeField] private float paddingSides = 0.4f;
-    [SerializeField] private float verticalOffset = 0.5f;
+    [Tooltip("Divides the screen into bands and frames the camera onto the " +
+             "board's. Wired by Word Crush/Set Up Game Layout.")]
+    [SerializeField] private GameLayout layout;
 
     public ModeConfig Config { get; private set; }
     public int Score { get; private set; }
@@ -85,7 +84,13 @@ public class GameSession : MonoBehaviour
         mode.Attach(this, board);
         board.Build(Config.boardShape, Config.letterSet,
                     Config.tileSkins, Config.letterFont);
-        FrameBoard();
+
+        // ⚠️ AFTER Build, BEFORE any widget's Start. Resolve reads BoardSize, so
+        // it cannot run before the board exists; and every widget places itself
+        // inside a band, so it must run before they do. Awake is the one window
+        // that satisfies both — every OnEnable and every Start come after it.
+        EnsureLayout();
+        if (layout != null) layout.Resolve();
 
         chainController.Init(board, sceneCamera);
         chainController.ChainChanged += OnChainChanged;
@@ -269,6 +274,11 @@ public class GameSession : MonoBehaviour
         {
             Word = resolved.Word,
             TileCount = chain.Count,
+
+            // Borrowed for the duration of the callback — see SelectionState.
+            // The word row draws copies of these so its tiles carry the same
+            // faces, score corners and badges the board's are carrying.
+            Tiles = chain,
             CanSubmit = IsPlaying && isWord && refused == null,
             RefusedReason = refused,
             CanDiscard = IsPlaying && mode.CanDiscard(chain.Count),
@@ -278,6 +288,39 @@ public class GameSession : MonoBehaviour
             // drift from what pressing ENTER actually pays.
             Preview = scorer.Base(chain),
         });
+    }
+
+    /// <summary>
+    /// Finds the layout, and stands one up if the scene hasn't been set up yet.
+    ///
+    /// ⚠️ Without this a missing GameLayout doesn't read as a missing GameLayout.
+    /// The camera never gets framed and every widget keeps whatever position it
+    /// was last authored at, so the screen looks like a layout that was built
+    /// wrong rather than one that was never built. GameLayout carries its own
+    /// band table and finds its own board and camera, so standing one up gets
+    /// the bands and the framing right; what stays missing is the widgets the
+    /// editor script creates and wires, which is a much smaller and much more
+    /// legible hole.
+    /// </summary>
+    private void EnsureLayout()
+    {
+        if (layout == null) layout = FindFirstObjectByType<GameLayout>(FindObjectsInactive.Include);
+        if (layout != null) return;
+
+        var canvas = FindFirstObjectByType<Canvas>(FindObjectsInactive.Include);
+        if (canvas == null)
+        {
+            Debug.LogError("GameSession found no Canvas and no GameLayout — the board " +
+                           "cannot be framed. Run Word Crush/Set Up Game Layout.", this);
+            return;
+        }
+
+        layout = canvas.gameObject.AddComponent<GameLayout>();
+        Debug.LogWarning("No GameLayout in the scene, so one was created at runtime. The " +
+                         "bands and the camera will be right, but the widgets that only " +
+                         "the editor script builds (round header, tile bag, items, system " +
+                         "buttons) are missing and the rest are unwired. " +
+                         "Run Word Crush/Set Up Game Layout.", this);
     }
 
     /// <summary>
@@ -791,19 +834,4 @@ public class GameSession : MonoBehaviour
         Tiles = chain,
         WordsThisRound = wordsThisRound,
     };
-
-    /// <summary>Fits the board in view with room above it for the HUD.</summary>
-    private void FrameBoard()
-    {
-        if (sceneCamera == null) return;
-        sceneCamera.orthographic = true;
-
-        float halfHeight = board.BoardSize.y / 2f + paddingAbove;
-        float halfWidth = board.BoardSize.x / 2f + paddingSides;
-        sceneCamera.orthographicSize = Mathf.Max(halfHeight, halfWidth / sceneCamera.aspect);
-        sceneCamera.transform.position = new Vector3(
-            board.BoardCenter.x,
-            board.BoardCenter.y + verticalOffset,
-            sceneCamera.transform.position.z);
-    }
 }

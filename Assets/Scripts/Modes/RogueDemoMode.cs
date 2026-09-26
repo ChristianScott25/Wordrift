@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -39,7 +40,14 @@ public class RogueDemoMode : GameMode
     private RoundRules rules = new RoundRules();
 
     // Same again for the librarian's name and power, which are fixed for the round.
-    private string librarianBanner = "";
+    // Two strings, not one: the header draws the name in its title bar and the
+    // power in the body underneath, and a single string glued together with size
+    // markup only worked while one label drew both.
+    private string librarianName = "";
+    private string librarianPower = "";
+
+    // The resource strip, owned here and refilled in place every frame. See Status.
+    private readonly List<StatusChip> chips = new();
 
     // What this round's librarian chose for itself, if it chooses anything — the
     // banned letter, today. Rebuilt in Begin from a round-keyed stream, so it is
@@ -156,7 +164,7 @@ public class RogueDemoMode : GameMode
         roundTarget = run == null
             ? int.MaxValue
             : ScoreLimits.Clamp((double)run.TargetScore * rules.TargetMultiplier);
-        librarianBanner = BuildLibrarianBanner();
+        CacheLibrarian();
     }
 
     /// <summary>
@@ -197,20 +205,24 @@ public class RogueDemoMode : GameMode
         run?.Bookmarks;
 
     /// <summary>
-    /// "LIBRARIAN — THE GRANDILOQUENT" over what it does. Both halves are
-    /// authored (the noun on the config, the name and power on the asset), so
-    /// renaming librarians to exams never touches this method.
+    /// Caches the round's librarian as the two strings the header draws, because
+    /// Status is rebuilt every frame and the librarian is fixed for the round.
+    /// Empty when there isn't one, which is what puts the header's placeholder up.
     /// </summary>
-    private string BuildLibrarianBanner()
+    private void CacheLibrarian()
     {
-        if (librarian == null) return "";
+        if (librarian == null)
+        {
+            librarianName = "";
+            librarianPower = "";
+            return;
+        }
 
-        string label = string.IsNullOrWhiteSpace(config.librarianLabel)
+        librarianName = string.IsNullOrWhiteSpace(config.librarianLabel)
             ? librarian.Title.ToUpperInvariant()
-            : $"{config.librarianLabel.ToUpperInvariant()} — {librarian.Title.ToUpperInvariant()}";
+            : $"{config.librarianLabel.ToUpperInvariant()} \u2014 {librarian.Title.ToUpperInvariant()}";
 
-        string power = librarian.Power(librarianNote);
-        return string.IsNullOrWhiteSpace(power) ? label : $"{label}\n<size=80%>{power}</size>";
+        librarianPower = librarian.Power(librarianNote) ?? "";
     }
 
     /// <summary>
@@ -362,35 +374,128 @@ public class RogueDemoMode : GameMode
         TargetReached ? "TARGET REACHED" :
         OutOfTiles ? "OUT OF TILES" : "OUT OF MOVES";
 
-    public override ModeStatus Status => new ModeStatus
+    /// <summary>
+    /// What the HUD shows about this round.
+    ///
+    /// ⚠️ Rebuilt EVERY FRAME — GameSession.Update raises StatusChanged
+    /// unconditionally — so the chip strip is refilled into a list this mode
+    /// owns rather than allocated here. Same reason the librarian's name and
+    /// power are cached in Begin: nothing in here may allocate per frame.
+    /// </summary>
+    public override ModeStatus Status
     {
-        Label = "MOVES",
-        Value = Mathf.Max(0, movesLeft).ToString(),
-        // Against the ROUND's allowance, not the config's: a checkout that grants
-        // extra moves makes those two different numbers, and the config's would
-        // send the bar past full on the first frame.
-        Fraction = rules.Moves > 0 ? (float)movesLeft / rules.Moves : 0f,
-        Urgent = movesLeft <= config.urgentMoves && !TargetReached,
+        get
+        {
+            BuildChips();
+            return new ModeStatus
+            {
+                Chips = chips,
+                Score = session == null ? 0 : session.Score,
+                Target = roundTarget,
+                Round = run == null ? 0 : run.Round,
+                BagRemaining = bag == null ? 0 : bag.Remaining,
+                BagTotal = run == null ? 0 : run.TileBag.Count,
+                LibrarianName = librarianName,
+                LibrarianPower = librarianPower,
+            };
+        }
+    }
 
-        // Round, target, bag and money share one string because the HUD has
-        // exactly one spare slot, and it's now four readouts wide — "R2" not
-        // "ROUND 2" so it still fits. Money can't change mid-round; it's here
-        // so the player can plan the next shop. A real multi-readout HUD is
-        // overdue, but it's a HUD job: wire StatusWidget.goalLabel.
-        Goal = $"R{run.Round}   {session.Score} / {roundTarget}   " +
-               $"BAG {bag.Remaining}   {run.MoneyText}",
+    /// <summary>
+    /// Refills the resource strip in place.
+    ///
+    /// Clear-and-refill rather than a fresh list: this runs once per frame, and
+    /// the chips are a struct, so the list's backing array is reused and the
+    /// whole strip costs no allocation at all.
+    /// </summary>
+    private void BuildChips()
+    {
+        chips.Clear();
 
-        // Empty, and explicitly so rather than left unset — StatusWidget assigns
-        // this straight into a TMP_Text, which has no business being handed null.
-        //
-        // It used to list the run's bookmarks. BookmarkRowWidget draws them as
-        // cards now, in the order they score, which is the half that matters and
-        // the half a cached string got wrong: it was built once in Begin, so a
-        // mid-round reorder left it naming the old order beside a row showing
-        // the new one. The slot is free for the next standing readout.
-        Extra = "",
+        if (run != null) chips.Add(new StatusChip("$", MoneyText()));
 
-        // Empty on an ordinary round, so the line simply isn't there.
-        Banner = librarianBanner,
-    };
+        chips.Add(new StatusChip(
+            "MOVES",
+            Fraction(ref movesText, ref movesShown, ref movesAllowanceShown,
+                     movesLeft, rules.Moves),
+            // Against the ROUND's allowance, not the config's: a checkout that
+            // grants extra moves makes those two different numbers, and the
+            // config's would send the bar past full on the first frame.
+            rules.Moves > 0 ? (float)movesLeft / rules.Moves : 0f,
+            movesLeft <= config.urgentMoves && !TargetReached));
+
+        // Only when the round HAS discards — a mode or a librarian that takes
+        // them away should take the readout away too, not show a dead "0".
+        if (rules.Discards > 0)
+            chips.Add(new StatusChip(
+                "DISCARDS",
+                Fraction(ref discardsText, ref discardsShown, ref discardsAllowanceShown,
+                         discardsLeft, rules.Discards),
+                (float)discardsLeft / rules.Discards,
+                discardsLeft == 0));
+
+        if (run != null) chips.Add(new StatusChip("ROUND", RoundText()));
+    }
+
+    // ⚠️ EVERY READOUT'S TEXT IS MEMOISED, and this is not premature. BuildChips
+    // runs once per frame, and the obvious version — interpolating "12/20" and
+    // calling MoneyText() inline — allocated five strings per frame, about three
+    // hundred a second, for numbers that change a few times a round. The chips
+    // themselves are structs going into a list that is cleared and refilled, so
+    // with the text cached the whole strip costs no allocation at all.
+
+    private string movesText = "";
+    private int movesShown = -1;
+    private int movesAllowanceShown = -1;
+
+    private string discardsText = "";
+    private int discardsShown = -1;
+    private int discardsAllowanceShown = -1;
+
+    private string moneyText = "";
+    private int moneyShown = -1;
+
+    private string roundText = "";
+    private int roundShown = -1;
+
+    /// <summary>"12/20", rebuilt only when either number moves.</summary>
+    private static string Fraction(ref string cache, ref int lastValue, ref int lastOf,
+                                   int value, int of)
+    {
+        value = Mathf.Max(0, value);
+        of = Mathf.Max(0, of);
+        if (value == lastValue && of == lastOf) return cache;
+
+        lastValue = value;
+        lastOf = of;
+        cache = $"{value}/{of}";
+        return cache;
+    }
+
+    /// <summary>
+    /// The money figure WITHOUT its "$", which the chip's own label carries.
+    /// Goes through RunState.UnlimitedMoney rather than trimming MoneyText,
+    /// which would allocate twice to undo its own formatting.
+    /// </summary>
+    private string MoneyText()
+    {
+        if (run.UnlimitedMoney) return "\u221e";
+
+        if (run.Money != moneyShown)
+        {
+            moneyShown = run.Money;
+            moneyText = run.Money.ToString();
+        }
+        return moneyText;
+    }
+
+    private string RoundText()
+    {
+        if (run.Round != roundShown)
+        {
+            roundShown = run.Round;
+            roundText = run.Round.ToString();
+        }
+        return roundText;
+    }
 }

@@ -34,10 +34,10 @@ RectTransform:
   - {fileID: 4571880971787781659}
   m_Father: {fileID: 3324352977042805008}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -265, y: 0}
-  m_SizeDelta: {x: 490, y: 150}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0.48, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6897332536224565204
 CanvasRenderer:
@@ -170,14 +170,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 043b9b0b627e44649b071a2af17d0930, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WordActionsWidget
-  root: {fileID: 8905518593797302749}
   session: {fileID: 0}
   submitButton: {fileID: 676643688191737187}
   submitLabel: {fileID: 2771907448559031322}
+  submitText: PLAY
   discardButton: {fileID: 6639637185342705888}
   discardLabel: {fileID: 7489143521442381090}
   disabledTint: {r: 1, g: 1, b: 1, a: 0.35}
   enabledTint: {r: 1, g: 1, b: 1, a: 1}
+  bandXMin: 0.3
+  bandXMax: 1
 --- !u!1 &4397295344658349631
 GameObject:
   m_ObjectHideFlags: 0
@@ -486,10 +488,10 @@ RectTransform:
   - {fileID: 8682356377926275542}
   m_Father: {fileID: 3324352977042805008}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 265, y: 0}
-  m_SizeDelta: {x: 490, y: 150}
+  m_AnchorMin: {x: 0.52, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7985647127984788068
 CanvasRenderer:
@@ -605,8 +607,8 @@ RectTransform:
   - {fileID: 6615957582016850091}
   m_Father: {fileID: 5826188505712014816}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1040, y: 170}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
