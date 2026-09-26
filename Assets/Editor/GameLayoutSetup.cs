@@ -104,6 +104,7 @@ public static class GameLayoutSetup
         }
 
         ConfigureCanvas(canvas);
+        SweepBrokenPrefabInstances(scene);
         RemoveRetired(canvas);
 
         var layout = EnsureLayout(canvas, session, board);
@@ -181,6 +182,46 @@ public static class GameLayoutSetup
         scaler.referenceResolution = new Vector2(1080f, 1920f);
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0f;
+    }
+
+    /// <summary>
+    /// Deletes every object left pointing at a prefab that no longer exists.
+    ///
+    /// ⚠️ THIS IS WHAT BREAKS THE BUILD IF IT DOESN'T RUN. Deleting a prefab
+    /// leaves its scene instances behind as stubs — Unity shows them as "Missing
+    /// Prefab" and tolerates them in the editor, so the game still plays
+    /// perfectly, but BuildPlayer treats each one as an error and refuses.
+    ///
+    /// They are invisible to both of the other cleanup paths here, which is how
+    /// five of them accumulated. RemoveRetired matches by NAME and only knows
+    /// the two it was told about; Reuse finds widgets by COMPONENT, and a stub
+    /// has no component at all — the script reference lived in the prefab that
+    /// was deleted. So Reuse saw nothing, built a fresh widget beside the stub,
+    /// and the stub stayed.
+    ///
+    /// Swept by CONDITION rather than by name so this keeps working for the next
+    /// prefab that gets retired, without anyone having to remember to list it.
+    /// </summary>
+    private static void SweepBrokenPrefabInstances(UnityEngine.SceneManagement.Scene scene)
+    {
+        var doomed = new System.Collections.Generic.List<GameObject>();
+
+        foreach (var root in scene.GetRootGameObjects())
+            foreach (var child in root.GetComponentsInChildren<Transform>(true))
+                if (PrefabUtility.IsPartOfPrefabInstance(child.gameObject) &&
+                    PrefabUtility.IsPrefabAssetMissing(child.gameObject))
+                    doomed.Add(child.gameObject);
+
+        foreach (var go in doomed)
+        {
+            // Null-checked as we go: destroying a parent takes its children with
+            // it, and the list was gathered before any of that happened.
+            if (go == null) continue;
+
+            Debug.Log($"Removed \"{go.name}\" — its prefab is gone, and a build " +
+                      "refuses to package an instance with no asset behind it.");
+            Object.DestroyImmediate(go);
+        }
     }
 
     private static void RemoveRetired(Canvas canvas)
