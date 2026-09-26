@@ -405,6 +405,39 @@ public static class WordCrushSetup
         return text;
     }
 
+    /// <summary>
+    /// A sprite out of Assets/Sprites/Gameplay UI, by file name without the
+    /// extension.
+    ///
+    /// Missing art is reported rather than silently left null: a button that
+    /// quietly keeps a flat colour block looks like a styling choice, not like a
+    /// file that failed to load.
+    /// </summary>
+    internal static Sprite LoadSprite(string fileName)
+    {
+        string path = $"Assets/Sprites/Gameplay UI/{fileName}.png";
+        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        if (sprite == null) Debug.LogError($"No sprite at {path}.");
+        return sprite;
+    }
+
+    /// <summary>
+    /// Points an Image at a sprite WITHOUT letting it stretch.
+    ///
+    /// ⚠️ preserveAspect matters for all of this art: none of it carries a
+    /// 9-slice border, and the two button sprites have their words drawn INTO
+    /// them. Stretching a 200x100 "PLAY" to fill a band of another shape stretches
+    /// the lettering with it.
+    /// </summary>
+    internal static void SetSprite(Image image, Sprite sprite, Color tint)
+    {
+        if (image == null || sprite == null) return;
+        image.sprite = sprite;
+        image.color = tint;
+        image.preserveAspect = true;
+        image.type = Image.Type.Simple;
+    }
+
     internal static Button MakeButton(Transform parent, string name, string label, Vector2 offset, Color background, Color textColor)
     {
         var go = NewUI(name, typeof(Image), typeof(Button));
@@ -438,6 +471,29 @@ public static class WordCrushSetup
     /// Assigns a serialized reference and verifies it actually stuck. Silent
     /// failures here are how you end up with an empty board and no error.
     /// </summary>
+    /// <summary>
+    /// Writes a float onto a serialized field — the same job as SetRef, for the
+    /// values that aren't object references.
+    ///
+    /// Needed because a serialized field ignores its C# initializer once it has
+    /// been saved: changing a default in code cannot reach an object already in
+    /// the scene, so anything this script owns has to be written, not defaulted.
+    /// </summary>
+    internal static void SetFloat(Object target, string field, float value)
+    {
+        var so = new SerializedObject(target);
+        var property = so.FindProperty(field);
+        if (property == null)
+        {
+            Debug.LogError($"No serialized field '{field}' on {target.GetType().Name}.", target);
+            return;
+        }
+
+        property.floatValue = value;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(target);
+    }
+
     internal static void SetRef(Object target, string field, Object value)
     {
         var so = new SerializedObject(target);

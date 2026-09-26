@@ -33,11 +33,15 @@ public class RoundBannerWidget : MonoBehaviour
     [SerializeField] private Image avatar;
 
     [Header("Look")]
-    [Tooltip("Portrait tint on a librarian round.")]
-    [SerializeField] private Color avatarColor = new Color(0.85f, 0.8f, 0.6f, 1f);
-
-    [Tooltip("Portrait tint when the round has no librarian — the placeholder.")]
-    [SerializeField] private Color emptyAvatarColor = new Color(1f, 1f, 1f, 0.12f);
+    [Tooltip("How faded the portrait is on a round with NO librarian. The art is " +
+             "drawn as it is meant to look, so a librarian round shows it at full " +
+             "strength and this only dims the empty case.")]
+    // ⚠️ A NEW FIELD ON PURPOSE. This replaced two serialized Colors that were
+    // authored for a flat placeholder block — a beige tint and a 12% white. Real
+    // art needs neither, but the old VALUES are already saved in the scene, and
+    // changing a C# default cannot reach a field that is already serialized. A
+    // new NAME has no saved key, so it takes its initializer.
+    [Range(0f, 1f)][SerializeField] private float emptyAvatarAlpha = 0.45f;
 
     [Tooltip("Score colour once the round's target has been reached.")]
     [SerializeField] private Color clearedColor = new Color(0.5f, 1f, 0.5f);
@@ -94,7 +98,9 @@ public class RoundBannerWidget : MonoBehaviour
             powerLabel.text = hasLibrarian ? status.LibrarianPower : "";
 
         if (avatar != null)
-            avatar.color = hasLibrarian ? avatarColor : emptyAvatarColor;
+            avatar.color = hasLibrarian
+                ? Color.white
+                : new Color(1f, 1f, 1f, emptyAvatarAlpha);
 
         if (scoreLabel != null)
         {

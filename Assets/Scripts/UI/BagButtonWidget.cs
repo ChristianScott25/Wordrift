@@ -17,6 +17,9 @@ public class BagButtonWidget : MonoBehaviour
     [Header("Slots")]
     [SerializeField] private TMP_Text valueLabel;
 
+    [Tooltip("🚧 Optional, and deliberately left unwired: the bag art carries the " +
+             "meaning, so a \"TILES\" caption is a second answer to the same " +
+             "question. Wire a label here to put it back.")]
     [SerializeField] private TMP_Text captionLabel;
 
     [SerializeField] private Button button;

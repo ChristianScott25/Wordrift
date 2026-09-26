@@ -24,7 +24,7 @@ MonoBehaviour:
   scoreMultiplier: 1
   tileSkins:
   - {fileID: 11400000, guid: 92229840c2a714561b5ae7a8519bea58, type: 2}
-  letterFont: {fileID: 0}
+  letterFont: {fileID: 11400000, guid: 11daabd5270de4776b889864148a7789, type: 2}
   tileModifiers:
   - {fileID: 11400000, guid: 4feeb697aa4bc4d6a8a5e0b449256678, type: 2}
   - {fileID: 11400000, guid: 728ccfa980b654c07a56408590f52235, type: 2}
@@ -38,6 +38,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 356fdfd326cee467ca20768fdc8cd5f3, type: 2}
   - {fileID: 11400000, guid: fc8dc52dae4914ba5b622080e09db056, type: 2}
   - {fileID: 11400000, guid: f8c6b6fc6a892461ba65dd182a44c20f, type: 2}
+  maxBookmarks: 5
   moves: 20
   endOnTargetReached: 1
   rejectedWordsCostMoves: 0

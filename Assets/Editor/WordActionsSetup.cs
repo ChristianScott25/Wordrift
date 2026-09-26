@@ -25,8 +25,19 @@ public static class WordActionsSetup
     private const string SubmitName = "EnterButton";
     private const string DiscardName = "DiscardButton";
 
-    private static readonly Color SubmitColor = new Color(0.18f, 0.6f, 0.32f);
-    private static readonly Color DiscardColor = new Color(0.42f, 0.22f, 0.26f);
+    // Tints MULTIPLIED onto the off-white plate, not colours drawn over it — the
+    // art is one neutral plate used by every button, so what makes PLAY green and
+    // DISCARD red lives here in code rather than in two near-identical sprites.
+    private static readonly Color SubmitColor = new Color(0.36f, 0.75f, 0.40f);
+    private static readonly Color DiscardColor = new Color(0.82f, 0.30f, 0.28f);
+
+    // Both buttons when they refuse. Grey rather than faded, so "you can't press
+    // this" doesn't read as "this is still loading".
+    private static readonly Color DisabledColor = new Color(0.60f, 0.60f, 0.62f);
+
+    // Dark, and the SAME on every plate: the label sits on green, red and grey in
+    // turn, and a colour tuned for one of those is unreadable on another.
+    private static readonly Color LabelColor = new Color(0.12f, 0.13f, 0.17f);
 
     // Bottom of the 1080x1920 canvas. Everything else in this HUD hangs off the
     // top, and the board's lower edge sits about 310px above the canvas bottom,
@@ -109,6 +120,9 @@ public static class WordActionsSetup
         var submit = FindOrCreateButton(shown.transform, SubmitName, "PLAY",
                                         0.52f, 1f, SubmitColor);
 
+        Dress(discard, DiscardColor);
+        Dress(submit, SubmitColor);
+
         WordCrushSetup.SetRef(widget, "discardButton", discard);
         WordCrushSetup.SetRef(widget, "discardLabel", LabelOf(discard));
         WordCrushSetup.SetRef(widget, "submitButton", submit);
@@ -148,6 +162,92 @@ public static class WordActionsSetup
         if (text != null) WordCrushSetup.Stretch(text.gameObject);
         return button;
     }
+
+    /// <summary>
+    /// Puts the shared plate on a button and gives it its colour.
+    ///
+    /// ⚠️ THE COLOUR IS THE BUTTON'S, NOT THE IMAGE'S. Writing the tint straight
+    /// onto the Image would be overwritten the moment Unity's own state tinting
+    /// ran, and the button would flicker back to white on hover. It belongs in
+    /// the ColorBlock, which is also what gives "can't press this" a look for
+    /// free — the widget only has to set `interactable`.
+    ///
+    /// Falls back to a flat colour block when the sprite is missing, so a renamed
+    /// file leaves a readable button rather than an invisible one — though
+    /// LoadSprite has already said so loudly.
+    /// </summary>
+    private static void Dress(Button button, Color color)
+    {
+        if (button == null) return;
+
+        var image = button.GetComponent<Image>();
+        var sprite = WordCrushSetup.LoadSprite("Medium Button");
+
+        if (sprite == null)
+        {
+            if (image != null) image.color = color;
+            return;
+        }
+
+        // White on the Image, colour in the ColorBlock: the tint multiplies the
+        // plate, so anything other than white here would double-tint it.
+        WordCrushSetup.SetSprite(image, sprite, Color.white);
+        button.targetGraphic = image;
+
+        var colors = button.colors;
+        colors.normalColor = color;
+        colors.selectedColor = color;
+        colors.highlightedColor = Lift(color, 0.12f);
+        colors.pressedColor = Lift(color, -0.12f);
+        colors.disabledColor = DisabledColor;
+        colors.fadeDuration = 0.06f;
+        button.colors = colors;
+
+        var label = EnsureLabel(button);
+        if (label != null) label.color = LabelColor;
+    }
+
+    /// <summary>
+    /// The button's text, created if an earlier version of this script removed it.
+    ///
+    /// It did: for one revision the words were drawn INTO the button art, so the
+    /// label was deleted to stop it printing them twice. The art is a plain plate
+    /// again now and the word is text, which is what lets DISCARD keep saying how
+    /// many tiles it will spend.
+    /// </summary>
+    private static TMP_Text EnsureLabel(Button button)
+    {
+        var label = LabelOf(button);
+        if (label == null)
+        {
+            label = WordCrushSetup.MakeText(button.transform, "Label", 40,
+                                            TextAlignmentOptions.Center);
+            WordCrushSetup.Stretch(label.gameObject);
+        }
+
+        // ⚠️ Auto-sized, and set on EVERY run rather than only when the label is
+        // new — sizing is this script's to own, and a label made before these
+        // rules existed would otherwise keep overflowing its button while a
+        // re-run looked like it had done nothing.
+        //
+        // Auto-sizing because the two buttons carry text of very different
+        // lengths — "PLAY" against "DISCARD 12" over "0 LEFT" — and the band
+        // decides their width, so no single font size is right for both on every
+        // screen. (The TILE labels deliberately do NOT auto-size: those are
+        // world-space and their transform is rescaled to cancel the tile's fit,
+        // so TMP would be fitting to a rect nobody has sized.)
+        label.enableAutoSizing = true;
+        label.fontSizeMin = 14f;
+        label.fontSizeMax = 40f;
+
+        // A little breathing room so a descender doesn't touch the plate's edge.
+        label.margin = new Vector4(10f, 6f, 10f, 6f);
+        return label;
+    }
+
+    private static Color Lift(Color color, float by) => new Color(
+        Mathf.Clamp01(color.r + by), Mathf.Clamp01(color.g + by),
+        Mathf.Clamp01(color.b + by), color.a);
 
     private static TMP_Text LabelOf(Button button) =>
         button == null ? null : button.GetComponentInChildren<TMP_Text>(true);

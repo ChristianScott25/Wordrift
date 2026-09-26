@@ -37,7 +37,9 @@ public static class GameLayoutSetup
 
     private static readonly Color Panel = new Color(0f, 0f, 0f, 0.35f);
     private static readonly Color Faint = new Color(1f, 1f, 1f, 0.55f);
-    private static readonly Color InfoColor = new Color(0.22f, 0.26f, 0.34f);
+    // Multiplied onto the off-white Small Button plate, so this is near-white
+    // rather than the dark slab the flat placeholder used.
+    private static readonly Color InfoColor = new Color(0.86f, 0.88f, 0.92f);
 
     [MenuItem("Word Crush/Set Up Game Layout")]
     public static void SetUp()
@@ -113,6 +115,7 @@ public static class GameLayoutSetup
         BuildWordRow(canvas, board);
 
         WordCrushSetup.SetRef(session, "layout", layout);
+        ShareTheHeaderBand();
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
@@ -222,15 +225,25 @@ public static class GameLayoutSetup
         var title = Slot(root.transform, "Title", 0f, 0.76f, 1f, 1f);
         var text = Text(title, 40, TextAlignmentOptions.Center);
 
-        var avatar = Slot(root.transform, "Avatar", 0.03f, 0.08f, 0.32f, 0.72f);
-        var portrait = Image(avatar, new Color(1f, 1f, 1f, 0.12f));
+        var avatar = Slot(root.transform, "Avatar", 0.04f, 0.08f, 0.30f, 0.70f);
+        var portrait = Image(avatar, Color.white);
+        WordCrushSetup.SetSprite(portrait, WordCrushSetup.LoadSprite("Librarian Avatar Placeholder"),
+                                 Color.white);
 
-        var power = Slot(root.transform, "Power", 0.35f, 0.42f, 0.98f, 0.74f);
-        var powerText = Text(power, 26, TextAlignmentOptions.TopLeft);
+        // Everything right of the portrait is one CENTRED column: the round's
+        // rule on top, then SCORE over the number. Left-aligning the score put it
+        // hard against the portrait's edge and left a wide gap on the right.
+        var power = Slot(root.transform, "Power", 0.32f, 0.54f, 0.98f, 0.74f);
+        var powerText = Text(power, 24, TextAlignmentOptions.Center);
         powerText.color = Faint;
 
-        var score = Slot(root.transform, "Score", 0.35f, 0.06f, 0.98f, 0.4f);
-        var scoreText = Text(score, 54, TextAlignmentOptions.Left);
+        var scoreCaption = Slot(root.transform, "ScoreCaption", 0.32f, 0.36f, 0.98f, 0.54f);
+        var scoreCaptionText = Text(scoreCaption, 24, TextAlignmentOptions.Center);
+        scoreCaptionText.color = Faint;
+        scoreCaptionText.text = "SCORE";
+
+        var score = Slot(root.transform, "Score", 0.32f, 0.06f, 0.98f, 0.36f);
+        var scoreText = Text(score, 46, TextAlignmentOptions.Center);
 
         WordCrushSetup.SetRef(widget, "titleLabel", text);
         WordCrushSetup.SetRef(widget, "powerLabel", powerText);
@@ -255,15 +268,52 @@ public static class GameLayoutSetup
         var root = Reuse<BagButtonWidget>(canvas, "TileBag");
         var widget = root.GetComponent<BagButtonWidget>();
 
-        Backdrop(root);
+        // ⚠️ THE ART IS A CHILD, NOT THE ROOT IMAGE. The root's Image is only
+        // the button's hit area and stays invisible; the bag and the text it
+        // carries live under it. Putting the sprite on the root meant the text
+        // had to be positioned against a rect that was bigger than the drawn bag.
+        var hit = root.GetComponent<Image>() ?? root.AddComponent<Image>();
+        hit.sprite = null;
+        hit.color = new Color(0f, 0f, 0f, 0f);
+        hit.raycastTarget = true;
+
         var button = root.GetComponent<Button>() ?? root.AddComponent<Button>();
 
-        var caption = Slot(root.transform, "Caption", 0f, 0.58f, 1f, 0.95f);
-        var captionText = Text(caption, 24, TextAlignmentOptions.Center);
-        captionText.color = Faint;
+        // Explicit, because a Button added on an earlier run saved a different
+        // target and would never register a press on the image we just made.
+        button.targetGraphic = hit;
 
-        var value = Slot(root.transform, "Value", 0f, 0.08f, 1f, 0.58f);
-        var valueText = Text(value, 40, TextAlignmentOptions.Center);
+        // ⚠️ AN AspectRatioFitter, NOT Image.preserveAspect. Both stop the art
+        // stretching, but preserveAspect letterboxes the sprite INSIDE a rect
+        // that stays the full slot — so a child positioned against that rect
+        // lands wherever the letterboxing left it, which is how the count ended
+        // up printed across the bag's belly and wider than the bag. The fitter
+        // resizes the RECT to the art, so fractions of it are fractions of the
+        // bag itself and the text sits where it looks like it sits.
+        // The labels moved INSIDE the bag, so any left over from when they sat
+        // beside it have to go — Slot looks for a child by name under its own
+        // parent, so it would happily make a second pair and leave the first
+        // showing a stale count underneath.
+        Orphan(root.transform, "Caption");
+        Orphan(root.transform, "Value");
+
+        var bag = Slot(root.transform, "Bag", 0f, 0f, 1f, 1f);
+        var bagImage = Image(bag, Color.white);
+        bagImage.sprite = WordCrushSetup.LoadSprite("Tile Bag");
+        bagImage.preserveAspect = false;
+
+        var fitter = bag.GetComponent<AspectRatioFitter>() ?? bag.AddComponent<AspectRatioFitter>();
+        fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+        fitter.aspectRatio = 50f / 46f;
+
+        // Both inside the bag's body, which is the lower two thirds of the art —
+        // the top is the tied neck and anything written there sits on the knot.
+        var caption = Slot(bag.transform, "Caption", 0f, 0.40f, 1f, 0.60f);
+        var captionText = Text(caption, 22, TextAlignmentOptions.Center);
+        captionText.color = new Color(1f, 1f, 1f, 0.75f);
+
+        var value = Slot(bag.transform, "Value", 0f, 0.15f, 1f, 0.40f);
+        var valueText = Text(value, 30, TextAlignmentOptions.Center);
 
         WordCrushSetup.SetRef(widget, "button", button);
         WordCrushSetup.SetRef(widget, "captionLabel", captionText);
@@ -314,6 +364,42 @@ public static class GameLayoutSetup
 
         WordCrushSetup.SetRef(widget, "messageLabel", text);
         WordCrushSetup.SetRef(widget, "board", board);
+    }
+
+    /// <summary>
+    /// Divides the header band between the librarian box, the tile bag and the
+    /// items area.
+    ///
+    /// ⚠️ WRITTEN, not left to the widgets' own defaults. Each of those is a
+    /// serialized field, and a serialized field ignores its C# initializer once
+    /// it has been saved — so changing a default in code cannot move a widget
+    /// already in the scene. Re-tuning the split means these three lines.
+    ///
+    /// The bag needs real WIDTH, not just height: its art is roughly square and
+    /// fits to whichever side is smaller, so in a tall narrow column it stays
+    /// small however much vertical room it is given.
+    /// </summary>
+    private static void ShareTheHeaderBand()
+    {
+        Share<RoundBannerWidget>(0f, 0.52f);
+        Share<BagButtonWidget>(0.54f, 0.78f);
+        Share<ConsumablesAreaWidget>(0.80f, 1f);
+    }
+
+    /// <summary>Removes a child left behind by an earlier shape of this layout.</summary>
+    private static void Orphan(Transform parent, string name)
+    {
+        var found = parent.Find(name);
+        if (found != null) Object.DestroyImmediate(found.gameObject);
+    }
+
+    private static void Share<T>(float xMin, float xMax) where T : Component
+    {
+        var widget = Object.FindFirstObjectByType<T>(FindObjectsInactive.Include);
+        if (widget == null) return;
+
+        WordCrushSetup.SetFloat(widget, "bandXMin", xMin);
+        WordCrushSetup.SetFloat(widget, "bandXMax", xMax);
     }
 
     // ----------------------------------------------------------------- pieces
@@ -407,22 +493,33 @@ public static class GameLayoutSetup
     }
 
     /// <summary>
-    /// The text on a slot. Size and alignment are set only when the label is
-    /// NEW — they're exactly the sort of thing worth hand-tuning once this is on
-    /// a real screen, and a re-run that reset them would be infuriating.
+    /// The text on a slot.
+    ///
+    /// ⚠️ ALIGNMENT IS APPLIED EVERY RUN; SIZE AND COLOUR ONLY WHEN THE LABEL IS
+    /// NEW. The split matters and I got it wrong once: alignment is STRUCTURE —
+    /// it decides where in its slot the text lands, so it belongs to whoever owns
+    /// the layout. Size and colour are styling, worth hand-tuning on a real
+    /// screen, and a re-run that reset them would be infuriating.
+    ///
+    /// The bug that made the case: the score was moved into a centred column, but
+    /// its label already existed from an earlier run with Left alignment, so it
+    /// kept hugging the portrait while the new SCORE caption above it centred
+    /// correctly. Re-running looked like it had done nothing.
     /// </summary>
     private static TMP_Text Text(GameObject slot, float size, TextAlignmentOptions align)
     {
-        var existing = slot.GetComponent<TMP_Text>();
-        if (existing != null) return existing;
+        var text = slot.GetComponent<TMP_Text>();
+        if (text == null)
+        {
+            text = slot.AddComponent<TextMeshProUGUI>();
+            text.fontSize = size;
+            text.color = Color.white;
+            text.fontStyle = FontStyles.Bold;
+            text.raycastTarget = false;
+            text.text = "";
+        }
 
-        var text = slot.AddComponent<TextMeshProUGUI>();
-        text.fontSize = size;
         text.alignment = align;
-        text.color = Color.white;
-        text.fontStyle = FontStyles.Bold;
-        text.raycastTarget = false;
-        text.text = "";
         return text;
     }
 
@@ -452,17 +549,27 @@ public static class GameLayoutSetup
     {
         var slot = Slot(parent, name, xMin, 0.1f, xMax, 0.9f);
 
-        var button = slot.GetComponent<Button>();
-        if (button != null) return button;
+        var image = slot.GetComponent<Image>() ?? slot.AddComponent<Image>();
+        WordCrushSetup.SetSprite(image, WordCrushSetup.LoadSprite("Small Button"), Color.white);
 
-        var image = slot.AddComponent<Image>();
-        image.sprite = Square();
-        image.color = InfoColor;
+        var button = slot.GetComponent<Button>() ?? slot.AddComponent<Button>();
+        button.targetGraphic = image;
 
-        button = slot.AddComponent<Button>();
+        // Neutral: these two are always pressable, so unlike PLAY and DISCARD
+        // they have no state to say anything about.
+        var colors = button.colors;
+        colors.normalColor = InfoColor;
+        colors.selectedColor = InfoColor;
+        colors.highlightedColor = new Color(1f, 1f, 1f, 1f);
+        colors.pressedColor = new Color(0.72f, 0.74f, 0.80f);
+        colors.fadeDuration = 0.06f;
+        button.colors = colors;
 
-        var text = WordCrushSetup.MakeText(slot.transform, "Label", 46, TextAlignmentOptions.Center);
+        var text = slot.GetComponentInChildren<TMP_Text>(true)
+                   ?? WordCrushSetup.MakeText(slot.transform, "Label", 46,
+                                              TextAlignmentOptions.Center);
         text.text = label;
+        text.color = new Color(0.12f, 0.13f, 0.17f);
         WordCrushSetup.Stretch(text.gameObject);
         return button;
     }

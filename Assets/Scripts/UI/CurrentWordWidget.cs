@@ -37,8 +37,12 @@ public class CurrentWordWidget : MonoBehaviour
     [Tooltip("Gap between tiles, as a fraction of a tile.")]
     [Range(0f, 0.5f)][SerializeField] private float tileGap = 0.12f;
 
+    [Tooltip("How much of the band the TILES get. The rest is the message strip " +
+             "underneath them.")]
+    [Range(0.4f, 1f)][SerializeField] private float tileAreaFraction = 0.66f;
+
     [Header("Message")]
-    [Tooltip("Shown in place of the tiles when the selection won't score.")]
+    [Tooltip("Shown UNDER the tiles when the selection won't score.")]
     [SerializeField] private TMP_Text messageLabel;
 
     [SerializeField] private string wontScoreText = "WON'T SCORE";
@@ -90,7 +94,27 @@ public class CurrentWordWidget : MonoBehaviour
     private void PlaceSelf()
     {
         GameLayout.Attach(self, LayoutBand.WordRow);
+        PlaceMessage();
         dirty = true;
+    }
+
+    /// <summary>
+    /// Pins the message to the bottom slice of the band.
+    ///
+    /// Done here rather than authored in the editor script so the split is ONE
+    /// number: the tiles read `tileAreaFraction` to know how much room they
+    /// have, and if the label's rect were set somewhere else the two would
+    /// drift and the message would creep back under the tiles.
+    /// </summary>
+    private void PlaceMessage()
+    {
+        if (messageLabel == null) return;
+
+        var rect = messageLabel.rectTransform;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = new Vector2(1f, 1f - tileAreaFraction);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
     }
 
     private void OnLayoutChanged()
@@ -117,9 +141,13 @@ public class CurrentWordWidget : MonoBehaviour
     }
 
     /// <summary>
-    /// The message replaces the tiles rather than sitting beside them: a row
-    /// that showed both would be two things to read at the moment the player
-    /// most needs one.
+    /// The message sits UNDER the tiles, never over them.
+    ///
+    /// ⚠️ It cannot simply fill the band. The tiles are world-space sprites and
+    /// this is a canvas label, so the canvas draws over them unconditionally —
+    /// a message across the middle of the band printed itself straight through
+    /// the word it was talking about. The band is split instead: tiles in the
+    /// top `tileAreaFraction`, message in what's left.
     ///
     /// Empty RefusedReason is the normal case and correct — "that isn't a word"
     /// needs no caption, and captioning it would bury the one message that IS
@@ -201,6 +229,11 @@ public class CurrentWordWidget : MonoBehaviour
 
         Rect band = GameLayout.Current.WorldRectOf(LayoutBand.WordRow);
         if (band.width <= 0f || band.height <= 0f) return;
+
+        // The top slice only — the bottom is the message's, and a tile drawn
+        // into it would have the message printed across it.
+        float tileHeight = band.height * tileAreaFraction;
+        band = new Rect(band.x, band.yMax - tileHeight, band.width, tileHeight);
 
         // One tile plus its gap, across the whole row, capped by the band height
         // and never larger than a board tile — the row is a readout, not a

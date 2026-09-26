@@ -28,20 +28,20 @@ public class WordActionsWidget : MonoBehaviour
     [Tooltip("What the submit button says.")]
     [SerializeField] private string submitText = "PLAY";
 
+    [Tooltip("How big the discard button's second line is, as a percentage of " +
+             "the first. It is the allowance, not the action, so it reads under it.")]
+    [Range(40, 100)][SerializeField] private int secondLinePercent = 62;
+
     [Header("Discard")]
     [SerializeField] private Button discardButton;
     [SerializeField] private TMP_Text discardLabel;
-
-    [Header("Look")]
-    [Tooltip("Faded onto a button that's visible but refusing — an invalid word, " +
-             "or a discard bigger than the allowance left.")]
-    [SerializeField] private Color disabledTint = new Color(1f, 1f, 1f, 0.35f);
-    [SerializeField] private Color enabledTint = Color.white;
 
     [Header("Place in band")]
     [Range(0f, 1f)][SerializeField] private float bandXMin = 0.3f;
 
     [Range(0f, 1f)][SerializeField] private float bandXMax = 1f;
+
+    private int discardsLeft;
 
     private void Awake()
     {
@@ -95,34 +95,50 @@ public class WordActionsWidget : MonoBehaviour
 
     private void OnSelectionChanged(SelectionState selection)
     {
-        if (selection.IsEmpty)
-        {
-            SetIdle();
-            return;
-        }
+        // Remembered so the button can still say what the allowance is once the
+        // round is over and there is no selection left to read it from.
+        discardsLeft = selection.DiscardsLeft;
 
-        SetButton(submitButton, submitLabel, selection.CanSubmit, submitText);
+        bool empty = selection.IsEmpty;
+        SetButton(submitButton, submitLabel, !empty && selection.CanSubmit, submitText);
 
         // The count is on the button because it's the number that decides
-        // whether the press will work — "DISCARD 3" against "2 LEFT" is the
-        // whole explanation for why it's greyed out.
-        SetButton(discardButton, discardLabel, selection.CanDiscard,
-                  $"DISCARD {selection.TileCount}" +
-                  $"   <size=60%>{selection.DiscardsLeft} LEFT</size>");
+        // whether the press will work — "DISCARD 3" over "2 LEFT" is the whole
+        // explanation for why it's greyed out.
+        //
+        // ⚠️ TWO LINES, not one. On one line the allowance ran off the end of
+        // the button, which is also why the label auto-sizes: "DISCARD 12" over
+        // "0 LEFT" is a lot wider than "PLAY".
+        SetButton(discardButton, discardLabel, !empty && selection.CanDiscard,
+                  DiscardText(empty ? 0 : selection.TileCount));
     }
 
-    /// <summary>Nothing selected: both buttons present, both refusing.</summary>
+    private string DiscardText(int tiles)
+    {
+        string action = tiles > 0 ? $"DISCARD {tiles}" : "DISCARD";
+        return $"{action}\n<size={secondLinePercent}%>{discardsLeft} LEFT</size>";
+    }
+
+    /// <summary>Nothing left to act on: both buttons present, both refusing.</summary>
     private void SetIdle()
     {
         SetButton(submitButton, submitLabel, false, submitText);
-        SetButton(discardButton, discardLabel, false, "DISCARD");
+        SetButton(discardButton, discardLabel, false, DiscardText(0));
     }
 
-    private void SetButton(Button button, TMP_Text label, bool usable, string text)
+    /// <summary>
+    /// ⚠️ SETS `interactable` AND THE TEXT, AND DELIBERATELY NOT THE COLOUR.
+    ///
+    /// The button's look comes from its own ColorBlock — green or red when it
+    /// will act, grey when it won't — which Unity applies to the plate the moment
+    /// `interactable` changes. This used to fade the LABEL instead, from when the
+    /// button was a flat rectangle with nothing else to say it was dead. Doing
+    /// both would fight: a greyed plate under a faded label is twice as washed
+    /// out as either was meant to be.
+    /// </summary>
+    private static void SetButton(Button button, TMP_Text label, bool usable, string text)
     {
         if (button != null) button.interactable = usable;
-        if (label == null) return;
-        label.text = text;
-        label.color = usable ? enabledTint : disabledTint;
+        if (label != null) label.text = text;
     }
 }

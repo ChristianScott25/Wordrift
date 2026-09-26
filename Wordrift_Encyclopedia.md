@@ -110,8 +110,10 @@ target beats you. ❓ That ending is undesigned.
 
 ### What's on screen
 
-*(Rebuilt on 2026-09-25. Everything below is 🚧 **TEMPORARY** placeholder art — flat
-coloured blocks and plain text. The LAYOUT is the real thing; the look is not.)*
+*(Rebuilt on 2026-09-25. The LAYOUT is the real thing; the look mostly isn't. First art and
+a pixel typeface landed 2026-09-26 — the buttons, the tile bag and the librarian portrait —
+and all of it is 🚧 **TEMPORARY**, the font especially, which is a placeholder to be redrawn.
+Everything else is still a flat coloured block.)*
 
 The screen is a stack of bands, top to bottom:
 
@@ -123,6 +125,11 @@ The screen is a stack of bands, top to bottom:
 | **Word row** | The word you're spelling, laid out left to right as tiles. When the selection won't score it says **WON'T SCORE** here instead, with the librarian's reason underneath when a librarian is the reason. |
 | **The board** | Where you drag. |
 | **Buttons** | Info, settings, DISCARD, PLAY. |
+
+The buttons are one shared plate, coloured in code — **PLAY green, DISCARD red, both grey
+when they won't do anything.** So DISCARD still tells you what it will cost
+(`DISCARD 3   5 LEFT`), and a word that can't be played leaves PLAY visibly dead rather than
+just unresponsive.
 
 Two of those are worth explaining, because they're new:
 
