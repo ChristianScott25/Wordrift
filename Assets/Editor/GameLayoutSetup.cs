@@ -35,6 +35,9 @@ public static class GameLayoutSetup
         "ScoreWidget", "WordResultWidget",
     };
 
+    /// <summary>The items panel's object name — it is found by name, not by component.</summary>
+    private const string ItemPanelName = "Item Panel";
+
     private static readonly Color Panel = new Color(0f, 0f, 0f, 0.35f);
     private static readonly Color Faint = new Color(1f, 1f, 1f, 0.55f);
     // Multiplied onto the off-white Small Button plate, so this is near-white
@@ -111,7 +114,7 @@ public static class GameLayoutSetup
         BuildHeader(canvas);
         BuildStrip(canvas);
         BuildBag(canvas);
-        BuildConsumables(canvas);
+        BuildConsumables(canvas, session);
         BuildSystemButtons(canvas);
         BuildWordRow(canvas, board);
 
@@ -361,7 +364,7 @@ public static class GameLayoutSetup
         WordCrushSetup.SetRef(widget, "valueLabel", valueText);
     }
 
-    private static void BuildConsumables(Canvas canvas)
+    private static void BuildConsumables(Canvas canvas, GameSession session)
     {
         var root = Reuse<ConsumablesAreaWidget>(canvas, "Consumables");
         var widget = root.GetComponent<ConsumablesAreaWidget>();
@@ -373,7 +376,140 @@ public static class GameLayoutSetup
 
         WordCrushSetup.SetRef(widget, "captionLabel", captionText);
         WordCrushSetup.SetRef(widget, "slotSprite", Square());
+
+        // 🚧 The tile body, borrowed. An item has no art of its own yet, and
+        // looking like something off the board beats looking like nothing.
+        var tile = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Tile - white.png");
+        if (tile != null) WordCrushSetup.SetRef(widget, "itemSprite", tile);
+
+        // A direct reference because this widget lives in one scene — the shape
+        // WordActionsWidget uses, and the reason the generator wires the field
+        // in the SCENE rather than into a prefab.
+        WordCrushSetup.SetRef(widget, "session", session);
+
+        BuildItemPanel(canvas, widget);
+
+        // The slots themselves are NOT built here. How many there are is the
+        // run's business (the mode config's maxConsumables), so the widget makes
+        // them at runtime — the same reason StatusWidget builds its own chips.
     }
+
+    /// <summary>
+    /// The read-before-you-spend panel.
+    ///
+    /// ⚠️ IT IS A SIBLING ON THE CANVAS, NOT A CHILD OF THE ITEMS BOX.
+    /// GameLayout.Attach reparents that box into a slice of the round header
+    /// about 200px wide, and a child panel would be squeezed into it.
+    ///
+    /// Its backdrop is a raycast target, which is what keeps a tap meant for
+    /// USE off the board underneath — ChainController's guard is
+    /// EventSystem.IsPointerOverGameObject on the press frame.
+    /// </summary>
+    private static void BuildItemPanel(Canvas canvas, ConsumablesAreaWidget widget)
+    {
+        var existing = canvas.transform.Find(ItemPanelName);
+        var root = existing != null ? existing.gameObject : WordCrushSetup.NewUI(ItemPanelName);
+        if (existing == null) root.transform.SetParent(canvas.transform, false);
+
+        // Full screen, so the backdrop covers everything behind it.
+        WordCrushSetup.Stretch(root);
+
+        var backdrop = root.GetComponent<Image>() ?? root.AddComponent<Image>();
+        backdrop.sprite = Square();
+        backdrop.color = new Color(0f, 0f, 0f, 0.72f);
+        backdrop.raycastTarget = true;
+
+        // Tap-outside-to-close, and a SECOND way out of a panel that covers the
+        // whole screen. No transition: this is an invisible hit area, and a
+        // colour tint on it would flash the whole screen on every press.
+        var dismiss = root.GetComponent<Button>() ?? root.AddComponent<Button>();
+        dismiss.targetGraphic = backdrop;
+        dismiss.transition = Selectable.Transition.None;
+
+        // Drawn over everything else in the canvas, including the band
+        // containers, whatever order the widgets were made in.
+        root.transform.SetAsLastSibling();
+
+        var card = Slot(root.transform, "Card", 0.08f, 0.32f, 0.92f, 0.68f);
+
+        // NOT the Backdrop helper: its 35% black would be almost invisible
+        // against the 72% black behind it. The card has to read as a thing
+        // sitting on top of the screen, so it is nearly opaque.
+        var plate = card.GetComponent<Image>() ?? card.AddComponent<Image>();
+        plate.sprite = Square();
+        plate.color = new Color(0.14f, 0.15f, 0.19f, 0.98f);
+
+        var title = Slot(card.transform, "Title", 0.05f, 0.72f, 0.95f, 0.95f);
+        var titleText = Text(title, 44, TextAlignmentOptions.Center);
+
+        var body = Slot(card.transform, "Body", 0.07f, 0.34f, 0.93f, 0.70f);
+        var bodyText = Text(body, 28, TextAlignmentOptions.Top);
+        bodyText.textWrappingMode = TextWrappingModes.Normal;
+
+        // Green like PLAY, because this is the button that commits; neutral for
+        // the one that doesn't.
+        var use = PanelButton(card.transform, "Use", "USE", 0.07f, 0.48f,
+                              new Color(0.45f, 0.78f, 0.45f));
+        var cancel = PanelButton(card.transform, "Cancel", "CANCEL", 0.52f, 0.93f, InfoColor);
+
+        WordCrushSetup.SetRef(widget, "detailRoot", root);
+        WordCrushSetup.SetRef(widget, "detailTitle", titleText);
+        WordCrushSetup.SetRef(widget, "detailBody", bodyText);
+        WordCrushSetup.SetRef(widget, "useButton", use);
+        WordCrushSetup.SetRef(widget, "useLabel", use.GetComponentInChildren<TMP_Text>(true));
+        WordCrushSetup.SetRef(widget, "cancelButton", cancel);
+        WordCrushSetup.SetRef(widget, "backdropButton", dismiss);
+
+        // Closed. The widget also closes it in Start, but a panel left switched
+        // on in the saved scene is the first thing you'd see on opening it.
+        root.SetActive(false);
+    }
+
+    /// <summary>
+    /// A button along the bottom of the item panel's card.
+    ///
+    /// Not FindOrMakeButton: that one is for the two little system buttons and
+    /// hardcodes the SMALL plate, which would letterbox itself to a stamp in a
+    /// slot this wide (every one of these sprites is drawn with preserveAspect,
+    /// because none of them carries a 9-slice border).
+    /// </summary>
+    private static Button PanelButton(Transform parent, string name, string label,
+                                      float xMin, float xMax, Color color)
+    {
+        var slot = Slot(parent, name, xMin, 0.07f, xMax, 0.27f);
+
+        var image = slot.GetComponent<Image>() ?? slot.AddComponent<Image>();
+        WordCrushSetup.SetSprite(image, WordCrushSetup.LoadSprite("Medium Button"), Color.white);
+
+        var button = slot.GetComponent<Button>() ?? slot.AddComponent<Button>();
+        button.targetGraphic = image;
+        Tint(button, color);
+
+        var text = slot.GetComponentInChildren<TMP_Text>(true)
+                   ?? WordCrushSetup.MakeText(slot.transform, "Label", 38,
+                                              TextAlignmentOptions.Center);
+        text.text = label;
+        text.color = new Color(0.12f, 0.13f, 0.17f);
+        WordCrushSetup.Stretch(text.gameObject);
+        return button;
+    }
+
+    /// <summary>A button's resting colour, with the usual lift and press around it.</summary>
+    private static void Tint(Button button, Color color)
+    {
+        var colors = button.colors;
+        colors.normalColor = color;
+        colors.selectedColor = color;
+        colors.highlightedColor = Lift(color, 0.12f);
+        colors.pressedColor = Lift(color, -0.12f);
+        colors.disabledColor = new Color(0.60f, 0.60f, 0.62f);
+        colors.fadeDuration = 0.06f;
+        button.colors = colors;
+    }
+
+    private static Color Lift(Color color, float by) => new Color(
+        Mathf.Clamp01(color.r + by), Mathf.Clamp01(color.g + by),
+        Mathf.Clamp01(color.b + by), color.a);
 
     private static void BuildSystemButtons(Canvas canvas)
     {

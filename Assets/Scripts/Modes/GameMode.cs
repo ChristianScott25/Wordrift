@@ -112,6 +112,25 @@ public abstract class GameMode
     public virtual IScoreRule ScoreRule => null;
 
     /// <summary>
+    /// Hold this consumable until a word is accepted, then let it score that
+    /// word. False means the round has nowhere to put it — which is the default,
+    /// and which leaves the item unspent.
+    ///
+    /// A hook rather than a field on RoundRules because the player arms it
+    /// DURING the round, and RoundRules is settled before the round begins.
+    /// </summary>
+    public virtual bool ArmForNextWord(Consumable consumable) => false;
+
+    /// <summary>
+    /// The stream a consumable rolls from this round, or null for a mode that
+    /// has none. It comes from the mode rather than straight off RunState
+    /// because the mode is what records the stream's position in the round
+    /// snapshot and winds it forward on resume — the same deal it has with the
+    /// tile bag's stream.
+    /// </summary>
+    public virtual Rng ConsumableRng => null;
+
+    /// <summary>
     /// Writes this mode's round state into a save, and reads it back out. The
     /// session saves and restores everything it owns itself (score, board, words
     /// found); this is for whatever the RULES own — a move counter, a discard

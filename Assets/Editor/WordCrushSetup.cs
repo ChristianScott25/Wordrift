@@ -53,6 +53,7 @@ public static class WordCrushSetup
         LibrarianSetup.Build();
         BookmarkSetup.Build();
         CheckoutSetup.Build();
+        ConsumableSetup.Build();
         BuildTilePrefab();
         BuildHudPrefabs();
 

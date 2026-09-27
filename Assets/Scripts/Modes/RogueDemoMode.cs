@@ -55,6 +55,30 @@ public class RogueDemoMode : GameMode
     // save. Stamped onto every WordCheck on the way past.
     private string librarianNote = "";
 
+    // The consumable stream, kept for the same reason bagRng is: how far into it
+    // this round has drawn depends on how many items the player chose to spend,
+    // so it CANNOT be re-derived the way a librarian's choice can.
+    private Rng consumableRng;
+
+    // Items armed to score the next accepted word, in the order they were armed.
+    // ⚠️ A LIST, NOT A SLOT. A run may carry two Doublers and arm both; a single
+    // field would have let the second one silently replace the first, which is a
+    // paid-for item vanishing with no message.
+    //
+    // Typed as the asset rather than as IScoreRule so it has a name to save.
+    private readonly List<Consumable> armed = new();
+
+    // Rebuilt only when `armed` changes — never in Status, which runs every frame.
+    private string armedText = "";
+
+    // The librarian and the armed items as one rule. Built once and refilled, so
+    // asking for ScoreRule allocates nothing; see ScoreRule for why it is only
+    // ever handed out when it actually has something in it.
+    private readonly CompositeScoreRule composite = new CompositeScoreRule();
+
+    // What ScoreRule hands out. Held rather than composed on demand — see there.
+    private IScoreRule activeRule;
+
     // What THIS round asks for: the run's target through the librarian's factor.
     // Held rather than recomputed so the HUD and the win check read one number.
     //
@@ -101,6 +125,15 @@ public class RogueDemoMode : GameMode
         bagRng = run.StreamFor(RunState.BagStream);
         bag = new TileBag(run.TileBag, bagRng);
         board.TileSource = bag;
+
+        // Its own stream, so that how often a consumable rolls can never shift
+        // which tiles the bag deals — the same independence every other stream
+        // buys. Taken ONCE and kept: asking StreamFor again restarts it.
+        consumableRng = run.StreamFor(RunState.ConsumableStream);
+
+        // Seeds activeRule from the librarian. Nothing is armed yet, so this is
+        // the pre-consumables behaviour exactly: the librarian, or null.
+        RebuildArmed();
     }
 
     /// <summary>
@@ -184,11 +217,90 @@ public class RogueDemoMode : GameMode
     }
 
     /// <summary>
-    /// The round's turn at the score, after every bookmark. The librarian itself
-    /// — most of them don't override Score, and an unoverridden one costs a
-    /// virtual call per word.
+    /// The round's turn at a word's score, after every bookmark: the librarian
+    /// first, then whatever the player armed, in the order they armed it.
+    ///
+    /// A librarian round with nothing armed hands back the librarian itself
+    /// rather than a wrapper — most librarians don't override Score, and an
+    /// unoverridden one costs a virtual call per word.
+    ///
+    /// ⚠️ IT MUST STAY NULL WHEN THERE IS NOTHING TO RUN. GameSession decides
+    /// whether a chain holding a wild needs the expensive per-candidate
+    /// resolution by asking `Bookmarks.Count > 0 || ScoreRule != null`, so a
+    /// rule that was always non-null would quietly put every frame of every
+    /// selection on the slow path for a run that owns nothing.
+    ///
+    /// Cached rather than composed on demand: this is read on the way into
+    /// Evaluate, which on a chain holding a wild runs once per candidate word,
+    /// every frame of a drag. What it is made of changes about twice a round.
     /// </summary>
-    public override IScoreRule ScoreRule => librarian == null ? null : librarian;
+    public override IScoreRule ScoreRule => activeRule;
+
+    /// <summary>
+    /// Holds an item until a word is accepted. Appends rather than replaces —
+    /// see the comment on `armed`.
+    ///
+    /// Refuses anything that isn't an IScoreRule, which is the honest answer:
+    /// there is nothing here for a consumable that doesn't score, and returning
+    /// true would spend it for nothing.
+    /// </summary>
+    public override bool ArmForNextWord(Consumable consumable)
+    {
+        if (consumable is not IScoreRule) return false;
+
+        armed.Add(consumable);
+        RebuildArmed();
+        return true;
+    }
+
+    public override Rng ConsumableRng => consumableRng;
+
+    /// <summary>
+    /// Re-derives everything that depends on what's armed — the rule the scorer
+    /// runs and the caption the HUD shows. Called when `armed` or the librarian
+    /// changes, and never from Status, which runs every frame.
+    /// </summary>
+    private void RebuildArmed()
+    {
+        // The two common shapes skip the wrapper: an ordinary round with nothing
+        // armed is null, and a librarian round with nothing armed is just the
+        // librarian, exactly as it was before consumables existed.
+        if (armed.Count == 0)
+        {
+            activeRule = librarian;
+        }
+        else
+        {
+            composite.Clear();
+            composite.Add(librarian);
+            for (int i = 0; i < armed.Count; i++) composite.Add(armed[i] as IScoreRule);
+            activeRule = composite.IsEmpty ? null : composite;
+        }
+
+        if (armed.Count == 0) armedText = "";
+        else if (armed.Count == 1) armedText = armed[0].Title.ToUpperInvariant();
+        // Two of the same item is the likeliest way to have two, so say how many
+        // rather than printing one name twice in a box this narrow.
+        else armedText = $"{armed[0].Title.ToUpperInvariant()} x{armed.Count}";
+    }
+
+    /// <summary>
+    /// A consumable this mode's config lists, by asset name. Resolved against the
+    /// pool rather than a registry, the same way RunState resolves every other
+    /// saved asset — so there is nothing to keep in sync.
+    /// </summary>
+    private Consumable FindConsumable(string assetName)
+    {
+        if (config == null || config.consumables == null || string.IsNullOrEmpty(assetName))
+            return null;
+
+        foreach (var consumable in config.consumables)
+            if (consumable != null && consumable.name == assetName) return consumable;
+
+        Debug.LogWarning($"Saved round armed '{assetName}', which isn't in this mode's " +
+                         "consumable pool — dropping it.");
+        return null;
+    }
 
     /// <summary>
     /// A fresh allowance every round, never carried over — see Begin. Spending
@@ -270,6 +382,10 @@ public class RogueDemoMode : GameMode
         into.movesLeft = movesLeft;
         into.discardsLeft = discardsLeft;
         into.bagDraws = bagRng == null ? 0 : bagRng.Draws;
+        into.consumableDraws = consumableRng == null ? 0 : consumableRng.Draws;
+
+        foreach (var consumable in armed)
+            if (consumable != null) into.armedConsumables.Add(consumable.name);
 
         if (run == null || bag == null) return;
 
@@ -284,6 +400,28 @@ public class RogueDemoMode : GameMode
     {
         movesLeft = from.movesLeft;
         discardsLeft = from.discardsLeft;
+
+        // Wound forward for the same reason the bag's stream is: a fresh stream
+        // starts over, and re-dealing a permutation the player has already seen
+        // would make quitting and continuing a way to re-roll a shuffle.
+        consumableRng = run == null ? null : run.StreamFor(RunState.ConsumableStream);
+        consumableRng?.Skip(from.consumableDraws);
+
+        // Cleared before restoring rather than appended to. Nothing should be
+        // armed here — Begin doesn't touch the list and a Restart builds a whole
+        // new mode object — but RestoreRound overwrites what Begin handed out,
+        // and a restore that ADDED to live state instead of replacing it is the
+        // kind of thing that only shows up as a run with two of something.
+        armed.Clear();
+        if (run != null && from.armedConsumables != null)
+        {
+            foreach (var name in from.armedConsumables)
+            {
+                var consumable = FindConsumable(name);
+                if (consumable != null) armed.Add(consumable);
+            }
+        }
+        RebuildArmed();
 
         if (run == null || bag == null) return;
 
@@ -307,7 +445,23 @@ public class RogueDemoMode : GameMode
         bag.RestoreRemaining(tiles, bagRng);
     }
 
-    public override void OnWordAccepted(WordResult result) => movesLeft--;
+    /// <summary>
+    /// ⚠️ THE ONE PLACE AN ARMED ITEM IS SPENT, and it has to be here rather
+    /// than inside the rule itself. GameSession.ResolveSelection calls Evaluate
+    /// once PER CANDIDATE WORD when the chain holds a wild, so a rule that
+    /// consumed itself would burn on a word the player never played. This fires
+    /// once, at the end of the tally, for a word that was actually accepted.
+    ///
+    /// Everything armed fired on that word, so everything armed is cleared.
+    /// </summary>
+    public override void OnWordAccepted(WordResult result)
+    {
+        movesLeft--;
+
+        if (armed.Count == 0) return;
+        armed.Clear();
+        RebuildArmed();
+    }
 
     public override void OnWordRejected(WordResult result)
     {
@@ -395,6 +549,7 @@ public class RogueDemoMode : GameMode
                 Round = run == null ? 0 : run.Round,
                 BagRemaining = bag == null ? 0 : bag.Remaining,
                 BagTotal = run == null ? 0 : run.TileBag.Count,
+                ArmedText = armedText,
                 LibrarianName = librarianName,
                 LibrarianPower = librarianPower,
             };

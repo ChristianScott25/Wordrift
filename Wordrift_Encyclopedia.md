@@ -28,9 +28,10 @@ is named in *(italics)*.
 7. [Money](#7-money)
 8. [The shop](#8-the-shop)
 9. [Checkouts](#9-checkouts)
-10. [Modes](#10-modes)
-11. [Every number, in one place](#11-every-number-in-one-place)
-12. [Built · planned · open](#12-built--planned--open)
+10. [Consumables](#10-consumables)
+11. [Modes](#11-modes)
+12. [Every number, in one place](#12-every-number-in-one-place)
+13. [Built · planned · open](#13-built--planned--open)
 
 ---
 
@@ -119,7 +120,7 @@ The screen is a stack of bands, top to bottom:
 
 | Band | What's in it |
 |---|---|
-| **Round header** | Who you're up against — the librarian's name, portrait and rule — and your score over the round's target. On a round with no librarian the box stays exactly the same size and shows the round number instead. Beside it, the **tile bag** (how many tiles are left to draw, out of your whole bag) and an **items area**. |
+| **Round header** | Who you're up against — the librarian's name, portrait and rule — and your score over the round's target. On a round with no librarian the box stays exactly the same size and shows the round number instead. Beside it, the **tile bag** (how many tiles are left to draw, out of your whole bag) and your **items** (§10). |
 | **Resource strip** | Small readouts: money, moves, discards, round. |
 | **Score × mult** | What the current selection is worth — the tiles' points, times the multiplier your word's length earns. After you hit PLAY this is where the bookmarks are counted in, one at a time. |
 | **Word row** | The word you're spelling, laid out left to right as tiles. When the selection won't score it says **WON'T SCORE** here instead, with the librarian's reason underneath when a librarian is the reason. |
@@ -143,10 +144,12 @@ A long word shrinks its tiles to fit rather than running off the side.
 their tops show. They're still dragged left and right to reorder, and that order is still the
 order they score in.
 
-🚧 The **items area** is empty and does nothing. Consumables — one-shot items you'd buy and
-spend during a round — are an idea, not a feature. The space is reserved so the layout can be
-judged at its real size. The **tile bag** is tappable but doesn't open yet, and the **info**
-and **settings** buttons don't open anything either.
+**The items box** holds your consumables — up to two one-shot items bought in the shop and
+spent during a round (§10). Tap one to read what it does, then press USE. The caption above
+them reads `ITEMS`, or names whatever you've armed to score the next word.
+
+🚧 The **tile bag** is tappable but doesn't open yet, and the **info** and **settings** buttons
+don't open anything either.
 
 ### Where the fun is supposed to come from
 
@@ -350,7 +353,7 @@ The rules around them:
 - **A tile can carry up to three** *(`maxModifiersPerTile`)*. Letter multipliers stack in order
   (2L then 3L = ×6); word multipliers all multiply together, so a tile with 3W 3W 3W is ×27 on
   every word it appears in. A full tile stops being a target the shop can offer you, and if
-  every tile in your bag fills up the upgrade rows disappear from the shop entirely.
+  every tile in your bag fills up the upgrade row disappears from the shop entirely.
 - **A stacked tile draws one badge per modifier**, fanned right across the top of the tile.
   🚧 A first-pass visual, not the final treatment — three badges reach most of the way across
   and sit over the letter.
@@ -424,7 +427,7 @@ takes **the one that scores highest**. You never choose, and you never have to.
 - **When nothing works, it still shows you a word.** If every letter that fits the dictionary
   would be refused by the librarian, the game shows the best of those anyway, in red, with the
   reason — rather than a star and no explanation.
-- ⚠️ **It can't be upgraded.** The shop's tile-upgrade rows skip it: a 3W that fits into any
+- ⚠️ **It can't be upgraded.** The shop's tile-upgrade row skips it: a 3W that fits into any
   word at all would be the strongest thing in the game by a distance.
 
 🎯 **$35 is well above QU at $22 on purpose.** A wild is strictly more useful than any letter
@@ -694,7 +697,7 @@ word on a board that can only manage threes and fours, The Conformist can lock y
 the board stops offering, The Censor can strike out the letter the board is full of, The
 Dilapidated cuts the board down to 22 spaces and breaks up the paths between them, and The
 Redactor takes away the discards that were the way out. On a librarian round with an empty bag
-and no legal word left, there is currently no way to end the round — see §12.
+and no legal word left, there is currently no way to end the round — see §13.
 
 **PLAY AGAIN starts a completely new run**: round 1, a stock bag, $0.
 
@@ -772,7 +775,7 @@ everything is one purchase only.
 **Interest exists now**, as a checkout rather than a rule — so saving is a *build*, not
 something the game does for you. ❓ Still no per-round purse and no sink other than the shop.
 
-🚧 **There is a test mode where money doesn't bind at all** — see §10. Nothing in the shop is
+🚧 **There is a test mode where money doesn't bind at all** — see §11. Nothing in the shop is
 ever too expensive and the readout says `$∞`. Rounds still pay normally underneath, so it's also
 the quickest way to watch what the payout formula actually hands out.
 
@@ -788,17 +791,16 @@ pay for:**
 
 | Slot | What it sells |
 |:--:|---|
-| 1, 2 | **A tile upgrade** — a random badge (2L / 3L / 2W / 3W) for a random tile in your bag. A 2L or 3L never lands on a tile worth 0 |
-| 3, 4 | **A bookmark** you don't own. The two are always different |
-| 5 | **A checkout** you don't own (§9) |
-| 6 | **A new tile** for your bag — a letter pair, a choice tile, or a wild (§4) |
+| 1 | **A tile upgrade** — a random badge (2L / 3L / 2W / 3W) for a random tile in your bag. A 2L or 3L never lands on a tile worth 0 |
+| 2, 3 | **A bookmark** you don't own. The two are always different |
+| 4 | **A checkout** you don't own (§9) |
+| 5 | **A new tile** for your bag — a letter pair, a choice tile, or a wild (§4) |
+| 6 | **A consumable** — a one-shot item to spend during a round (§10) |
 
 ```
-   OWNED   DEJA VU · SENSE AND FRUGALITY      BAG 104
+   OWNED   SENSE AND FRUGALITY      BAG 104      ITEMS 1/2
 
    ┌────────────────────────────────┐
-   │  2L → E                   $4   │
-   ├────────────────────────────────┤
    │  3W → A             $22   $18  │   ← struck-through: your discount
    ├────────────────────────────────┤
    ╎  SPINE                  SOLD   ╎   ← greyed, stays where it is
@@ -808,6 +810,8 @@ pay for:**
    │  ONE MORE CHAPTER         $28  │
    ├────────────────────────────────┤
    │  NEW TILE   CH            $17  │
+   ├────────────────────────────────┤
+   │  SHUFFLE                   $6  │
    └────────────────────────────────┘
 
        [ CONTINUE ]   [ REROLL $5 ]
@@ -823,7 +827,8 @@ something you could never find out about.
 
 The button says which problem you have, because they have different answers: **NOT ENOUGH**
 means come back with more money, **BOOKMARKS FULL** means you're carrying five already
-(§5), and **SOLD** means you took it this visit.
+(§5), **ITEMS FULL** means you're carrying two consumables already (§10), and **SOLD** means
+you took it this visit.
 
 The rules of the shelf:
 
@@ -832,15 +837,18 @@ The rules of the shelf:
   is no second time.
 - **A row stays put when it sells.** The shelf never re-orders itself mid-visit — your thumb
   is already moving when the screen updates.
-- **The two upgrade rows always name different tiles.** They can offer the same badge, but
-  never for the same tile: otherwise buying one could fill that tile up and take the *other*
-  row off the shelf without you touching it.
+- **There used to be two upgrade rows, and the second is now the consumable row.** Two rows
+  selling the same kind of thing was the cheapest one to give up. (When there were two they
+  always named different tiles, so that buying one couldn't fill that tile up and take the
+  *other* row off the shelf without you touching it. That rule is still in the code, waiting
+  for a second row that may never come back.)
 - **A slot with nothing in it isn't drawn.** Own every bookmark and both bookmark rows are
-  gone; fill every tile in your bag and the upgrade rows go. The shop carries on with what's
+  gone; fill every tile in your bag and the upgrade row goes. The shop carries on with what's
   left rather than back-filling, so the slots keep their meaning.
-- **The tile row is the one that never runs out.** Everything else on the shelf is something
-  you can only own once; a tile is something you can own six of, so the same pair — or another
-  wild — can be offered again next visit. Every tile the shop sells sits in that row at the same
+- **The tile and consumable rows are the ones that never run out.** Everything else on the shelf is something
+  you can only own once; a tile is something you can own six of and a consumable is something
+  you spend, so the same pair — or another wild, or a second Shuffle — can be offered again
+  next visit. Every tile the shop sells sits in that row at the same
   odds: eight pairs, ten choice tiles and one wild, so any particular one is **one in
   nineteen**. Buying one shows up as the **BAG** count going up — which is the only visible
   sign, since the tile then waits for a round to deal it.
@@ -885,8 +893,8 @@ What a reroll does and doesn't do:
 - **It's one tap, with no confirmation.** Everything else in the shop makes you read a
   description and press BUY; a reroll has nothing to read, and the price is on the button.
 - **Late in a run a reroll buys less.** Once you own every bookmark and checkout, those three
-  rows are empty and you're paying full price to re-roll two upgrades and a tile. Nothing
-  warns you.
+  rows are empty and you're paying full price to re-roll one upgrade, a tile and an item.
+  Nothing warns you.
 
 **A Tale of Two Shelves** (§9) makes the first reroll of every shop **$2 cheaper**, and because
 the climb compounds off that lower number, the whole ladder comes down with it: **$3 · $5 · $7
@@ -968,7 +976,92 @@ version. Nothing here unlocks anything, and whether that's the shape this wants 
 ---
 
 
-## 10. Modes
+## 10. Consumables
+
+**A consumable is a one-shot item you buy in the shop and spend during a round.** Balatro's
+consumables. You carry up to **two** at a time, they sit in the box at the top right of the
+screen, and they're gone once used.
+
+They're the opposite bargain from a checkout. A checkout is expensive, permanent and changes
+the whole run; a consumable is cheap, single-use and changes one moment. 🎯 That's what they're
+for — the round where the board has gone stupid, or the word you can see is worth double.
+
+**There are two.**
+
+| | Costs | What it does |
+|---|--:|---|
+| **SHUFFLE** | 🚧 $6 | The tiles on the board swap into new places. Nothing is added, nothing is removed |
+| **DOUBLER** | 🚧 $8 | The next word you play scores **double**, after everything else has been counted |
+
+### Using one
+
+**Tap an item to read it, then press USE.** Two steps, like buying something in the shop — an
+item is something you paid for and there's no undo, so a mis-tap must not be able to burn one.
+CANCEL puts it back.
+
+USE reads **NOT NOW** and won't press while the board is busy: mid-fall after a word, or while
+the score is still being counted out. Nothing is spent when it refuses.
+
+**Using an item costs no move and no discard.** It's a third budget, and the only thing that
+limits it is that you had to buy it.
+
+### SHUFFLE
+
+The tiles swap into each other's places and slide to their new homes. The letters are exactly
+the ones you had — **this is not a redeal**. Nothing comes out of your bag, nothing goes back into it, and a tile
+carrying a 3W is still carrying it wherever it lands.
+
+🎯 It's the answer to a board you can't read, and it's deliberately *not* the same answer as
+discarding. A discard throws letters away, spends your discard allowance, and pulls new tiles
+out of a bag that has to last the round. A shuffle costs none of that — it just rearranges what
+you already have. So a board of good letters in bad places is a shuffle; a board of bad letters
+is a discard.
+
+⚠️ **Your selection is cleared first.** The tiles you'd picked are about to be somewhere else.
+
+### DOUBLER
+
+**Press USE and nothing visible happens yet.** The item leaves your box and the caption above
+it changes to say **DOUBLER** — that's the round holding onto it. The next word you play scores
+double, and then it's gone.
+
+You'll see it land in the score box: the walk-through counts your bookmarks one at a time as
+usual, and then a **DOUBLER ×2** beat lands after all of them.
+
+**It really is last.** A word's score is `Points × Mult`, and the doubler multiplies the mult —
+so it doubles the finished number, whatever your bookmarks, your tile multipliers or the round's
+librarian did to it first. A Critic round that cut your score by a quarter gets doubled *after*
+the cut.
+
+**You can arm two.** Buy two Doublers, use both, and the next word scores ×4 — two separate
+beats in the walk-through.
+
+⚠️ **It expires with the round.** Arm one, run out of moves, and it's gone unspent. So it isn't
+something to hold "just in case" at the end of a round — it's something to use when you can see
+the word.
+
+### The rules of carrying them
+
+- **Two at a time.** The shop still offers a third when you're full, with the buy button reading
+  **ITEMS FULL**, because knowing what you're turning down is part of the decision (§8).
+- **You can hold two of the same one.** An item you spend isn't an item you own, so the shop
+  never filters out something you're already carrying — and with only two items in the game,
+  filtering would leave the row empty most visits.
+- **They survive between rounds and through the shop**, and they survive quitting and coming
+  back — including a Doubler you'd already armed, which comes back armed.
+- **Nothing gives you one for free.** The shop is the only source.
+
+🚧 **This is a first pass and it's meant to grow.** Two items, both of which just happen when you
+press USE. The interesting ones are the ones you'd aim — drop this on *that* tile — and those
+need a way to pick a target, which doesn't exist yet. The prices are a first guess against a
+round 1 that pays about $19.
+
+❓ **Whether a consumable should be discardable** — you're full, the shop has the one you want,
+and right now there's nothing you can do about it except spend one.
+
+---
+
+## 11. Modes
 
 | Mode | What it is |
 |---|---|
@@ -988,7 +1081,7 @@ one. It comes out before release.
 
 ---
 
-## 11. Every number, in one place
+## 12. Every number, in one place
 
 | | Value | Lives in |
 |---|--:|---|
@@ -1017,11 +1110,14 @@ one. It comes out before release.
 | Max payout per round | $200 (0 = no cap) | `Mode_RogueDemo.asset` |
 | Max interest per round | $25 (0 = no cap) | `Mode_RogueDemo.asset` |
 | 🚧 Unlimited money | off | `Mode_RogueDemo.asset` — on in `Mode_RogueDemo_Unlimited.asset` |
-| Shop slots | 2 upgrades · 2 bookmarks · 1 checkout · 1 new tile | `ShopScreen` (code, not an asset) |
+| Shop slots | 1 upgrade · 2 bookmarks · 1 checkout · 1 new tile · 1 consumable | `ShopScreen` (code, not an asset) |
 | Modifier prices | 5 / 9 / 14 / 22 | each asset in `GameData/Modifiers/` |
 | Bookmark prices | 10 / 12 / 13 / 13 / 14 / 16 | each asset in `GameData/Bookmarks/` |
 | Bookmarks you may hold | 5 (0 = no limit) | `Mode_RogueDemo.asset` |
 | Checkout prices | 20 / 20 / 25 / 30 / 35 / 40 | each asset in `GameData/Checkouts/` |
+| Consumable prices | 🚧 6 / 8 | each asset in `GameData/Consumables/` |
+| Consumables you may hold | 2 (0 = no limit) | `Mode_RogueDemo.asset` |
+| Doubler multiplier | ×2 Mult, after everything else | `Consumable_Doubler.asset` |
 | Multi-letter tiles | ER IN IE ED TH SH CH QU | `LetterSet_Scrabble.asset` |
 | Multi-letter tile worth | the two letters, ×1.5 rounded up | derived — `LetterSetSetup` |
 | Multi-letter tile prices | 8 / 8 / 8 / 10 / 14 / 14 / 17 / 22 | `LetterSet_Scrabble.asset` |
@@ -1050,7 +1146,7 @@ one. It comes out before release.
 
 ---
 
-## 12. Built · planned · open
+## 13. Built · planned · open
 
 ### ✅ Built and playable
 
@@ -1065,6 +1161,8 @@ description you read before you buy (§8) · **paying to reroll the shelf**, at 
 climbs within a visit and resets between them (§8) · **checkouts** — six permanent run-wide
 perks, including interest on savings and a cheaper reroll (§9) · runs that save and resume themselves (§6) ·
 **librarians** — rule-warping rounds every third round, eight of them, paying double (§6) ·
+🚧 **consumables** — two one-shot items, Shuffle and Doubler, bought in the shop and spent
+during a round (§10) ·
 🚧 **the banded screen layout** — round header, resource strip, score, word row, board,
 buttons, with the word you're spelling shown as tiles above the board (§2). The structure is
 real; every pixel of the art is placeholder.
@@ -1075,10 +1173,10 @@ real; every pixel of the art is placeholder.
   flows differently**. All three have seams in the code; no content uses them.
 - **Tile skins as a player-facing thing** — several looks can already share a board, but
   nothing decides which ones a player *has*.
-- **Consumables** — one-shot items bought in the shop and spent during a round. The area is
-  reserved on screen (§2) and nothing else exists: no item, no shop slot, nothing in the run.
 - **The run-info and settings panels**, behind the two buttons at the bottom left, and **the
   tile-bag view** behind the bag. All three are buttons that log and do nothing.
+- **Consumables you aim** — drop this one on *that* tile. The two that exist both just happen
+  when you press USE; picking a target is the next piece of work (§10).
 
 ### ❓ Open questions
 

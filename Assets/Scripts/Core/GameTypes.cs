@@ -128,6 +128,19 @@ public struct ModeStatus
     public string LibrarianPower;
 
     public bool HasLibrarian => !string.IsNullOrEmpty(LibrarianName);
+
+    /// <summary>
+    /// What the player has armed to fire on the next word — "DOUBLER", or
+    /// "DOUBLER x2" for two of them. Empty when nothing is.
+    ///
+    /// ⚠️ The mode must hand over a string it built when the arming CHANGED, not
+    /// one it composes here: Status is rebuilt every frame, so a $"..." in the
+    /// property would allocate sixty strings a second.
+    /// </summary>
+    public string ArmedText;
+
+    /// <summary>Something is waiting to score the next word.</summary>
+    public bool HasArmed => !string.IsNullOrEmpty(ArmedText);
 }
 
 /// <summary>

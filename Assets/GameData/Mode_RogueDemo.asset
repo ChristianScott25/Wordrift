@@ -68,6 +68,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c8f61a858a2b84dfb8706de6d4aa6f5d, type: 2}
   - {fileID: 11400000, guid: d54f12bc8630948b385f3b71c3c2876e, type: 2}
   - {fileID: 11400000, guid: 39f933cbcd63f45fda9a0254be38983c, type: 2}
+  consumables:
+  - {fileID: 11400000, guid: 56af1b5756e8b40758089a738979eb28, type: 2}
+  - {fileID: 11400000, guid: 16fd8adace0b44923be38e5e1eafa78f, type: 2}
+  maxConsumables: 2
   rerollBasePrice: 5
   rerollPriceGrowth: 1.5
   pointsPerCoin: 10

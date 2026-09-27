@@ -363,6 +363,87 @@ public class GameSession : MonoBehaviour
         if (mode.IsRoundOver) EndRound();
     }
 
+    // ---- Consumables --------------------------------------------------------
+
+    /// <summary>
+    /// Whether an item could be spent right now. THE one place that question is
+    /// answered — the items area obeys it and greys its USE button, exactly as
+    /// the PLAY button obeys SelectionState.CanSubmit rather than re-deriving it.
+    ///
+    /// The three refusals are the same three that stop a save being written: a
+    /// board mid-fall or mid-tally is one whose tile map is about to change under
+    /// whatever the item does to it.
+    /// </summary>
+    public bool CanUseConsumable =>
+        IsPlaying && !tallying && board != null && !board.Busy && !board.Resolving;
+
+    /// <summary>
+    /// Spends the item in a slot. THE ONE PLACE AN ITEM LEAVES THE RUN.
+    ///
+    /// ⚠️ IT SPENDS ONLY IF Use RETURNED TRUE. That is the whole contract with
+    /// Consumable.Use, and it is what will make a future pick-a-target flow safe:
+    /// a player who changes their mind is just a Use that never ran.
+    ///
+    /// Returns whether the item was actually spent, so the caller knows whether
+    /// to close its panel.
+    /// </summary>
+    public bool UseConsumable(int index)
+    {
+        if (!CanUseConsumable) return false;
+
+        var run = RunState.Current;
+        if (run == null || index < 0 || index >= run.Consumables.Count) return false;
+
+        var consumable = run.Consumables[index];
+        if (consumable == null) return false;
+
+        // 🚧 Nothing can pick a target yet. Refusing loudly beats using the item
+        // against a target nobody chose — and it costs the player nothing,
+        // because the spend below never happens.
+        if (consumable.Targets != ConsumableTarget.None)
+        {
+            Debug.LogWarning($"{consumable.Title} needs the player to pick a " +
+                             $"{consumable.Targets}, and that flow isn't built yet.");
+            return false;
+        }
+
+        // Before the item runs, not after — and it has to be, because a shuffle
+        // moves the tiles out from under the chain synchronously. Leaving it
+        // would keep the selected tiles tinted, no longer next to each other,
+        // and spelling something else.
+        //
+        // The cost is that an item which then REFUSES has cleared the selection
+        // for nothing. That is only reachable on a board with fewer than two
+        // tiles (Board.Shuffle rules out every other refusal), which is a board
+        // with no selection worth keeping.
+        chainController.CancelChain();
+
+        bool used = consumable.Use(new ConsumableUse
+        {
+            Run = run,
+            Session = this,
+            Board = board,
+            Rng = mode.ConsumableRng,
+        });
+
+        if (!used) { RaiseSelection(); return false; }
+
+        // Raises RunState.Changed, which queues the save — the board may be
+        // sliding, and FlushSaveWhenSettled holds it until it isn't.
+        run.SpendConsumable(index);
+
+        RaiseSelection();
+        GameEvents.RaiseStatusChanged(mode.Status);
+        return true;
+    }
+
+    /// <summary>
+    /// Hands a consumable to the round to hold until a word is accepted. Pure
+    /// pass-through: the round owns armed state because it dies with the round.
+    /// </summary>
+    public bool ArmForNextWord(Consumable consumable) =>
+        mode != null && mode.ArmForNextWord(consumable);
+
     private void OnChainSubmitted(IReadOnlyList<Tile> chain)
     {
         if (!IsPlaying || chain.Count == 0) return;

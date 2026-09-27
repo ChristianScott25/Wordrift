@@ -85,6 +85,21 @@ public class RogueDemoModeConfig : ModeConfig
              "simply means the checkout row is never stocked.")]
     public List<Checkout> checkouts = new();
 
+    [Header("Consumables")]
+    [Tooltip("The pool of consumables this mode's shop can offer — one-shot items " +
+             "spent during a round. Unlike bookmarks and checkouts a run may hold " +
+             "several of the same one, so the shop never filters by what you own. " +
+             "An empty list simply means the consumable row is never stocked.")]
+    public List<Consumable> consumables = new();
+
+    [Tooltip("How many consumables a run may carry at once. It is a display limit " +
+             "as much as a balance one — the items sit in one small box in the " +
+             "round header, and there is only so much box. The shop still OFFERS " +
+             "one when you're full, with the buy button reading ITEMS FULL, " +
+             "because knowing what you're turning down is the decision. " +
+             "0 removes the limit.")]
+    [Min(0)] public int maxConsumables = 2;
+
     [Header("Shop")]
     [Tooltip("What the FIRST reroll of a shop visit costs. Every reroll after " +
              "it costs the growth factor below times more, and the price resets " +
@@ -222,7 +237,7 @@ public class RogueDemoModeConfig : ModeConfig
     public override GameMode CreateMode() => new RogueDemoMode(this);
 
     /// <summary>
-    /// The librarian and checkout pools join the stamp for the same reason the
+    /// The librarian, checkout and consumable pools join the stamp for the same reason the
     /// modifier and bookmark pools do: their numbers are tuning knobs, and a run
     /// resumed against a retuned one would play by numbers the save doesn't
     /// describe. The base stamp covers this asset's own fields, but the pools
@@ -230,5 +245,6 @@ public class RogueDemoModeConfig : ModeConfig
     /// assets themselves have to be stamped by hand.
     /// </summary>
     public override string Fingerprint() =>
-        base.Fingerprint() + StampAll(librarians) + StampAll(checkouts);
+        base.Fingerprint() + StampAll(librarians) + StampAll(checkouts) +
+        StampAll(consumables);
 }

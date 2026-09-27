@@ -71,6 +71,16 @@ public class RunState
     public const string LibrarianRoundStream = "librarian-round";
 
     /// <summary>
+    /// What a consumable rolls when it's used — the board shuffle's permutation.
+    /// Keyed by round like every other stream, and ⚠️ unlike the librarian's it
+    /// CANNOT be re-derived, because how many times it has been drawn from
+    /// depends on how many items the player chose to spend. RogueDemoMode
+    /// therefore records its position in the round snapshot and winds it forward
+    /// on resume, exactly as it does for the tile bag.
+    /// </summary>
+    public const string ConsumableStream = "consumable";
+
+    /// <summary>
     /// The run's tiles. The full bag comes back at the start of every round —
     /// playing tiles never shrinks it (TileBag drains a copy of this list).
     /// Changing THIS list is how shops and bookmarks alter what the player
@@ -220,6 +230,70 @@ public class RunState
         Perks = new RunPerks();
         foreach (var checkout in Checkouts)
             checkout?.Apply(Perks);
+    }
+
+    // ---- Consumables ----------------------------------------------------
+
+    /// <summary>
+    /// The one-shot items this run is carrying, in the order they were bought.
+    ///
+    /// The assets themselves, like Checkouts and unlike Bookmarks — there is no
+    /// per-copy wrapper because nothing about your copy can differ from anyone
+    /// else's. The day one CAN (charges left, a target it remembers), that's a
+    /// ConsumableSpec, exactly as BookmarkSpec exists for editions.
+    ///
+    /// ⚠️ DUPLICATES ARE ALLOWED, so there is no Owns() here and the shop never
+    /// filters by what you hold: an item you spend isn't an item you own, and
+    /// stocking two of the same one is a reasonable thing to want.
+    /// </summary>
+    public List<Consumable> Consumables { get; } = new();
+
+    /// <summary>
+    /// Carrying as many as the mode allows. THE one place that question is
+    /// answered, the same way BookmarksFull and CanAfford are, and derived from
+    /// the Template every time it's asked — so there is nothing here for
+    /// RunSaveData to capture. 0 means unlimited, the convention maxBookmarks
+    /// and maxModifiersPerTile both use.
+    /// </summary>
+    public bool ConsumablesFull =>
+        Template != null && Template.maxConsumables > 0 &&
+        Consumables.Count >= Template.maxConsumables;
+
+    /// <summary>
+    /// Takes an item into the run. Refuses past the cap — the last line of
+    /// defence, not the one the player meets: the shop asks Offer.Blocked before
+    /// it spends, so by the time this could refuse, the money would be gone.
+    ///
+    /// Deliberately raises no Changed event: the only caller is the shop, which
+    /// saves itself immediately afterwards. SpendConsumable is the half that has
+    /// to announce itself.
+    ///
+    /// ⚠️ If anything ever hands an item over DURING a round — a librarian, a
+    /// round reward, a checkout — it must raise Changed itself or call this and
+    /// then do so, because the items box redraws on that event and nothing else.
+    /// </summary>
+    public bool AddConsumable(Consumable consumable)
+    {
+        if (consumable == null || ConsumablesFull) return false;
+        Consumables.Add(consumable);
+        return true;
+    }
+
+    /// <summary>
+    /// Takes an item back out, by slot. Called only by GameSession.UseConsumable,
+    /// which is the one place an item is spent — and only once the item's own Use
+    /// has reported that it actually did something.
+    ///
+    /// Raises Changed, because nobody else would: the item vanishing is a change
+    /// to the run that the round's host has to write to disk (GameSession queues
+    /// it until the board is at rest).
+    /// </summary>
+    public bool SpendConsumable(int index)
+    {
+        if (index < 0 || index >= Consumables.Count) return false;
+        Consumables.RemoveAt(index);
+        RaiseChanged();
+        return true;
     }
 
     /// <summary>
@@ -495,6 +569,9 @@ public class RunState
         foreach (var checkout in Checkouts)
             if (checkout != null) data.checkouts.Add(checkout.name);
 
+        foreach (var consumable in Consumables)
+            if (consumable != null) data.consumables.Add(consumable.name);
+
         // Both halves, and both are load-bearing: the current one because it's
         // the round's rule, and the unseen pool because it's the no-repeat rule.
         // Saving only the first would resume the right round into the wrong run.
@@ -617,6 +694,15 @@ public class RunState
         {
             var checkout = Resolve(template.checkouts, name);
             if (checkout != null) Checkouts.Add(checkout);
+        }
+
+        // Duplicates are legal here, and Resolve is happy to hand back the same
+        // asset twice — two saved "Consumable_Doubler" lines mean the run was
+        // carrying two of them, not that the file is wrong.
+        foreach (var name in data.consumables)
+        {
+            var consumable = Resolve(template.consumables, name);
+            if (consumable != null) Consumables.Add(consumable);
         }
 
         // Derived from the list above, so it has to be built AFTER it — a resumed

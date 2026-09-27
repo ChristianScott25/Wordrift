@@ -22,7 +22,11 @@ public static class RunSave
     //                  instead of `timesBought`, which no longer exists.
     // v4 (2026-09-17): the shelf grew a sixth slot (a new tile for the bag), so
     //                  a v3 shelf is the wrong length to restore.
-    public const int Version = 4;
+    // v5 (2026-09-27): consumables. The run carries them, a round can have them
+    //                  armed, and the shelf swapped one of its two tile-upgrade
+    //                  rows for one that sells them — so a v4 shelf restores the
+    //                  wrong kind of thing into that slot.
+    public const int Version = 5;
 
     private const string FileName = "run.json";
 

@@ -159,6 +159,43 @@ the librarian sees them, so a librarian that lowers an allowance with `Mathf.Min
 beats a checkout that raised it — the boss beats the shop, without either one
 knowing the other exists.
 
+**A consumable (a one-shot item)** — subclass `Consumable`, override
+`PowerText` and `Use(ConsumableUse)`, create the asset, add it to a mode
+config's `consumables`, and add a block to `Assets/Editor/ConsumableSetup.cs`.
+Nothing else in the game is keyed off which consumables exist: the shop's row
+rolls over that pool, and the items box draws whatever the run is carrying.
+
+**The one thing to read before writing one is the contrast with a checkout**,
+because they look like the same shape and are not:
+
+| | `Checkout.Apply` | `Consumable.Use` |
+|---|---|---|
+| Runs | many times per purchase | exactly once |
+| May DO something | never — describe a perk | yes, that's the point |
+| Returns | nothing | `false` if it couldn't, and the item is **not spent** |
+
+That bool is the contract, and it is what makes the next step cheap. There is
+one place an item leaves the run — `GameSession.UseConsumable` — and it spends
+only on `true`. So a consumable that needs the player to pick a tile can refuse
+until it has one, and a player who changes their mind is just a `Use` that never
+ran. `Consumable.Targets` is the marker for that (🚧 only `None` is wired), the
+target itself arrives on `ConsumableUse`, and the thing that would collect it is
+`ConsumableSlotView` — which exists as its own component, rather than an
+anonymous button, precisely so it can grow the three drag interfaces
+`BookmarkCard` already carries.
+
+Two more that aren't obvious:
+
+- **Widen `ConsumableUse`, don't add a hook.** Same bargain as `RoundRules`,
+  `WordCheck`, `ScoringContext` and `RunPerks`.
+- **A consumable that SCORES implements `IScoreRule` itself**, the way a
+  `Librarian` does, and the mode composes it with the round's librarian through
+  `CompositeScoreRule`. ⚠️ `Evaluate` is called speculatively, once per candidate
+  word, so the rule may only write into the context it was handed and the charge
+  must be spent in `OnWordAccepted`. And ⚠️ `GameMode.ScoreRule` has to stay null
+  when there is nothing to run — `GameSession` uses it to decide whether a chain
+  holding a wild needs the expensive resolution path.
+
 **A new HUD element** — a MonoBehaviour that subscribes to a `GameEvents` event
 in `OnEnable` and unsubscribes in `OnDisable`. The session doesn't need to know
 it exists.
@@ -167,7 +204,8 @@ It also has to say WHERE it goes, which since 2026-09-25 means naming a band
 rather than picking a corner. The screen is a vertical stack — round header,
 resource strip, score, word row, bookmarks, board, buttons — resolved by
 `GameLayout` on the HUD Canvas. (The bookmarks band is a SPACER: nothing attaches
-to it, it just stops the word row sitting where the card tips are.) A widget calls `GameLayout.Attach(rect, band)` (optionally with a
+to it, it just stops the word row sitting where the card tips are; the round
+header is SHARED, by the librarian box, the tile bag and the items box.) A widget calls `GameLayout.Attach(rect, band)` (optionally with a
 left/right share, for the bands several widgets divide) and re-attaches on
 `GameLayout.Changed`.
 

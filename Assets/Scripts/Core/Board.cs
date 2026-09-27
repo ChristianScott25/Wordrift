@@ -356,6 +356,168 @@ public class Board : MonoBehaviour
             ? CellToWorld(list[list.Count - 1]).y
             : transform.position.y;
 
+    // ---- Shuffling ----
+
+    /// <summary>
+    /// The tiles swap into each other's places. Nothing is added, nothing is
+    /// removed, and the board is left holding exactly the letters it held. Some
+    /// tiles keep their cell — that is what a random rearrangement is — but not
+    /// all of them at once; see Permutation.
+    ///
+    /// Returns false when nothing happened — the board is mid-fall, or has fewer
+    /// than two tiles on it. The caller (a consumable) relies on that to know not
+    /// to spend itself. An arrangement identical to the one it started from is
+    /// NOT one of the refusals; see Permutation, which rules it out instead.
+    ///
+    /// ⚠️ IT PERMUTES ONLY CELLS THAT ALREADY HOLD A TILE, which is what keeps
+    /// gravity out of it: the occupancy pattern afterwards is identical, so the
+    /// next ColumnGravity.Plan is a fixed point (every move From == To) and
+    /// nothing gets compacted. Shuffling tiles into EMPTY cells would look right
+    /// and then be silently undone the next time a word cleared.
+    ///
+    /// ⚠️ THE ORDER IT WALKS CELLS IN MUST NOT COME FROM A HASHSET OR A
+    /// DICTIONARY. It goes through columnCells, which is ordered by column and
+    /// then by y. Enumerating `cells` or `tiles` instead would deal a different
+    /// shuffle in the editor than on device from the very same seed, because
+    /// neither one's enumeration order is stable across runtimes — the same trap
+    /// The Dilapidated's candidate list exists to avoid.
+    ///
+    /// ⚠️ `resolving` is deliberately NOT touched. It means "the columns hold
+    /// gaps gravity would never leave", which a permutation never produces.
+    /// </summary>
+    public bool Shuffle(Rng rng)
+    {
+        if (rng == null)
+        {
+            Debug.LogError("Board.Shuffle needs a seeded Rng — refusing rather than " +
+                           "reaching for UnityEngine.Random.", this);
+            return false;
+        }
+
+        if (Busy || Resolving) return false;
+
+        var occupied = OccupiedInOrder();
+        if (occupied.Count < 2) return false;
+
+        var shuffled = Permutation(occupied, rng);
+
+        // Rebuilt from the permutation rather than swapped in place, for the
+        // same reason ApplyGravityAndRefill does it: overlapping writes into a
+        // map you are still reading clobber each other.
+        var previous = new Dictionary<Vector2Int, Tile>(tiles);
+        tiles.Clear();
+
+        var moved = new List<Tile>(occupied.Count);
+        for (int i = 0; i < occupied.Count; i++)
+        {
+            if (!previous.TryGetValue(shuffled[i], out var tile) || tile == null)
+            {
+                // `tiles` has already been cleared, so skipping here leaves the
+                // destination cell empty AND orphans whatever was in the source
+                // one — still drawn, no longer clearable, no longer saved. It
+                // also punches a hole in the occupancy pattern, which is the one
+                // thing this method promises it never does. Can't happen (Board
+                // never stores a null tile), so if it ever does, say so.
+                Debug.LogError($"Shuffle found no tile at {shuffled[i]}, which it " +
+                               "had just read out of the board.", this);
+                continue;
+            }
+
+            var cell = occupied[i];
+
+            // The key and tile.Cell are ONE fact and are always written
+            // together — RemoveTiles does tiles.Remove(tile.Cell), and the save
+            // keys the board off this dictionary.
+            tiles[cell] = tile;
+            tile.Cell = cell;
+            tile.name = $"Tile {tile.Face.ToUpperInvariant()} ({cell.x},{cell.y})";
+
+            if (cell == shuffled[i]) continue;
+            tile.MoveTo(CellToWorld(cell));
+            moved.Add(tile);
+        }
+
+        // Permutation guarantees at least one tile moves, so this is a bug, not
+        // an unlucky draw.
+        if (moved.Count == 0)
+        {
+            Debug.LogError("Shuffle moved nothing — the permutation came back as " +
+                           "the arrangement it started from.", this);
+            return false;
+        }
+
+        StartCoroutine(ShuffleRoutine(moved));
+        return true;
+    }
+
+    /// <summary>
+    /// A rearrangement of these cells in which AT LEAST ONE tile moves.
+    ///
+    /// ⚠️ THE IDENTITY IS EXCLUDED ON PURPOSE, and it is not paranoia: a shuffle
+    /// is a paid item, so an arrangement the player cannot see is worth nothing.
+    /// It is one draw in 25 factorial on a full board and A COIN TOSS ON A
+    /// TWO-TILE ONE.
+    ///
+    /// It matters more than it looks, because a refusal cannot be saved. Nothing
+    /// is spent when a shuffle does nothing, so no save is queued — and a resumed
+    /// round winds this stream back to the position BEFORE the refusal, draws the
+    /// same identity again, and refuses again. Deterministically, forever. So the
+    /// identity is ruled out here rather than reported upwards.
+    ///
+    /// Forced rather than re-rolled: swapping the first two entries always works,
+    /// takes no extra draws, and can't loop. It biases the (rare) identity case
+    /// toward one particular answer, which is a fair price for terminating.
+    /// </summary>
+    private static List<Vector2Int> Permutation(List<Vector2Int> cells, Rng rng)
+    {
+        // Fisher-Yates over a copy, so cell i of `cells` gets the tile that was
+        // at cell i of the result. One Range draw per cell past the first, which
+        // is what the round's consumable stream records.
+        var shuffled = new List<Vector2Int>(cells);
+        for (int i = shuffled.Count - 1; i > 0; i--)
+        {
+            int j = rng.Range(0, i + 1);
+            (shuffled[i], shuffled[j]) = (shuffled[j], shuffled[i]);
+        }
+
+        for (int i = 0; i < shuffled.Count; i++)
+            if (shuffled[i] != cells[i]) return shuffled;
+
+        (shuffled[0], shuffled[1]) = (shuffled[1], shuffled[0]);
+        return shuffled;
+    }
+
+    /// <summary>
+    /// Holds input until the slide finishes. Input is gated unconditionally,
+    /// unlike ResolveRoutine's GateInputWhileResolving: that flag exists for a
+    /// mode that drips tiles in forever and so never settles, and a shuffle
+    /// always settles. A tile that happened not to move would otherwise be
+    /// grabbable while the rest of the board was still sliding.
+    /// </summary>
+    private IEnumerator ShuffleRoutine(List<Tile> moved)
+    {
+        Busy = true;
+        yield return new WaitUntil(() => moved.TrueForAll(t => t == null || t.IsSettled));
+        Busy = false;
+    }
+
+    /// <summary>
+    /// The cells holding a tile, in a stable order — by column, then bottom to
+    /// top. See the warning on Shuffle: this exists so that no shuffle ever
+    /// takes its order from a HashSet or a Dictionary.
+    /// </summary>
+    private List<Vector2Int> OccupiedInOrder()
+    {
+        var occupied = new List<Vector2Int>(tiles.Count);
+        foreach (int column in Columns)
+        {
+            if (!columnCells.TryGetValue(column, out var list)) continue;
+            foreach (var cell in list)
+                if (tiles.ContainsKey(cell)) occupied.Add(cell);
+        }
+        return occupied;
+    }
+
     // ---- Clearing and settling ----
 
     public void RemoveTiles(IEnumerable<Tile> toRemove)

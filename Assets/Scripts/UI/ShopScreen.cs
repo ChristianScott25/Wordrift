@@ -216,8 +216,16 @@ public class ShopScreen : MonoBehaviour
     // choose it. Choosing needs a bag picker, which is its own piece of work.
     // ------------------------------------------------------------------------
 
-    /// <summary>Tile-upgrade rows. Rolled independently, so they can coincide.</summary>
-    private const int ModifierSlots = 2;
+    /// <summary>
+    /// Tile-upgrade rows. There were two until consumables landed (2026-09-27);
+    /// the second became the consumable row, because two rows selling the same
+    /// kind of thing is the cheapest row on the shelf to give up.
+    ///
+    /// The machinery for more than one is deliberately still here — see the
+    /// `taken` list in StockShelves — because it is what makes a second row safe
+    /// if one ever comes back.
+    /// </summary>
+    private const int ModifierSlots = 1;
 
     /// <summary>Bookmark rows. Always two DIFFERENT bookmarks when two are left.</summary>
     private const int BookmarkSlots = 2;
@@ -233,12 +241,21 @@ public class ShopScreen : MonoBehaviour
     private const int TileSlots = 1;
 
     /// <summary>
+    /// The consumable row. One per visit, and like the tile row it never runs
+    /// out: an item you spend is not an item you own, so it may offer one you're
+    /// already carrying. What stops you buying a third is the carry cap, and
+    /// that is answered in Blocked — the row stays on screen and says why.
+    /// </summary>
+    private const int ConsumableSlots = 1;
+
+    /// <summary>
     /// How many rows the shelf needs. Public because ShopSceneSetup lays out
     /// exactly this many buttons — the count used to be written down separately
     /// in the editor script, and two copies of it would part company the first
     /// time a slot was added.
     /// </summary>
-    public const int Slots = ModifierSlots + BookmarkSlots + CheckoutSlots + TileSlots;
+    public const int Slots =
+        ModifierSlots + BookmarkSlots + CheckoutSlots + TileSlots + ConsumableSlots;
 
     /// <summary>
     /// One thing on the shelf. Subclassed rather than switched on, so the row
@@ -472,6 +489,55 @@ public class ShopScreen : MonoBehaviour
     }
 
     /// <summary>
+    /// A one-shot item to carry into a round.
+    ///
+    /// Like the tile row and unlike every other kind, it NEVER RUNS OUT: an item
+    /// you spend is not an item you own, so the same one may be offered while
+    /// you're already carrying it.
+    ///
+    /// ⚠️ THE CARRY CAP IS A `Blocked`, NOT A `HasStock`. Out of stock means
+    /// there is nothing to sell and the row hides; full means there IS something
+    /// and you can't take it, which is exactly when knowing what it does matters
+    /// most. Gating HasStock on the cap would make the row vanish WHILE STILL
+    /// UNSOLD the moment you bought your second item — the one thing the shelf
+    /// promises it never does. Same rule BookmarkOffer follows.
+    /// </summary>
+    private class ConsumableOffer : Offer
+    {
+        public Consumable Consumable;
+
+        public override bool HasStock => Consumable != null;
+        public override int ListPrice => Consumable == null ? 0 : Consumable.price;
+        public override string Title => Consumable == null ? "" : Consumable.Title.ToUpperInvariant();
+        public override string Description =>
+            Consumable == null
+                ? ""
+                : $"{Consumable.Power}\n\nCarried into a round and gone once you use it.";
+
+        public override string Blocked(RunState run) =>
+            run != null && run.ConsumablesFull ? "ITEMS FULL" : null;
+
+        public override void Deliver(RunState run)
+        {
+            // Reachable only if the cap check above and this one disagree, which
+            // they can't — but the money is already gone by the time this runs,
+            // so it shouts rather than shrugging. See BookmarkOffer.Deliver.
+            // Consumable?.name, not Consumable.name: AddConsumable(null) returns
+            // false too, and an error path that throws reports nothing at all.
+            if (!run.AddConsumable(Consumable))
+                Debug.LogError($"Bought consumable '{Consumable?.name}' the run can't hold — " +
+                               "the player has been charged and given nothing.");
+        }
+
+        public override ShopOfferData Capture(Dictionary<TileSpec, int> tileIndex) => new ShopOfferData
+        {
+            kind = ShopOfferData.Consumable,
+            assetName = Consumable == null ? "" : Consumable.name,
+            sold = Sold,
+        };
+    }
+
+    /// <summary>
     /// A brand-new tile for the bag — a multi-letter one, which is the only kind
     /// anything sells. Unlike every other row it can't run out and doesn't care
     /// what the run already owns: two CH tiles are twice as likely to turn up as
@@ -596,12 +662,15 @@ public class ShopScreen : MonoBehaviour
     {
         offers.Clear();
 
-        // Targets are drawn without replacement ACROSS the upgrade rows. Two rows
-        // naming the same tile looks harmless until that tile is one modifier
-        // short of the limit: buying the first fills it, which flips the second
-        // row's HasStock false while it is still unsold — so an untouched row
-        // would vanish mid-visit, which is the one thing the shelf promises it
-        // never does. Costs no extra draw, so the stream position is unchanged.
+        // Targets are drawn without replacement ACROSS the upgrade rows. There is
+        // only ONE such row today, so this is a list of one and does nothing —
+        // kept because it is what makes a second row safe if one comes back, and
+        // because the failure it prevents is not obvious: two rows naming the
+        // same tile look harmless until that tile is one modifier short of the
+        // limit, when buying the first fills it and flips the second row's
+        // HasStock false WHILE IT IS STILL UNSOLD. An untouched row vanishing
+        // mid-visit is the one thing the shelf promises it never does. It costs
+        // no extra draw, so the stream position is unaffected either way.
         int limit = run.Template.maxModifiersPerTile;
         var taken = new List<TileSpec>(ModifierSlots);
         for (int i = 0; i < ModifierSlots; i++)
@@ -630,11 +699,22 @@ public class ShopScreen : MonoBehaviour
         for (int i = 0; i < CheckoutSlots; i++)
             offers.Add(new CheckoutOffer { Checkout = RollCheckout() });
 
-        // Appended LAST, deliberately: every roll above it keeps its position in
-        // the stream, so a seed recorded before this row existed still stocks
-        // rows 0-4 with exactly what it used to.
+        // Appended after everything above it, which is the rule for adding a
+        // slot. ⚠️ THE 2026-09-27 CONSUMABLE CHANGE BROKE IT ANYWAY: dropping one
+        // of the two upgrade rows removed a draw from the MIDDLE, and every draw
+        // after it shifted. Seeds recorded before that date no longer stock the
+        // same shelf. That was a deliberate trade (his call — the shop's two
+        // upgrade rows did the same job, and nothing records a seed yet), but
+        // don't read this comment as saying old seeds are safe. They aren't.
         for (int i = 0; i < TileSlots; i++)
             offers.Add(new TileOffer { Entry = RollTile() });
+
+        // And this one after THAT, for the same reason. The shelf reads by kind
+        // top to bottom — upgrade, bookmarks, checkout, tile, item — which is
+        // the roll order too, and keeping the two the same is what makes "add to
+        // the end" a rule anyone can follow.
+        for (int i = 0; i < ConsumableSlots; i++)
+            offers.Add(new ConsumableOffer { Consumable = RollConsumable() });
     }
 
     /// <summary>
@@ -703,7 +783,20 @@ public class ShopScreen : MonoBehaviour
                     });
                     break;
 
-                default:
+                case ShopOfferData.Consumable:
+                    offers.Add(new ConsumableOffer
+                    {
+                        Consumable = FindByName(run.Template.consumables, entry.assetName),
+                        Sold = entry.sold,
+                    });
+                    break;
+
+                // ⚠️ The modifier row is an explicit case, and `default` is a
+                // complaint. It used to BE the default, which meant a kind
+                // nobody had written a case for restored silently as a tile
+                // upgrade — wrong stock, no warning, and a save version bump
+                // that looked like it had worked.
+                case ShopOfferData.Modifier:
                     // Read out rather than built inline: the re-roll below has to
                     // be handed the same modifier, or a restored 2L row could land
                     // on a 0-point tile that StockShelves would never have offered.
@@ -727,6 +820,13 @@ public class ShopScreen : MonoBehaviour
                         Sold = entry.sold,
                     });
                     break;
+
+                default:
+                    Debug.LogError($"Saved shop row has kind '{entry.kind}', which this " +
+                                   "shop doesn't know how to restore — re-rolling the " +
+                                   "visit rather than putting the wrong thing on the shelf.");
+                    StockShelves();
+                    return;
             }
         }
     }
@@ -879,6 +979,27 @@ public class ShopScreen : MonoBehaviour
         var available = new List<LetterSet.Entry>();
         foreach (var entry in letters.Entries)
             if (entry != null && entry.IsForSale) available.Add(entry);
+
+        return available.Count == 0 ? null : available[rng.Range(0, available.Count)];
+    }
+
+    /// <summary>
+    /// A random consumable from the mode's pool, or null when the pool is empty.
+    ///
+    /// Deliberately unfiltered by what the run is carrying — the same call the
+    /// tile row makes, and for the same reason: duplicates are legal, and with a
+    /// pool this small, filtering would leave the row empty most visits.
+    ///
+    /// Exactly ONE draw, whatever the pool, so the stream stays predictable.
+    /// </summary>
+    private Consumable RollConsumable()
+    {
+        var pool = run.Template.consumables;
+        if (pool == null) return null;
+
+        var available = new List<Consumable>();
+        foreach (var consumable in pool)
+            if (consumable != null) available.Add(consumable);
 
         return available.Count == 0 ? null : available[rng.Range(0, available.Count)];
     }
@@ -1212,9 +1333,19 @@ public class ShopScreen : MonoBehaviour
         // like it did nothing.
         string bag = $"BAG {run.TileBag.Count}";
 
+        // Items, for the same reason the bag count is here: you cannot see them
+        // from the shop, and "ITEMS 2/2" is what explains the consumable row's
+        // buy button reading ITEMS FULL. Shown only when carrying something —
+        // an empty count would be one more number to read on every visit.
+        string items = run.Consumables.Count == 0
+            ? ""
+            : run.Template.maxConsumables > 0
+                ? $"      ITEMS {run.Consumables.Count}/{run.Template.maxConsumables}"
+                : $"      ITEMS {run.Consumables.Count}";
+
         return names.Count == 0
-            ? bag
-            : $"OWNED   {string.Join("  ·  ", names)}      {bag}";
+            ? bag + items
+            : $"OWNED   {string.Join("  ·  ", names)}      {bag}{items}";
     }
 
     /// <summary>Wired to the Continue button. Starts the next round of the run.</summary>

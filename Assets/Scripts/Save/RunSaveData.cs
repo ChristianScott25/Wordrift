@@ -66,6 +66,13 @@ public class RunSaveData
     public List<string> checkouts = new();
 
     /// <summary>
+    /// Consumables the run is carrying, by asset name, in the order they were
+    /// bought. ⚠️ THE SAME NAME MAY APPEAR TWICE — duplicates are legal, so this
+    /// is a list of items and not a set of things owned.
+    /// </summary>
+    public List<string> consumables = new();
+
+    /// <summary>
     /// The librarian this round is played against, by asset name. Empty on an
     /// ordinary round, which is most of them.
     /// </summary>
@@ -148,6 +155,23 @@ public class RoundSnapshot
     /// one it was about to — the same wind-forward ShopSnapshot.rngDraws does.
     /// </summary>
     public int bagDraws;
+
+    /// <summary>
+    /// Consumables armed to fire on the next word, by asset name, in the order
+    /// they were armed. ROUND state, not run state: an armed item that never
+    /// gets a word is lost when the round ends, so it has no business in
+    /// RunSaveData. ⚠️ A LIST, not one name — a run may carry two Doublers and
+    /// arm both, and a single slot would have silently eaten the second.
+    /// </summary>
+    public List<string> armedConsumables = new();
+
+    /// <summary>
+    /// How far into its stream the round's consumables had drawn. Same
+    /// wind-forward as bagDraws, and needed for the same reason — but note it
+    /// can't be re-derived the way a librarian's choice can, because how many
+    /// draws have happened depends on how many items the player chose to spend.
+    /// </summary>
+    public int consumableDraws;
 }
 
 /// <summary>
@@ -197,6 +221,7 @@ public class ShopOfferData
     public const string Bookmark = "bookmark";
     public const string Checkout = "checkout";
     public const string Tile = "tile";
+    public const string Consumable = "consumable";
 
     public string kind;
 
