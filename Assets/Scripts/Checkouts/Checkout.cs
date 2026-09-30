@@ -31,7 +31,7 @@ using UnityEngine;
 /// (ShopDiscountCheckout), never for the title on the asset — so retitling
 /// "Sense and Frugality" is one Inspector string.
 /// </summary>
-public abstract class Checkout : ScriptableObject
+public abstract class Checkout : ScriptableObject, IInspectable
 {
     [Tooltip("What this one is CALLED — the book title on the shop button. Free " +
              "to change without touching what it does, because a save names the " +
@@ -63,6 +63,14 @@ public abstract class Checkout : ScriptableObject
 
     /// <summary>The name to show, falling back to the asset's file name.</summary>
     public string Title => string.IsNullOrWhiteSpace(displayName) ? name : displayName;
+
+    /// <summary>What this perk is, for the info box.</summary>
+    public virtual void Describe(InspectInfo info)
+    {
+        if (info == null) return;
+        info.Title = Title.ToUpperInvariant();
+        info.Body = Power;
+    }
 
     /// <summary>
     /// Describe what owning this grants. Add to the fields — never assign, or two

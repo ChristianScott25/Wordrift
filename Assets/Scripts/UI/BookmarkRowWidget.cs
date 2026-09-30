@@ -186,7 +186,7 @@ public class BookmarkRowWidget : MonoBehaviour
 
         Sprite sprite = cardSkin == null ? null : cardSkin.baseSprite;
         for (int i = 0; i < count; i++)
-            cards[i].Bind(this, owned[i].Name, sprite, cardColor, cardTextColor);
+            cards[i].Bind(this, owned[i], sprite, cardColor, cardTextColor);
 
         LayOut(-1);
         PinAboveBoard();

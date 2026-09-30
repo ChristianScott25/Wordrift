@@ -113,6 +113,21 @@ public class Tile : MonoBehaviour
     public string Letters { get; private set; }
 
     /// <summary>
+    /// Where this tile is on screen, in world units — what the info box needs to
+    /// tuck itself under the tile the player is holding.
+    ///
+    /// Off the body renderer rather than the transform, because the tile is
+    /// uniformly SCALED to fit its cell and a skin can swap the body for a
+    /// sprite of any size; the transform's position alone says nothing about how
+    /// big the thing on screen is. Falls back to a point at the tile's position
+    /// if the renderer has gone, which places the box sensibly rather than at
+    /// the world origin.
+    /// </summary>
+    public Bounds WorldBounds =>
+        tileRenderer != null ? tileRenderer.bounds : new Bounds(transform.position, Vector3.zero);
+
+
+    /// <summary>
     /// What this tile DRAWS when it isn't showing a resolved letter. The same
     /// string as Letters for everything except a choice tile, which plays as "*"
     /// but reads "A/E/I" — the one place the two deliberately disagree, because

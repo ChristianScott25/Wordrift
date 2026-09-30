@@ -145,11 +145,27 @@ their tops show. They're still dragged left and right to reorder, and that order
 order they score in.
 
 **The items box** holds your consumables — up to two one-shot items bought in the shop and
-spent during a round (§10). Tap one to read what it does, then press USE. The caption above
-them reads `ITEMS`, or names whatever you've armed to score the next word.
+spent during a round (§10). Tap one to read what it does; **drag it onto the board to play
+it.** The caption above them reads `ITEMS`, or names whatever you've armed to score the next
+word.
 
-🚧 The **tile bag** is tappable but doesn't open yet, and the **info** and **settings** buttons
-don't open anything either.
+**The info box** is how you find out what anything does. Touch a tile, a bookmark or an item
+and a small card appears underneath it with its name, what it does, and its qualities — a
+tile's points and its badges, for instance. It stays until you touch something else.
+
+| What you're reading | How |
+|---|---|
+| A tile on the board | **Press and hold it.** A quick tap already means "add this letter" |
+| A bookmark, an item | **Tap it.** Dragging a bookmark still reorders it; dragging an item still plays it |
+
+*(Two gestures rather than one, and that's a deliberate trade. One rule would be easier to
+learn, but the board is the one place where touching something already means something, and
+putting a box on the screen every time you tap a letter would be worse than a split.)*
+
+🚧 It's a plain dark card for now. The **tile bag** is tappable but doesn't open yet, and the
+**info** and **settings** buttons don't open anything either. The **librarian's** rule is
+already printed in the round header, so it needs no box, and **checkouts** you've bought
+aren't re-readable anywhere yet.
 
 ### Where the fun is supposed to come from
 
@@ -184,9 +200,14 @@ throwing it away.
 | Tap a tile already selected | It and everything after it drop off — tap the last one to undo one letter |
 | Drag onto a tile that isn't adjacent | **Ignored.** A fast swipe skips tiles, and wiping your selection over a sampling gap would be maddening |
 | Tap the board background | Nothing. Deselecting is done by tapping a tile, so a stray tap can't cost you a word |
+| **Press and hold a tile** | Its **info box** opens — what the tile is, what it's worth, what its badges do. It does **not** get selected |
 
 **Tiles in motion can't be grabbed.** A tile has to settle before it will respond, so nothing
-slides out from under your finger mid-word.
+slides out from under your finger mid-word. The same goes for holding one to read it.
+
+**Holding never costs you a letter.** The tile is selected the instant you touch it, because
+waiting to find out whether you meant to hold would put a lag on every tap — so when the hold
+does come, the selection is put back exactly as it was. Your word is untouched either way.
 
 ### The two buttons
 
@@ -995,12 +1016,21 @@ for — the round where the board has gone stupid, or the word you can see is wo
 
 ### Using one
 
-**Tap an item to read it, then press USE.** Two steps, like buying something in the shop — an
-item is something you paid for and there's no undo, so a mis-tap must not be able to burn one.
-CANCEL puts it back.
+**Tap an item to read it. Drag it onto the board to play it.** Two different gestures on
+purpose — an item is something you paid for and there's no undo, so reading one must not be
+able to spend it.
 
-USE reads **NOT NOW** and won't press while the board is busy: mid-fall after a word, or while
-the score is still being counted out. Nothing is spent when it refuses.
+*(It used to be tap-then-USE, with a confirmation panel. That changed on 2026-09-29, when
+touching things to read them became a rule across the whole game: a tap can't mean "tell me
+what this is" everywhere else and "spend this" here. Dragging is the better half of the trade
+anyway — it's deliberate enough to need no confirmation, and it's the gesture an item that has
+to be aimed at a particular tile will need.)*
+
+**Let go anywhere off the board and nothing happens.** The item goes back in the box unspent,
+so changing your mind halfway is free.
+
+**An item won't lift at all while the board is busy** — mid-fall after a word, or while the
+score is still being counted out. Nothing is spent, and you find out before you've aimed.
 
 **Using an item costs no move and no discard.** It's a third budget, and the only thing that
 limits it is that you had to buy it.
@@ -1161,8 +1191,9 @@ description you read before you buy (§8) · **paying to reroll the shelf**, at 
 climbs within a visit and resets between them (§8) · **checkouts** — six permanent run-wide
 perks, including interest on savings and a cheaper reroll (§9) · runs that save and resume themselves (§6) ·
 **librarians** — rule-warping rounds every third round, eight of them, paying double (§6) ·
-🚧 **consumables** — two one-shot items, Shuffle and Doubler, bought in the shop and spent
-during a round (§10) ·
+🚧 **consumables** — two one-shot items, Shuffle and Doubler, bought in the shop and dragged
+onto the board to play (§10) ·
+🚧 **info boxes** — hold a tile, or tap a bookmark or an item, and a card says what it is (§2) ·
 🚧 **the banded screen layout** — round header, resource strip, score, word row, board,
 buttons, with the word you're spelling shown as tiles above the board (§2). The structure is
 real; every pixel of the art is placeholder.

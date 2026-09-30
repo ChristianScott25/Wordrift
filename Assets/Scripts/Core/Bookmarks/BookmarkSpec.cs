@@ -8,7 +8,7 @@
 /// bookmark at different strengths. Apply is where an edition will get to touch
 /// the context after the bookmark itself has.
 /// </summary>
-public class BookmarkSpec
+public class BookmarkSpec : IInspectable
 {
     public Bookmark bookmark;
 
@@ -20,6 +20,23 @@ public class BookmarkSpec
         if (bookmark == null || ctx == null) return;
         bookmark.OnWordScored(ctx);
         // Editions hook in here, after the bookmark's own effect.
+    }
+
+    /// <summary>
+    /// What the copy the run OWNS is, for the info box.
+    ///
+    /// It goes through the spec rather than straight to the asset for the same
+    /// reason Apply does: an edition is a property of your copy, so this is
+    /// where "Holographic" will be added to the chips without the asset ever
+    /// learning that editions exist.
+    /// </summary>
+    public void Describe(InspectInfo info)
+    {
+        if (info == null) return;
+        if (bookmark == null) { info.Title = "EMPTY"; return; }
+
+        bookmark.Describe(info);
+        // Editions tag themselves here, after the bookmark has spoken.
     }
 
     public string Name => bookmark == null ? "" : bookmark.displayName;

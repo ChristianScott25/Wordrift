@@ -3,17 +3,26 @@ using UnityEngine;
 /// <summary>
 /// What a consumable needs the player to pick before it can be used.
 ///
-/// 🚧 ONLY None IS WIRED. A targeted consumable needs a pick-a-target flow —
-/// tap the item, then tap or drag onto a tile — and that flow isn't built.
-/// GameSession.UseConsumable refuses anything else and says so, rather than
-/// half-using it against a target nobody chose.
+/// Both values are WIRED as of 2026-09-29, when items moved to being played by
+/// dragging them onto the board: the drop point is a place on the board either
+/// way, so asking which TILE it landed on costs one call to Board.TileAt.
+/// GameSession.UseConsumable resolves it and refuses a drop that found nothing,
+/// which costs the player nothing because the refusal comes before the spend.
+///
+/// 🚧 No consumable declares BoardTile yet — there are two items and neither
+/// wants a target. The path is there for the first one that does.
 /// </summary>
 public enum ConsumableTarget
 {
-    /// <summary>Press USE and it happens. Both of today's items.</summary>
+    /// <summary>
+    /// Drop it anywhere on the board and it happens. Both of today's items.
+    /// </summary>
     None,
 
-    /// <summary>🚧 One tile on the board. Arrives on ConsumableUse.Tile.</summary>
+    /// <summary>
+    /// Drop it on ONE TILE, which arrives on ConsumableUse.Tile (and its cell on
+    /// .Cell). A drop that missed every tile is refused and costs nothing.
+    /// </summary>
     BoardTile,
 }
 
@@ -46,10 +55,13 @@ public class ConsumableUse
     /// </summary>
     public Rng Rng;
 
-    /// <summary>🚧 The tile the player picked, for a BoardTile consumable. Null today.</summary>
+    /// <summary>
+    /// The tile the item was dropped on, for a BoardTile consumable. Null for
+    /// an untargeted one, which is every item there is today.
+    /// </summary>
     public Tile Tile;
 
-    /// <summary>🚧 The cell the player picked. Unused today.</summary>
+    /// <summary>That tile's cell. Default for an untargeted item.</summary>
     public Vector2Int Cell;
 }
 
@@ -76,17 +88,21 @@ public class ConsumableUse
 ///
 /// ⚠️ RETURNING FALSE MEANS THE ITEM IS NOT SPENT. That is the whole contract
 /// with GameSession.UseConsumable, which is the one place an item leaves the
-/// run: it spends only on true. So "the board is mid-fall", "there's only one
-/// tile left to shuffle" and, later, "the player cancelled the target" all keep
-/// the item. (They do NOT keep the board selection — that is cleared before Use
-/// runs either way, because an item is free to move the tiles out from under it.
-/// Pressing USE is a deliberate act, so that is the honest cost.)
+/// run: it spends only on true. So "the board is mid-fall" and "there's only one
+/// tile left to shuffle" both keep the item. (They do NOT keep the board
+/// selection — that is cleared before Use runs either way, because an item is
+/// free to move the tiles out from under it. Dragging an item onto the board is
+/// a deliberate act, so that is the honest cost.)
+///
+/// A drop that MISSED the board never gets this far: UseConsumable checks where
+/// it landed before it clears or spends anything, so changing your mind halfway
+/// costs nothing at all.
 ///
 /// THE NAME IS A COSTUME, like "librarian" and "checkout" are. Subclasses are
 /// named for the POWER (ShuffleConsumable, NextWordMultiplierConsumable), never
 /// for the word on the asset — so renaming "Doubler" is one Inspector string.
 /// </summary>
-public abstract class Consumable : ScriptableObject
+public abstract class Consumable : ScriptableObject, IInspectable
 {
     [Tooltip("What this one is CALLED — on the shop row and on the item itself. " +
              "Free to change without touching what it does, because a save names " +
@@ -120,10 +136,24 @@ public abstract class Consumable : ScriptableObject
     public string Title => string.IsNullOrWhiteSpace(displayName) ? name : displayName;
 
     /// <summary>
-    /// What the player has to pick first. Default None: press USE and it happens.
-    /// 🚧 Anything else is refused for now — see ConsumableTarget.
+    /// What this item needs under the finger when it is dropped. Default None:
+    /// anywhere on the board will do. See ConsumableTarget.
     /// </summary>
     public virtual ConsumableTarget Targets => ConsumableTarget.None;
+
+    /// <summary>What this item is, for the info box.</summary>
+    public virtual void Describe(InspectInfo info)
+    {
+        if (info == null) return;
+        info.Title = Title.ToUpperInvariant();
+        info.Body = Power;
+
+        // 🚧 No item declares a target yet, so this chip never appears. It is
+        // here now because the day one does, the box saying so is the only thing
+        // that will tell the player this one has to be dropped on something
+        // particular rather than anywhere on the board.
+        if (Targets == ConsumableTarget.BoardTile) info.Tag("DROP ON A TILE");
+    }
 
     /// <summary>
     /// Spend this item. Runs ONCE.

@@ -10,7 +10,7 @@ using System.Collections.Generic;
 /// needs identity, and the bag holds these directly.
 /// </summary>
 [System.Serializable]
-public class TileSpec
+public class TileSpec : IInspectable
 {
     [UnityEngine.Tooltip("What this tile is, as the catalog authored it: \"a\", \"ch\", " +
                          "\"*\" for a wild, or \"a/e/i\" for a choice tile.")]
@@ -177,6 +177,85 @@ public class TileSpec
     /// from there; don't call this one in a loop that runs while a finger moves.
     /// </summary>
     public string Options => IsChoice ? Face.Replace(SeparatorText, "") : "";
+
+    // ---- Reading a tile ------------------------------------------------------
+
+    /// <summary>
+    /// What this tile is, for the info box. The tile itself is the authority on
+    /// this rather than the catalog, because what a player wants to know is what
+    /// the tile in front of them does — a gilded E is worth 5 whatever the
+    /// catalog says an E is worth, and the badges came from an upgrade.
+    /// </summary>
+    public void Describe(InspectInfo info)
+    {
+        if (info == null) return;
+
+        info.Title = IsWild ? "WILD TILE" : Face.ToUpperInvariant();
+
+        var body = new System.Text.StringBuilder();
+        if (IsWild)
+        {
+            body.Append("Becomes whichever letter makes the best word. Worth no points of its own.");
+        }
+        else if (IsChoice)
+        {
+            body.Append("Becomes ").Append(OptionsSentence())
+                .Append(" — whichever makes the best word.");
+        }
+        else if (Spelling.Length > 1)
+        {
+            body.Append("Spells ").Append(Face.ToUpperInvariant())
+                .Append(" — ").Append(Spelling.Length)
+                .Append(" letters from one tile, so it counts as ")
+                .Append(Spelling.Length).Append(" toward the length bonus.");
+        }
+        else
+        {
+            body.Append("An ordinary letter tile.");
+        }
+
+        // Each badge explained in full underneath. The chips say WHICH ones are
+        // on the tile; this is the only place that says what they do, and it is
+        // the modifier asset's own words rather than a second copy of them.
+        if (modifiers != null)
+        {
+            for (int i = 0; i < modifiers.Count; i++)
+            {
+                var modifier = modifiers[i];
+                if (modifier == null || string.IsNullOrWhiteSpace(modifier.description)) continue;
+                body.Append("\n\n").Append(modifier.badgeLabel).Append("  ").Append(modifier.description);
+            }
+        }
+
+        info.Body = body.ToString();
+
+        // A wild is worth 0 and saying so is noise — "worth no points" is
+        // already in the sentence above.
+        if (!IsWild) info.Tag(baseScore == 1 ? "1 PT" : baseScore + " PTS");
+
+        if (modifiers != null)
+            for (int i = 0; i < modifiers.Count; i++)
+                if (modifiers[i] != null) info.Tag(modifiers[i].badgeLabel);
+    }
+
+    /// <summary>
+    /// A choice tile's options as a sentence — "A, E or I". Built rather than
+    /// authored so a new choice tile stays a catalog row and no code at all.
+    /// </summary>
+    private string OptionsSentence()
+    {
+        string options = Options;
+        if (options.Length == 0) return "";
+        if (options.Length == 1) return options.ToUpperInvariant();
+
+        var text = new System.Text.StringBuilder();
+        for (int i = 0; i < options.Length; i++)
+        {
+            if (i > 0) text.Append(i == options.Length - 1 ? " or " : ", ");
+            text.Append(char.ToUpperInvariant(options[i]));
+        }
+        return text.ToString();
+    }
 
     // The separator as a string, because string.Replace has no "delete this
     // char" overload. DERIVED from the char rather than written out again — two

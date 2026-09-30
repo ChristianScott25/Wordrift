@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -8,17 +9,28 @@ using UnityEngine.UI;
 ///
 /// It is to ConsumablesAreaWidget exactly what BookmarkCard is to
 /// BookmarkRowWidget: it owns nothing, it is told what to show and which slot it
-/// is, and it reports a tap. Splitting it out costs nothing today and is what
-/// makes the next step cheap — a consumable you DRAG onto a tile is three
-/// interfaces added to this class, the same three BookmarkCard already carries
-/// and which need no wiring in either scene.
+/// is, and it reports a finger.
+///
+/// ⚠️ A TAP READS, A DRAG ONTO THE BOARD SPENDS. Those are two different
+/// gestures on purpose and they replaced a tap-then-confirm panel on
+/// 2026-09-29. Dragging is what a targeted item will need anyway — the tile
+/// under the finger is the target — so building it now means there is one way
+/// to play an item rather than two, and a drag is deliberate enough that it
+/// needs no confirmation step. Reading is a plain tap here and press-and-hold on
+/// the BOARD, because a tap there already means "add this letter".
 ///
 /// ⚠️ A filled slot is a raycast target and an empty one is not. An empty slot
 /// that swallowed a tap would be worse than one that ignores it, and it would
 /// also shield the board from a press for no reason (ChainController's guard is
 /// EventSystem.IsPointerOverGameObject on the press frame).
+///
+/// ⚠️ THE TAP AND THE DRAG MUST NOT BOTH FIRE. Unity still delivers a click on
+/// release when the finger comes back over the slot it started on, so a drag
+/// that ended where it began would also open the info box. `dragged` rules that
+/// out — the same guard BookmarkCard carries.
 /// </summary>
-public class ConsumableSlotView : MonoBehaviour
+public class ConsumableSlotView : MonoBehaviour,
+    IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerDownHandler, IPointerClickHandler
 {
     [Tooltip("The slot's body. A filled one borrows the tile sprite, so an item " +
              "reads as something you could put on the board rather than a new " +
@@ -32,6 +44,12 @@ public class ConsumableSlotView : MonoBehaviour
 
     private ConsumablesAreaWidget owner;
     private int slot = -1;
+
+    // Did this gesture turn into a drag? See the class comment.
+    private bool dragged;
+
+    /// <summary>Which slot of the box this is.</summary>
+    public int Slot => slot;
 
     /// <summary>This slot's RectTransform, fetched once.</summary>
     public RectTransform Rect { get; private set; }
@@ -106,12 +124,12 @@ public class ConsumableSlotView : MonoBehaviour
             label = tmp;
         }
 
-        // A persistent listener pointing at a scene object does not survive
-        // being saved into a prefab, so it is added here — the same reason
-        // WordActionsWidget and BagButtonWidget add their own. Removed first so
-        // a re-run (or a wired prefab that already has it) can't double up.
-        button.onClick.RemoveListener(OnPressed);
-        button.onClick.AddListener(OnPressed);
+        // ⚠️ THE BUTTON IS HERE FOR ITS COLOURS, NOT ITS CLICK. Reading and
+        // spending are both handled by this class's own pointer handlers, which
+        // is what lets a drag suppress the tap; Button.onClick has no idea a
+        // drag happened and would fire anyway. Any listener left on it from an
+        // older scene would re-open that hole, so it is cleared.
+        button.onClick.RemoveAllListeners();
     }
 
     /// <summary>
@@ -180,11 +198,26 @@ public class ConsumableSlotView : MonoBehaviour
         name = filled ? $"Item {slot} - {consumable.name}" : $"Item {slot} - empty";
     }
 
-    private void OnPressed()
+    /// <summary>Every gesture starts as a tap until it moves.</summary>
+    public void OnPointerDown(PointerEventData eventData) => dragged = false;
+
+    /// <summary>A tap, not a drag: say what this item does. Never spends it.</summary>
+    public void OnPointerClick(PointerEventData eventData)
     {
-        if (Consumable == null || owner == null) return;
-        owner.Select(slot);
+        if (dragged || Consumable == null || owner == null) return;
+        owner.Read(slot);
     }
+
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+        dragged = true;
+        if (Consumable == null || owner == null) return;
+        owner.BeginItemDrag(this, eventData);
+    }
+
+    public void OnDrag(PointerEventData eventData) => owner?.DragItem(this, eventData);
+
+    public void OnEndDrag(PointerEventData eventData) => owner?.EndItemDrag(this, eventData);
 
     private static Color Lift(Color color, float by) => new Color(
         Mathf.Clamp01(color.r + by), Mathf.Clamp01(color.g + by),

@@ -8,6 +8,12 @@ using UnityEngine.InputSystem;
 /// Pointer input (touch or mouse) that builds a SELECTION of adjacent tiles.
 /// Two ways in, one result: drag across tiles, or tap them one at a time.
 ///
+/// A THIRD gesture reads rather than selects: PRESS AND HOLD one tile and its
+/// info box opens (see Inspector). Holding is a read on the board and a plain
+/// tap is a read everywhere else, and that split is forced rather than chosen —
+/// a tap here already means "add this letter", and it is a supported way to
+/// spell a word, so a box on every tap would appear on every letter.
+///
 /// The selection PERSISTS when the pointer lifts — releasing is no longer a
 /// submit. Something outside has to call Submit() or Clear(); the buttons in
 /// WordActionsWidget are what do. That's the whole reason this class stopped
@@ -26,6 +32,16 @@ public class ChainController : MonoBehaviour
     [Header("Rules")]
     [Tooltip("Allow diagonal connections between tiles.")]
     [SerializeField] private bool allowDiagonals = true;
+
+    [Header("Reading a tile")]
+    [Tooltip("How long a finger must rest on one tile before its info box opens. " +
+             "0 switches holding off entirely.")]
+    [SerializeField] private float holdSeconds = 0.45f;
+
+    [Tooltip("How far the finger may drift, in SCREEN pixels, and still count as " +
+             "holding still. Too tight and nobody can hold steady enough on a " +
+             "phone; too loose and the start of a slow drag opens a box.")]
+    [SerializeField] private float holdSlopPixels = 28f;
 
     public bool InputEnabled { get; set; } = true;
 
@@ -48,6 +64,24 @@ public class ChainController : MonoBehaviour
     // tap — a tap meant to deselect re-selects instead. Cleared on release, so
     // it only ever suppresses repeats within one press.
     private Tile lastActedOn;
+
+    // ---- Holding a tile to read it ------------------------------------------
+    //
+    // ⚠️ THE PRESS FRAME HAS ALREADY SELECTED BY THE TIME WE KNOW IT IS A HOLD.
+    // OnTapped runs the instant the finger lands, because deferring it by the
+    // hold threshold would put a visible lag on every tap-to-select. So the
+    // selection as it was BEFORE the press is kept, and putting it back is what
+    // makes holding purely a read.
+    //
+    // Snapshotting the whole chain rather than just un-adding the one tile is
+    // deliberate: OnTapped is allowed to CLEAR the selection and start over when
+    // the tile isn't connectable, so "remove the tile we added" would leave a
+    // hold on a far-away tile having silently wiped the player's word.
+    private readonly List<Tile> chainBeforePress = new();
+    private Tile pressedTile;
+    private Vector2 pressScreenPos;
+    private float pressedAt;
+    private bool holdFired;
 
     public void Init(Board board, Camera cam)
     {
@@ -91,6 +125,9 @@ public class ChainController : MonoBehaviour
             dragging = true;
             lastActedOn = null;
             var tile = board.TileAt(worldPos);
+
+            BeginHold(tile, pointer.position.ReadValue());
+
             if (tile != null)
             {
                 OnTapped(tile);
@@ -99,6 +136,16 @@ public class ChainController : MonoBehaviour
         }
         else if (pointer.press.isPressed && dragging)
         {
+            if (TryHold(pointer.position.ReadValue()))
+            {
+                // The gesture is a read now, not a drag. Ending the drag here is
+                // what stops the finger carrying on into a word from a press the
+                // player has already spent on reading.
+                dragging = false;
+                RedrawLine(null);
+                return;
+            }
+
             var tile = board.TileAt(worldPos);
 
             // Only when the pointer reaches a DIFFERENT tile. Holding still on
@@ -115,6 +162,7 @@ public class ChainController : MonoBehaviour
             // drag, so the trailing line stops following the finger.
             dragging = false;
             lastActedOn = null;
+            pressedTile = null;
         }
 
         RedrawLine(dragging ? worldPos : (Vector3?)null);
@@ -171,6 +219,69 @@ public class ChainController : MonoBehaviour
         if (!IsConnectable(chain[chain.Count - 1], tile)) return;
 
         AddTile(tile);
+    }
+
+    /// <summary>
+    /// Remembers what a press landed on, and what the selection looked like
+    /// before it acted. Runs BEFORE OnTapped, which is the whole point.
+    /// </summary>
+    private void BeginHold(Tile tile, Vector2 screenPos)
+    {
+        holdFired = false;
+        pressedTile = tile;
+        pressScreenPos = screenPos;
+        pressedAt = Time.unscaledTime;
+
+        chainBeforePress.Clear();
+        for (int i = 0; i < chain.Count; i++) chainBeforePress.Add(chain[i]);
+    }
+
+    /// <summary>
+    /// Has this press become a HOLD? True exactly once per press, on the frame
+    /// the threshold is crossed with the finger still on the tile it landed on.
+    ///
+    /// Time.unscaledTime rather than Time.time: the score walk-through and any
+    /// future pause both work by stopping the clock, and how long a finger has
+    /// been down is a fact about the finger.
+    /// </summary>
+    private bool TryHold(Vector2 screenPos)
+    {
+        if (holdFired || holdSeconds <= 0f || pressedTile == null) return false;
+
+        // Moved too far — this is a drag, and it can never become a read.
+        if (Vector2.Distance(screenPos, pressScreenPos) > holdSlopPixels)
+        {
+            pressedTile = null;
+            return false;
+        }
+
+        if (Time.unscaledTime - pressedAt < holdSeconds) return false;
+
+        holdFired = true;
+
+        // Put the selection back exactly as it was before this press touched it.
+        RestoreChain();
+
+        Inspector.Show(pressedTile.Spec, Inspector.ScreenRectOf(pressedTile.WorldBounds, cam));
+        return true;
+    }
+
+    /// <summary>
+    /// Undoes whatever the press frame did to the selection. Only ever called
+    /// with a snapshot taken microseconds-of-gameplay ago, so the tiles in it
+    /// cannot have been cleared from the board in between.
+    /// </summary>
+    private void RestoreChain()
+    {
+        ClearSelectionSilently();
+        for (int i = 0; i < chainBeforePress.Count; i++)
+        {
+            var tile = chainBeforePress[i];
+            if (tile == null) continue;
+            chain.Add(tile);
+            tile.SetSelected(true);
+        }
+        ChainChanged?.Invoke(chain);
     }
 
     private bool IsConnectable(Tile from, Tile to)
@@ -246,6 +357,8 @@ public class ChainController : MonoBehaviour
     public void CancelChain()
     {
         dragging = false;
+        pressedTile = null;
+        chainBeforePress.Clear();
         ClearSelectionSilently();
         ChainChanged?.Invoke(chain);
     }

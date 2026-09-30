@@ -123,6 +123,12 @@ public static class ShopSceneSetup
 
         int added = EnsureContents(shop);
 
+        // The shop carries the bookmark row too, and a tap on a card raises
+        // Inspector wherever it happens — so the Shop needs a box of its own or
+        // the same gesture would silently do nothing here.
+        var canvas = Object.FindFirstObjectByType<Canvas>();
+        if (canvas != null) InspectBoxSetup.Build(canvas);
+
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene, ScenePath);
         RegisterInBuild();

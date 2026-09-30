@@ -174,15 +174,18 @@ because they look like the same shape and are not:
 | May DO something | never — describe a perk | yes, that's the point |
 | Returns | nothing | `false` if it couldn't, and the item is **not spent** |
 
-That bool is the contract, and it is what makes the next step cheap. There is
-one place an item leaves the run — `GameSession.UseConsumable` — and it spends
-only on `true`. So a consumable that needs the player to pick a tile can refuse
-until it has one, and a player who changes their mind is just a `Use` that never
-ran. `Consumable.Targets` is the marker for that (🚧 only `None` is wired), the
-target itself arrives on `ConsumableUse`, and the thing that would collect it is
-`ConsumableSlotView` — which exists as its own component, rather than an
-anonymous button, precisely so it can grow the three drag interfaces
-`BookmarkCard` already carries.
+That bool is the contract. There is one place an item leaves the run —
+`GameSession.UseConsumable` — and it spends only on `true`, so a player who
+changes their mind is just a `Use` that never ran.
+
+**An item is played by DRAGGING it onto the board.** `ConsumableSlotView` carries
+the three drag interfaces, `ConsumablesAreaWidget` moves the card, and the drop
+point goes to `UseConsumable`, which resolves what it landed on:
+`Consumable.Targets == BoardTile` needs a tile under the finger (it arrives on
+`ConsumableUse.Tile`), anything else just needs to be over the board. Both
+refusals happen **before** the selection is cleared and before anything is spent,
+so a drop in the wrong place costs nothing at all. Writing an item that has to be
+aimed is now one enum value and no new flow.
 
 Two more that aren't obvious:
 
@@ -195,6 +198,33 @@ Two more that aren't obvious:
   must be spent in `OnWordAccepted`. And ⚠️ `GameMode.ScoreRule` has to stay null
   when there is nothing to run — `GameSession` uses it to decide whether a chain
   holding a wild needs the expensive resolution path.
+
+**Something the player can READ** — implement `IInspectable` and fill in the
+`InspectInfo` you are handed (`Title`, `Body`, `info.Tag("3 PTS")`). Then raise
+it from wherever the finger lands:
+
+```csharp
+Inspector.Show(thing, Inspector.ScreenRectOf(rect));          // a canvas widget
+Inspector.Show(tile.Spec, Inspector.ScreenRectOf(bounds, cam)); // a board tile
+```
+
+`InspectBoxWidget` draws it and nothing else changes — it knows about tiles,
+bookmarks and items only as "something that can describe itself".
+
+Three things to know before you add one:
+
+- **Fill the bundle, don't return one.** `Inspector` reuses a single
+  `InspectInfo`, so opening a box allocates nothing — and a listener must draw
+  from it immediately rather than keep a reference. Widen `InspectInfo` rather
+  than adding a second hook.
+- **`IInspectable` and `Inspector` live in Core**, because the things that
+  describe themselves do (`TileSpec`, `Bookmark`) and Core may not reference
+  `Scripts/UI`. The box is UI and only ever reads.
+- ⚠️ **Nothing in the box may be a raycast target.** It floats over the board,
+  and `ChainController` refuses to start a word while
+  `EventSystem.IsPointerOverGameObject()` is true on the press frame. One
+  raycast target there and word selection stops working entirely. That is also
+  why the box has no backdrop and closes by polling the pointer instead.
 
 **A new HUD element** — a MonoBehaviour that subscribes to a `GameEvents` event
 in `OnEnable` and unsubscribes in `OnDisable`. The session doesn't need to know

@@ -19,8 +19,14 @@ using UnityEngine.UI;
 /// draggable at all, and it's also what keeps ChainController's hands off the
 /// board underneath: that guard is EventSystem.IsPointerOverGameObject() on the
 /// press frame, and a card with no raycast target is invisible to it.
+///
+/// ⚠️ A TAP READS, A DRAG REORDERS, and the two must not both fire from one
+/// gesture. Unity will still deliver a click on release when the finger comes
+/// back over the card it started on, so a reorder that ended where it began
+/// would ALSO open the info box. `dragged` is what rules that out.
 /// </summary>
-public class BookmarkCard : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+public class BookmarkCard : MonoBehaviour,
+    IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerDownHandler, IPointerClickHandler
 {
     [Tooltip("The card's body. Uses the tile sprite, so a bookmark looks like " +
              "something off the board rather than a new kind of object.")]
@@ -30,6 +36,14 @@ public class BookmarkCard : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     [SerializeField] private TMP_Text label;
 
     private BookmarkRowWidget owner;
+
+    // What this card is showing. Kept so a tap can describe it — the SPEC and
+    // not the asset, because an edition belongs to your copy and this is the
+    // thing that owns one.
+    private BookmarkSpec spec;
+
+    // Did this gesture turn into a drag? See the class comment.
+    private bool dragged;
 
     /// <summary>This card's RectTransform, fetched once.</summary>
     public RectTransform Rect { get; private set; }
@@ -41,9 +55,10 @@ public class BookmarkCard : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     /// creation, because a card is REUSED: reordering hands card 0 a different
     /// bookmark rather than destroying and rebuilding the row.
     /// </summary>
-    public void Bind(BookmarkRowWidget owner, string name, Sprite sprite, Color bodyColor, Color textColor)
+    public void Bind(BookmarkRowWidget owner, BookmarkSpec spec, Sprite sprite, Color bodyColor, Color textColor)
     {
         this.owner = owner;
+        this.spec = spec;
         if (Rect == null) Rect = (RectTransform)transform;
 
         if (body != null)
@@ -61,14 +76,29 @@ public class BookmarkCard : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
 
         if (label != null)
         {
+            string name = spec == null ? "" : spec.Name;
             label.text = name == null ? "" : name.ToUpperInvariant();
             label.color = textColor;
         }
     }
 
-    public void OnBeginDrag(PointerEventData eventData) => owner?.BeginCardDrag(this);
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+        dragged = true;
+        owner?.BeginCardDrag(this);
+    }
 
     public void OnDrag(PointerEventData eventData) => owner?.DragCard(this, eventData);
 
     public void OnEndDrag(PointerEventData eventData) => owner?.EndCardDrag(this);
+
+    /// <summary>Every gesture starts as a tap until it moves.</summary>
+    public void OnPointerDown(PointerEventData eventData) => dragged = false;
+
+    /// <summary>A tap, not a drag: say what this bookmark does.</summary>
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (dragged || spec == null) return;
+        Inspector.Show(spec, Inspector.ScreenRectOf(Rect));
+    }
 }

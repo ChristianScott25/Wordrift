@@ -367,8 +367,9 @@ public class GameSession : MonoBehaviour
 
     /// <summary>
     /// Whether an item could be spent right now. THE one place that question is
-    /// answered — the items area obeys it and greys its USE button, exactly as
-    /// the PLAY button obeys SelectionState.CanSubmit rather than re-deriving it.
+    /// answered — the items area obeys it and refuses to pick an item up at all,
+    /// exactly as the PLAY button obeys SelectionState.CanSubmit rather than
+    /// re-deriving it.
     ///
     /// The three refusals are the same three that stop a save being written: a
     /// board mid-fall or mid-tally is one whose tile map is about to change under
@@ -387,7 +388,10 @@ public class GameSession : MonoBehaviour
     /// Returns whether the item was actually spent, so the caller knows whether
     /// to close its panel.
     /// </summary>
-    public bool UseConsumable(int index)
+    /// <param name="screenPoint">Where the item was dropped. An item is played by
+    /// dragging it onto the board, so a drop anywhere else is a change of mind
+    /// and must cost nothing.</param>
+    public bool UseConsumable(int index, Vector2 screenPoint)
     {
         if (!CanUseConsumable) return false;
 
@@ -397,13 +401,20 @@ public class GameSession : MonoBehaviour
         var consumable = run.Consumables[index];
         if (consumable == null) return false;
 
-        // 🚧 Nothing can pick a target yet. Refusing loudly beats using the item
-        // against a target nobody chose — and it costs the player nothing,
-        // because the spend below never happens.
-        if (consumable.Targets != ConsumableTarget.None)
+        // Where it landed. An item that names a target needs a TILE under the
+        // finger; one that doesn't just needs to be somewhere on the board.
+        //
+        // Both refusals happen BEFORE anything is cleared or spent, which is
+        // what makes "drag it out and change your mind" free — the same
+        // guarantee Use returning false gives, arriving one step earlier.
+        Tile target = null;
+        if (consumable.Targets == ConsumableTarget.BoardTile)
         {
-            Debug.LogWarning($"{consumable.Title} needs the player to pick a " +
-                             $"{consumable.Targets}, and that flow isn't built yet.");
+            target = TileAtScreen(screenPoint);
+            if (target == null) return false;
+        }
+        else if (!IsOverBoard(screenPoint))
+        {
             return false;
         }
 
@@ -424,6 +435,8 @@ public class GameSession : MonoBehaviour
             Session = this,
             Board = board,
             Rng = mode.ConsumableRng,
+            Tile = target,
+            Cell = target == null ? default : target.Cell,
         });
 
         if (!used) { RaiseSelection(); return false; }
@@ -435,6 +448,44 @@ public class GameSession : MonoBehaviour
         RaiseSelection();
         GameEvents.RaiseStatusChanged(mode.Status);
         return true;
+    }
+
+    /// <summary>
+    /// Is this screen point over the board?
+    ///
+    /// The drop zone for an item that targets nothing in particular. It lives
+    /// here rather than on the widget because the widget has no camera and no
+    /// board, and giving it either would be a second place that knows how to
+    /// turn a finger into a place on the board — which is exactly what
+    /// ChainController already is.
+    ///
+    /// Deliberately the board's OWN rectangle with no slack: a generous margin
+    /// would make a drop just outside it play the item, and an item is something
+    /// the player paid for.
+    /// </summary>
+    public bool IsOverBoard(Vector2 screenPoint)
+    {
+        if (board == null || sceneCamera == null) return false;
+
+        Vector3 world = sceneCamera.ScreenToWorldPoint(screenPoint);
+        Vector2 size = board.BoardSize;
+        Vector2 centre = board.BoardCenter;
+
+        return Mathf.Abs(world.x - centre.x) <= size.x * 0.5f &&
+               Mathf.Abs(world.y - centre.y) <= size.y * 0.5f;
+    }
+
+    /// <summary>
+    /// The tile under a screen point, or null. Board.TileAt refuses tiles that
+    /// aren't settled, so an item cannot be dropped onto one mid-slide.
+    /// </summary>
+    public Tile TileAtScreen(Vector2 screenPoint)
+    {
+        if (board == null || sceneCamera == null) return null;
+
+        Vector3 world = sceneCamera.ScreenToWorldPoint(screenPoint);
+        world.z = 0f;
+        return board.TileAt(world);
     }
 
     /// <summary>
