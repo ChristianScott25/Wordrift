@@ -425,10 +425,15 @@ public static class WordCrushSetup
     /// <summary>
     /// Points an Image at a sprite WITHOUT letting it stretch.
     ///
-    /// ⚠️ preserveAspect matters for all of this art: none of it carries a
-    /// 9-slice border, and the two button sprites have their words drawn INTO
+    /// ⚠️ preserveAspect matters for all the art that goes through HERE: it has
+    /// no 9-slice border, and the two button sprites have their words drawn INTO
     /// them. Stretching a 200x100 "PLAY" to fill a band of another shape stretches
     /// the lettering with it.
+    ///
+    /// ⚠️ A 9-SLICED SPRITE MUST NOT COME THROUGH THIS METHOD. The info box's
+    /// plate is Sliced, not Simple, and preserveAspect on a Sliced image is
+    /// meaningless — the whole point is that it stretches. InspectBoxSetup does
+    /// its own assignment for exactly that reason.
     /// </summary>
     internal static void SetSprite(Image image, Sprite sprite, Color tint)
     {
@@ -491,6 +496,27 @@ public static class WordCrushSetup
         }
 
         property.floatValue = value;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(target);
+    }
+
+    /// <summary>
+    /// Writes a colour onto a serialized field — the sibling of SetFloat, and
+    /// needed for the same reason: a serialized field ignores its C# initializer
+    /// the moment it has been saved into a scene, so a default changed in code
+    /// cannot reach a widget that already exists.
+    /// </summary>
+    internal static void SetColor(Object target, string field, Color value)
+    {
+        var so = new SerializedObject(target);
+        var property = so.FindProperty(field);
+        if (property == null)
+        {
+            Debug.LogError($"No serialized field '{field}' on {target.GetType().Name}.", target);
+            return;
+        }
+
+        property.colorValue = value;
         so.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(target);
     }

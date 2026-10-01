@@ -41,13 +41,24 @@ public class InspectBoxWidget : MonoBehaviour
              "many there are is the thing being read's business.")]
     [SerializeField] private RectTransform tagRow;
 
-    [Tooltip("One chip's background. Left empty, chips draw as plain text.")]
+    [Tooltip("One chip's background. Left empty, chips draw as plain text. " +
+             "It is the same sprite as the card's plate, 9-sliced.")]
     [SerializeField] private Sprite chipSprite;
 
-    [Header("Look")]
-    [SerializeField] private Color chipColor = new Color(0.30f, 0.33f, 0.42f, 1f);
+    // ⚠️ EVERY FIELD BELOW IS REWRITTEN BY InspectBoxSetup ON EVERY RUN of
+    // Word Crush/Set Up Game Layout, because there is a box in each of two scenes
+    // and a value tuned on one of them is a value the other doesn't have. Drag
+    // them here to find something you like — OnValidate redraws the box as you
+    // go — then put the number in that script, which is where it survives.
+    [Header("Look — set by InspectBoxSetup, not preserved")]
+    [SerializeField] private Color chipColor = new Color(0.47f, 0.60f, 0.82f, 1f);
     [SerializeField] private Color chipTextColor = Color.white;
-    [SerializeField] private float chipFontSize = 22f;
+    [SerializeField] private float chipFontSize = 26f;
+
+    [Tooltip("How big the drawn border and corners come out. HIGHER IS CHUNKIER: " +
+             "1 draws the art's 8-pixel corner as 8 canvas units, 2.5 draws it as " +
+             "20. Drives the card and the chips together.")]
+    [SerializeField] private float borderScale = 2.5f;
 
     [Header("Placement")]
     [Tooltip("Gap in canvas units between the thing being read and the box.")]
@@ -89,7 +100,50 @@ public class InspectBoxWidget : MonoBehaviour
         self.pivot = new Vector2(0.5f, 1f);          // hangs DOWN from its top edge
 
         RefuseRaycasts();
+        ApplySliceSettings();
         Hide();
+    }
+
+#if UNITY_EDITOR
+    // So dragging borderScale in the Inspector redraws the box immediately
+    // instead of only once the game is running. The whole point of the field is
+    // that it gets tuned by eye.
+    private void OnValidate() => ApplySliceSettings();
+#endif
+
+    /// <summary>
+    /// Dresses the card's plate and every chip as 9-SLICED art at one shared
+    /// corner size.
+    ///
+    /// ⚠️ ONE CORNER SIZE REACHES BOTH THE CARD AND THE CHIPS, and that is the
+    /// point of this method being public. The card's plate is built by
+    /// InspectBoxSetup and the chips are built at runtime by this class, so the
+    /// number has two call sites — and two call sites with their own copies is
+    /// how the chips end up with a visibly different corner radius from the box
+    /// they sit in. The setup script writes the value onto this object and then
+    /// asks for this, rather than dressing the plate itself.
+    ///
+    /// Unity's own knob is pixelsPerUnitMultiplier, which DIVIDES the border, so
+    /// bigger means smaller. It is inverted here because this field exists to be
+    /// dragged in the Inspector, and a slider that shrinks things as it goes up is
+    /// a slider nobody tunes correctly the first time.
+    /// </summary>
+    public void ApplySliceSettings()
+    {
+        if (root != null) DressPlate(root.GetComponent<Image>());
+
+        for (int i = 0; i < chips.Count; i++)
+            if (chips[i] != null) DressPlate(chips[i].GetComponent<Image>());
+    }
+
+    private void DressPlate(Image image)
+    {
+        if (image == null || image.sprite == null) return;
+
+        image.type = Image.Type.Sliced;
+        image.fillCenter = true;
+        image.preserveAspect = false;
+        image.pixelsPerUnitMultiplier = 1f / Mathf.Max(0.01f, borderScale);
     }
 
     private void OnEnable()
@@ -174,11 +228,22 @@ public class InspectBoxWidget : MonoBehaviour
     }
 
     /// <summary>
-    /// Tucks the box under the thing being read, and keeps it on screen.
+    /// Puts the box beside the thing being read, and keeps it on screen.
     ///
-    /// Flips above rather than being squashed when there is no room below, which
-    /// is what the bottom row of the board needs — the alternative is a box half
-    /// off the bottom of the phone.
+    /// ⚠️ IT GOES ABOVE BY DEFAULT, NOT BELOW, AND THAT IS THE WHOLE POINT. You
+    /// hold a phone from the bottom, so a box drawn under the thing you just
+    /// touched is a box drawn behind your own hand. It used to prefer below and
+    /// flip up only when it physically wouldn't fit, which meant every tile on
+    /// the board put its description under your finger.
+    ///
+    /// Preferring above also means there is no threshold to tune. The board
+    /// occupies 43%-92% of the screen and a box is roughly a ninth of the screen
+    /// tall, so everything from the bookmarks down has room above it and reads
+    /// upward; only the round header at the very top runs out of ceiling and
+    /// falls back to drawing below, on its own, with nothing to configure. A
+    /// percentage threshold would instead cut somewhere through the board, and
+    /// one row of tiles behaving differently from the four under it reads as a
+    /// bug rather than as a rule. His call, 2026-09-30.
     /// </summary>
     private void Place(Rect screenRect)
     {
@@ -198,11 +263,8 @@ public class InspectBoxWidget : MonoBehaviour
         float canvasWidth = canvasRect.rect.width;
         float canvasHeight = canvasRect.rect.height;
 
-        float y = itemBottomY - gap;
-        if (y - height < screenMargin) y = itemTopY + gap + height;
-
-        // ⚠️ Both ranges are built so the low bound can never exceed the high
-        // one. Mathf.Clamp with min > max silently returns the MIN, so a box
+        // ⚠️ Every range here is built so the low bound can never exceed the
+        // high one. Mathf.Clamp with min > max silently returns the MIN, so a box
         // wider or taller than the screen would be pinned to a corner with no
         // hint that the range was nonsense.
         float halfWidth = width * 0.5f;
@@ -210,9 +272,24 @@ public class InspectBoxWidget : MonoBehaviour
         float maxX = Mathf.Max(minX, canvasWidth - halfWidth - screenMargin);
         float x = Mathf.Clamp(itemCentreX, minX, maxX);
 
-        float maxY = canvasHeight - screenMargin;
-        float minY = Mathf.Min(height + screenMargin, maxY);
-        y = Mathf.Clamp(y, minY, maxY);
+        // Both of these are the box's TOP edge, because the pivot is (0.5, 1).
+        float above = itemTopY + gap + height;
+        float below = itemBottomY - gap;
+
+        float highest = canvasHeight - screenMargin;
+        float lowest = Mathf.Min(height + screenMargin, highest);
+
+        float y;
+        if (above <= highest) y = above;              // the default
+        else if (below >= lowest) y = below;
+
+        // Neither side fits, which takes a box about as tall as the screen. Take
+        // the one that misses by less and let the clamp do the rest — the old
+        // code flipped blindly here, so a tall box could be sent to the side with
+        // LESS room and end up jammed against the margin.
+        else y = (above - highest) <= (lowest - below) ? above : below;
+
+        y = Mathf.Clamp(y, lowest, highest);
 
         self.anchoredPosition = new Vector2(x, y);
     }
@@ -253,9 +330,18 @@ public class InspectBoxWidget : MonoBehaviour
         if (chipSprite != null) image.sprite = chipSprite;
         image.color = chipColor;
         image.raycastTarget = false;
+        DressPlate(image);
 
         var group = go.GetComponent<HorizontalLayoutGroup>();
-        group.padding = new RectOffset(12, 12, 4, 4);
+
+        // ⚠️ THE PADDING IS WHAT KEEPS A CHIP BIGGER THAN ITS OWN CORNERS. A
+        // sliced image smaller than its borders added together does not overflow
+        // — Unity quietly shrinks the border to fit — so a cramped chip comes out
+        // with a tighter corner radius than the card it sits in, which reads as
+        // sloppy art rather than as a layout number being too small. At the
+        // default borderScale the corners want about 40 units in each direction,
+        // and "1 PT" at font size 26 does not reach that on its own.
+        group.padding = new RectOffset(22, 22, 14, 14);
         group.childAlignment = TextAnchor.MiddleCenter;
         group.childForceExpandWidth = false;
         group.childForceExpandHeight = false;

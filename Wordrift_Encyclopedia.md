@@ -150,8 +150,12 @@ it.** The caption above them reads `ITEMS`, or names whatever you've armed to sc
 word.
 
 **The info box** is how you find out what anything does. Touch a tile, a bookmark or an item
-and a small card appears underneath it with its name, what it does, and its qualities — a
+and a small card appears **above** it with its name, what it does, and its qualities — a
 tile's points and its badges, for instance. It stays until you touch something else.
+
+*(Above rather than below because you hold a phone from the bottom, so a card under the thing
+you just touched is a card behind your own hand. Things right at the top of the screen have no
+room up there and drop below instead.)*
 
 | What you're reading | How |
 |---|---|
@@ -162,7 +166,7 @@ tile's points and its badges, for instance. It stays until you touch something e
 learn, but the board is the one place where touching something already means something, and
 putting a box on the screen every time you tap a letter would be worse than a split.)*
 
-🚧 It's a plain dark card for now. The **tile bag** is tappable but doesn't open yet, and the
+🚧 The **tile bag** is tappable but doesn't open yet, and the
 **info** and **settings** buttons don't open anything either. The **librarian's** rule is
 already printed in the round header, so it needs no box, and **checkouts** you've bought
 aren't re-readable anywhere yet.
