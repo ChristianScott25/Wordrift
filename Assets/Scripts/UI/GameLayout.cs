@@ -214,6 +214,17 @@ public class GameLayout : MonoBehaviour
     public RectTransform BandOf(LayoutBand band) =>
         containers.TryGetValue(band, out var rect) ? rect : null;
 
+    /// <summary>
+    /// The camera the board is drawn with — for Inspector.ScreenRectOf, which is
+    /// how a world-space thing tells a canvas widget where it is on screen.
+    ///
+    /// ⚠️ NOT a licence to do your own WorldToScreenPoint / scaleFactor maths.
+    /// WorldRectOf and CanvasYOf below are still the only two places the camera
+    /// and the canvas are reconciled; this exists so a widget can hand the camera
+    /// to the one shared helper rather than keep a second reference to it.
+    /// </summary>
+    public Camera SceneCamera => sceneCamera;
+
     /// <summary>The band's rect in canvas units, measured from the canvas's bottom-left.</summary>
     public Rect CanvasRectOf(LayoutBand band) =>
         rects.TryGetValue(band, out var rect) ? rect : new Rect();

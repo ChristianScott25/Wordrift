@@ -120,6 +120,7 @@ public static class GameLayoutSetup
         BuildBag(canvas);
         BuildConsumables(canvas, session);
         InspectBoxSetup.Build(canvas);
+        ScorePopSetup.Build(canvas);
         BuildSystemButtons(canvas);
         BuildWordRow(canvas, board);
 

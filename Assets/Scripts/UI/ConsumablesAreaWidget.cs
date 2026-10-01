@@ -99,6 +99,7 @@ public class ConsumablesAreaWidget : MonoBehaviour
         GameEvents.RoundStarted += Refresh;
         GameEvents.StatusChanged += OnStatusChanged;
         GameEvents.RoundEnded += OnRoundEnded;
+        GameEvents.ScoreBeat += OnScoreBeat;
 
         // The run telling the UI it moved — the opposite direction from
         // GameEvents. It is what fires when an item is bought or spent.
@@ -111,6 +112,7 @@ public class ConsumablesAreaWidget : MonoBehaviour
         GameEvents.RoundStarted -= Refresh;
         GameEvents.StatusChanged -= OnStatusChanged;
         GameEvents.RoundEnded -= OnRoundEnded;
+        GameEvents.ScoreBeat -= OnScoreBeat;
         RunState.Changed -= Refresh;
 
         // A card left parented to the canvas root would survive this widget
@@ -152,8 +154,53 @@ public class ConsumablesAreaWidget : MonoBehaviour
     }
 
     /// <summary>Rebuilds the slots from what the run is carrying.</summary>
+    /// <summary>
+    /// Shakes the slot holding whatever just scored — an armed Doubler taking its
+    /// turn — and floats its number off the top of it.
+    ///
+    /// ⚠️ Found by the ASSET, which two slots can legitimately share: duplicates
+    /// are allowed, so arming two Doublers shakes the first slot twice rather
+    /// than one each. Harmless, and the alternative is the mode keeping track of
+    /// which slot an armed item came from, which nothing else needs.
+    /// </summary>
+    private void OnScoreBeat(ScoreStep step)
+    {
+        if (step.Kind != ScoreActor.Consumable) return;
+        if (step.Actor is not Consumable consumable) return;
+
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var slot = slots[i];
+
+            // activeSelf in the SAME test as the item, not after it: a slot past
+            // the carried count is hidden but still holds what it last showed.
+            if (slot == null || slot.Rect == null || !slot.gameObject.activeSelf) continue;
+            if (!ReferenceEquals(slot.Consumable, consumable)) continue;
+
+            // Sampled before the pulse — see BookmarkRowWidget.
+            var at = Inspector.ScreenRectOf(slot.Rect);
+
+            Jolt.Pulse(slot.Rect);
+            ScorePop.Show(step.Amount, at, step.Side);
+            return;
+        }
+    }
+
+    /// <summary>
+    /// Stops every slot mid-pulse and puts it back. Before a Refresh, which
+    /// rebinds slots to different items — a slot left shaking through that would
+    /// be the wrong slot shaking.
+    /// </summary>
+    private void CancelPulses()
+    {
+        for (int i = 0; i < slots.Count; i++)
+            if (slots[i] != null) Jolt.Cancel(slots[i].Rect);
+    }
+
     private void Refresh()
     {
+        CancelPulses();
+
         // Spending an item raises RunState.Changed from inside UseConsumable,
         // which lands here — and re-binding the card still under the finger
         // would renumber it mid-gesture. The drag puts the card back and

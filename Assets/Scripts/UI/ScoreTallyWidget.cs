@@ -1,23 +1,23 @@
-using System.Collections;
 using TMPro;
 using UnityEngine;
 
 /// <summary>
 /// The scoring readout: POINTS x MULT, live while you select and then walked
-/// through a step at a time once you commit.
+/// through a beat at a time once you commit.
 ///
-/// Before ENTER it shows only the BASE — what the tiles are worth times the
-/// word's length multiplier. Bookmarks are deliberately absent from that: seeing
-/// them land afterwards is the payoff, and previewing them would just hand the
-/// player the answer.
+/// Before PLAY it shows the whole selection — the word's length plus every tile,
+/// through its own badges. Bookmarks, the librarian and armed items are
+/// deliberately absent from that: seeing them land afterwards is the payoff, and
+/// previewing them would just hand the player the answer.
 ///
-/// After ENTER it replays WordResult.Steps. A run owning no bookmarks produces
-/// no steps, so early rounds resolve instantly and the flourish grows only as
-/// the player earns things worth watching.
+/// After PLAY it opens on WordResult.Opening — the length ALONE, which is where
+/// both numbers start — and then draws each beat it is handed, climbing back
+/// through the preview's number and past it.
 ///
-/// Both this and GameSession read ScoreTallyTiming, which is the whole reason
-/// that class exists: the session waits exactly as long as this animates, and
-/// two Inspector copies of the same numbers would eventually disagree.
+/// ⚠️ IT DOES NOT OWN A CLOCK, AND MUST NOT GROW ONE. GameSession.ScoreThenClear
+/// steps the beats and raises them; this draws whatever it is given. The two used
+/// to run separate timers off a shared constant and could not stay in step — see
+/// ScoreTallyTiming for what that cost.
 ///
 /// ⚠️ IT NEVER HIDES. It used to disappear whenever nothing was selected, which
 /// was right when it floated in the middle of the screen and wrong now that it
@@ -37,12 +37,11 @@ public class ScoreTallyWidget : MonoBehaviour
     [Tooltip("The product underneath — what this word is actually worth.")]
     [SerializeField] private TMP_Text totalLabel;
 
-    [Tooltip("Names the bookmark firing during the walk-through. Blank the rest of the time.")]
+    [Tooltip("Names whatever is firing during the walk-through. Blank the rest of the time.")]
     [SerializeField] private TMP_Text stepLabel;
 
-    [Tooltip("Where the multiplier comes from — \"5 LETTERS\". Without it that " +
-             "number is magic; Balatro names the poker hand over its own for the " +
-             "same reason.")]
+    [Tooltip("Where BOTH numbers come from — \"5 LETTERS\". Without it they are " +
+             "magic; Balatro names the poker hand over its own for the same reason.")]
     [SerializeField] private TMP_Text lengthLabel;
 
     [Header("Place in band")]
@@ -51,12 +50,24 @@ public class ScoreTallyWidget : MonoBehaviour
     [Range(0f, 1f)][SerializeField] private float bandXMax = 1f;
 
     [Header("Look")]
-    [SerializeField] private Color restingColor = Color.white;
+    [Tooltip("The left-hand number, and every floating number that moved it.")]
+    [SerializeField] private Color pointsColor = new Color(0.13f, 0.26f, 0.55f, 1f);
 
-    [Tooltip("Flashed on whichever number a step just changed.")]
+    [Tooltip("The right-hand number, and every floating number that moved it.")]
+    [SerializeField] private Color multColor = new Color(0.60f, 0.13f, 0.16f, 1f);
+
+    [Tooltip("Flashed on whichever number a beat just changed.")]
     [SerializeField] private Color hitColor = new Color(1f, 0.85f, 0.3f);
 
-    private Coroutine tally;
+    /// <summary>
+    /// A walk is in progress and owns the display.
+    ///
+    /// ⚠️ THIS IS WHAT STOPS THE SCORE BLANKING THE INSTANT PLAY IS PRESSED.
+    /// ChainController.Submit raises the word and then immediately raises an
+    /// EMPTY selection, and acting on that would wipe the numbers before the
+    /// first beat landed.
+    /// </summary>
+    private bool walking;
 
     private void Awake()
     {
@@ -76,6 +87,8 @@ public class ScoreTallyWidget : MonoBehaviour
         GameLayout.Changed += PlaceSelf;
         GameEvents.SelectionChanged += OnSelectionChanged;
         GameEvents.WordSubmitted += OnWordSubmitted;
+        GameEvents.ScoreBeat += OnScoreBeat;
+        GameEvents.ScoreWalkEnded += OnWalkEnded;
         GameEvents.RoundStarted += OnRoundStarted;
         GameEvents.RoundEnded += OnRoundEnded;
     }
@@ -85,8 +98,14 @@ public class ScoreTallyWidget : MonoBehaviour
         GameLayout.Changed -= PlaceSelf;
         GameEvents.SelectionChanged -= OnSelectionChanged;
         GameEvents.WordSubmitted -= OnWordSubmitted;
+        GameEvents.ScoreBeat -= OnScoreBeat;
+        GameEvents.ScoreWalkEnded -= OnWalkEnded;
         GameEvents.RoundStarted -= OnRoundStarted;
         GameEvents.RoundEnded -= OnRoundEnded;
+
+        // Or a re-enabled widget would think a walk were still running and
+        // ignore every selection from then on.
+        walking = false;
     }
 
     // Start, not OnEnable — the layout resolves between the two. See GameLayout.
@@ -97,10 +116,8 @@ public class ScoreTallyWidget : MonoBehaviour
 
     private void OnSelectionChanged(SelectionState selection)
     {
-        // A tally in progress owns the display until it's finished — the
-        // selection empties the moment ENTER is pressed, and letting that
-        // blank the numbers would wipe the score mid-count.
-        if (tally != null) return;
+        // A walk in progress owns the display until it's finished — see `walking`.
+        if (walking) return;
 
         if (selection.IsEmpty)
         {
@@ -112,11 +129,39 @@ public class ScoreTallyWidget : MonoBehaviour
         DrawLength(selection.Word);
     }
 
+    /// <summary>
+    /// The opening frame: both numbers at the word's LENGTH, nothing counted yet.
+    /// Every tile then climbs on top of it, one beat at a time.
+    /// </summary>
     private void OnWordSubmitted(WordResult result)
     {
         if (!result.Accepted) return;
-        if (tally != null) StopCoroutine(tally);
-        tally = StartCoroutine(Walk(result));
+
+        walking = true;
+        Draw(result.Opening.Points, result.Opening.Mult, "");
+        DrawLength(result.Word);
+    }
+
+    /// <summary>
+    /// One beat. Each step already carries the totals AFTER it, so this only has
+    /// to display them — no scoring logic lives here, and no timing either.
+    /// </summary>
+    private void OnScoreBeat(ScoreStep step)
+    {
+        Draw(step.Points, step.Mult, $"{step.Source}   {step.Detail}");
+        Flash(step.Side == ScoreSide.Points ? pointsLabel : multLabel);
+
+        // Only the beats with nothing on screen behind them. Everything else is
+        // popped by the widget that owns the thing — it's the only one that knows
+        // where that thing is. See ScorePop.
+        if (step.Kind == ScoreActor.Mode || step.Kind == ScoreActor.None)
+            ScorePop.Show(step.Amount, Inspector.ScreenRectOf((RectTransform)transform), step.Side);
+    }
+
+    private void OnWalkEnded()
+    {
+        walking = false;
+        DrawResting();
     }
 
     private void OnRoundStarted() => Clear();
@@ -125,8 +170,7 @@ public class ScoreTallyWidget : MonoBehaviour
 
     private void Clear()
     {
-        if (tally != null) StopCoroutine(tally);
-        tally = null;
+        walking = false;
         DrawResting();
     }
 
@@ -138,9 +182,12 @@ public class ScoreTallyWidget : MonoBehaviour
     }
 
     /// <summary>
-    /// Says where the multiplier came from. Counted in LETTERS, not tiles — a
+    /// Says where the two numbers came from. Counted in LETTERS, not tiles — a
     /// "ch" tile is two, which is the same distinction ScoreCalculator draws and
     /// the same one two bookmarks once got wrong.
+    ///
+    /// It earns its place twice over now that length is the base POINTS as well
+    /// as the multiplier: this one number is where the whole walk starts.
     /// </summary>
     private void DrawLength(string word)
     {
@@ -150,49 +197,18 @@ public class ScoreTallyWidget : MonoBehaviour
         lengthLabel.text = letters == 0 ? "" : $"{letters} LETTER{(letters == 1 ? "" : "S")}";
     }
 
-    /// <summary>
-    /// Steps the two numbers from their base to their final values, pausing on
-    /// each bookmark. Each ScoreStep already carries the totals AFTER it, so
-    /// this only has to display them — no scoring logic lives here.
-    /// </summary>
-    private IEnumerator Walk(WordResult result)
-    {
-        Draw(result.Base.Points, result.Base.Mult, "");
-        DrawLength(result.Word);
-
-        if (result.HasSteps)
-        {
-            foreach (var step in result.Steps)
-            {
-                yield return new WaitForSeconds(ScoreTallyTiming.StepSeconds);
-                Draw(step.Points, step.Mult, $"{step.Source}   {step.Detail}");
-                Flash(step.Side == ScoreSide.Points ? pointsLabel : multLabel);
-            }
-        }
-
-        // Held even when nothing fired, so the numbers are readable instead of
-        // vanishing the instant ENTER is pressed.
-        yield return new WaitForSeconds(ScoreTallyTiming.FinishSeconds);
-
-        // Clear tally BEFORE resting: the session raises an empty selection at
-        // the same moment, and whichever of the two lands first must reach the
-        // same place. Both rest, so the order can't matter.
-        tally = null;
-        DrawResting();
-    }
-
     private void Draw(int points, float mult, string step)
     {
         if (pointsLabel != null)
         {
             pointsLabel.text = points.ToString();
-            pointsLabel.color = restingColor;
+            pointsLabel.color = pointsColor;
         }
         if (multLabel != null)
         {
             // Bare number — the separator label between the two IS the "x".
             multLabel.text = ScoringContext.Trim(mult);
-            multLabel.color = restingColor;
+            multLabel.color = multColor;
         }
         // Saturated the same way ScoreCalculator.Evaluate is, and for the same
         // reason: this is the number the player WATCHES, so a wrapped one here

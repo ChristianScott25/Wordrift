@@ -35,12 +35,18 @@ live `ScorePair` preview. Widgets obey those rather than re-deriving them, which
 a button from offering something the session would refuse — and a preview from disagreeing
 with the score.
 
-**Scoring is two numbers.** `ScoreCalculator.Base` gives `Points × Mult` — tiles (through their
-own 2L/3L and 2W/3W) times a multiplier from word length. That pair is what the HUD shows live.
-`Evaluate` runs the run's bookmarks over it in slot order, each recording a `ScoreStep`, and the
-HUD replays those steps one beat at a time after ENTER. A bookmark can add points, add mult, or
-multiply mult; the additive and multiplicative forms don't commute, which is what makes the
-order bookmarks sit in a real decision.
+**Scoring is two numbers, and EVERY contributor is a beat.** Both numbers open at the word's
+LENGTH (`ModeConfig.LengthPoints` and `LengthMultiplier`), and then every tile adds itself in
+chain order, then the run's bookmarks in slot order, then the round's rule, then the mode's own
+multiplier. Each one goes through a `ScoringContext` and records a `ScoreStep` saying what it
+did and WHICH thing on screen did it — `GameSession.ScoreThenClear` steps through them on the
+one clock there is and raises `GameEvents.ScoreBeat`, and the widgets shake whatever each beat
+points at. `ScoreCalculator.Preview` is the same walk with recording off, which is what the HUD
+shows live; sharing the walk is what stops a preview drifting from the score beside it.
+A bookmark can add points, multiply points, add mult or multiply mult; the additive and
+multiplicative forms don't commute, which is what makes the order bookmarks sit a real decision
+— and since a 2W/3W fires on its own tile's beat, the order the TILES were dragged in is now one
+too.
 
 ## Layout
 

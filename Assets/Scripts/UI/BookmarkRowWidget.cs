@@ -83,6 +83,16 @@ public class BookmarkRowWidget : MonoBehaviour
 
     private bool Dragging => dragFrom >= 0 && dragCard != null;
 
+    /// <summary>
+    /// A word is being counted, so these cards are mid-performance.
+    ///
+    /// ⚠️ IT IS WHY A DRAG IS REFUSED WHILE A WORD SCORES. ScoreThenClear only
+    /// turns off the BOARD's input, so the HUD stays live throughout — and
+    /// reordering a scoring order that has already been applied, while the cards
+    /// are being walked through in that order, is nonsense the player can't undo.
+    /// </summary>
+    private bool walking;
+
     private void Awake()
     {
         self = (RectTransform)transform;
@@ -117,7 +127,11 @@ public class BookmarkRowWidget : MonoBehaviour
         // of a resumed run looks exactly like a run that lost its bookmarks.
         Refresh();
 
-        GameEvents.RoundStarted += Refresh;
+        GameEvents.RoundStarted += OnRoundStarted;
+        GameEvents.RoundEnded += OnRoundEnded;
+        GameEvents.WordSubmitted += OnWordSubmitted;
+        GameEvents.ScoreBeat += OnScoreBeat;
+        GameEvents.ScoreWalkEnded += OnWalkEnded;
         RunState.Changed += OnRunChanged;
 
         // The board's top edge moves when the bands are re-resolved, so the row
@@ -130,8 +144,15 @@ public class BookmarkRowWidget : MonoBehaviour
     {
         GameLayout.Changed -= PinAboveBoard;
 
-        GameEvents.RoundStarted -= Refresh;
+        GameEvents.RoundStarted -= OnRoundStarted;
+        GameEvents.RoundEnded -= OnRoundEnded;
+        GameEvents.WordSubmitted -= OnWordSubmitted;
+        GameEvents.ScoreBeat -= OnScoreBeat;
+        GameEvents.ScoreWalkEnded -= OnWalkEnded;
         RunState.Changed -= OnRunChanged;
+
+        // Or a re-enabled row would refuse drags forever.
+        walking = false;
 
         // A drag doesn't survive the widget going away. Left set, dragFrom would
         // still be pointing at a slot when this came back, and the next stray
@@ -155,11 +176,80 @@ public class BookmarkRowWidget : MonoBehaviour
     }
 
     // ------------------------------------------------------------------------
+    // THE SCORE WALK-THROUGH
+    // ------------------------------------------------------------------------
+
+    private void OnWordSubmitted(WordResult result)
+    {
+        if (result.Accepted) walking = true;
+    }
+
+    /// <summary>
+    /// Shakes the card that just scored and floats its number off the top of it.
+    ///
+    /// Found by REFERENCE rather than by slot, because cards are reused across a
+    /// reorder and a slot number means something different afterwards. See
+    /// ScoreStep.Actor.
+    /// </summary>
+    private void OnScoreBeat(ScoreStep step)
+    {
+        if (step.Kind != ScoreActor.Bookmark) return;
+        if (step.Actor is not BookmarkSpec spec) return;
+
+        for (int i = 0; i < cards.Count; i++)
+        {
+            var card = cards[i];
+
+            // activeSelf in the SAME test as the spec, not after it: a card past
+            // the owned count is hidden but still holds whatever it was last
+            // bound to, so bailing on it would miss the live card behind it.
+            if (card == null || card.Rect == null || !card.gameObject.activeSelf) continue;
+            if (!ReferenceEquals(card.Spec, spec)) continue;
+
+            // Sampled BEFORE the pulse: a rotating rect's bounds grow, and a
+            // label placed off a moving one would drift with the shake.
+            var at = Inspector.ScreenRectOf(card.Rect);
+
+            Jolt.Pulse(card.Rect);
+            ScorePop.Show(step.Amount, at, step.Side);
+            return;
+        }
+    }
+
+    private void OnWalkEnded() => walking = false;
+
+    private void OnRoundEnded(RoundSummary summary) => walking = false;
+
+    /// <summary>
+    /// ⚠️ Clears `walking` as well as redrawing. A round that starts mid-walk
+    /// never reaches OnWalkEnded, and a row left thinking a word were still
+    /// being counted would refuse every drag from then on.
+    /// </summary>
+    private void OnRoundStarted()
+    {
+        walking = false;
+        Refresh();
+    }
+
+    /// <summary>
+    /// Stops every card mid-pulse and puts it back. Called before a Refresh,
+    /// which REBINDS cards to different bookmarks — a card left shaking through
+    /// that would be the wrong card shaking.
+    /// </summary>
+    private void CancelPulses()
+    {
+        for (int i = 0; i < cards.Count; i++)
+            if (cards[i] != null) Jolt.Cancel(cards[i].Rect);
+    }
+
+    // ------------------------------------------------------------------------
     // DRAWING
     // ------------------------------------------------------------------------
 
     private void Refresh()
     {
+        CancelPulses();
+
         var run = RunState.Current;
         var owned = run?.Bookmarks;
         int count = owned == null ? 0 : owned.Count;
@@ -367,6 +457,9 @@ public class BookmarkRowWidget : MonoBehaviour
 
     internal void BeginCardDrag(BookmarkCard card)
     {
+        // Not while the word is being counted — see `walking`.
+        if (walking) return;
+
         // One card at a time. A second finger is ignored rather than taking
         // over, so the drag that's already in flight still lands where the
         // player aimed it.

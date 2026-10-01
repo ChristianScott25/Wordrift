@@ -65,20 +65,56 @@ public class RoundBannerWidget : MonoBehaviour
     private void OnEnable()
     {
         GameEvents.StatusChanged += OnStatusChanged;
+        GameEvents.ScoreBeat += OnScoreBeat;
         GameLayout.Changed += PlaceSelf;
     }
 
     private void OnDisable()
     {
         GameEvents.StatusChanged -= OnStatusChanged;
+        GameEvents.ScoreBeat -= OnScoreBeat;
         GameLayout.Changed -= PlaceSelf;
     }
 
     // Start, not OnEnable — the layout resolves between the two. See GameLayout.
     private void Start() => PlaceSelf();
 
-    private void PlaceSelf() =>
+    /// <summary>
+    /// Shakes the header when the librarian takes its cut, and floats its number
+    /// off the top of the box.
+    ///
+    /// The whole box, not the portrait: the librarian's name and its rule are
+    /// drawn in two different children, and shaking one of them would read as a
+    /// label glitching rather than as the librarian acting. The box's SIZE is
+    /// deliberately fixed (see the class note) and a pulse doesn't change that —
+    /// it scales what's drawn, the band keeps its height, and nothing under it
+    /// moves.
+    ///
+    /// ⚠️ The Critic produces TWO beats, one per number, so the header pulses
+    /// twice in a row. That's correct — it really does two things.
+    /// </summary>
+    private void OnScoreBeat(ScoreStep step)
+    {
+        if (step.Kind != ScoreActor.Librarian || self == null) return;
+
+        // Sampled before the pulse: a rotating rect's bounds grow, so a label
+        // placed off a moving one would drift along with the shake.
+        var at = Inspector.ScreenRectOf(self);
+
+        Jolt.Pulse(self);
+        ScorePop.Show(step.Amount, at, step.Side);
+    }
+
+    private void PlaceSelf()
+    {
+        // ⚠️ Before Attach, which sets localScale back to one — a pulse still
+        // holding its captured scale would restore the pre-resize value when it
+        // finished. This is the one performer whose own transform the layout
+        // writes to; the others pulse children the layout never touches.
+        Jolt.Cancel(self);
+
         GameLayout.Attach(self, LayoutBand.RoundHeader, bandXMin, bandXMax);
+    }
 
     /// <summary>
     /// Everything here comes off ModeStatus, including the score — deliberately,

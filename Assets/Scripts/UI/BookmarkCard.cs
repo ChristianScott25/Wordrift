@@ -42,6 +42,13 @@ public class BookmarkCard : MonoBehaviour,
     // thing that owns one.
     private BookmarkSpec spec;
 
+    /// <summary>
+    /// Which bookmark this card is currently showing. Cards are REUSED across a
+    /// reorder, so this is the only honest way to ask "where is Bookend right
+    /// now" — the walk-through needs it to shake the right card.
+    /// </summary>
+    public BookmarkSpec Spec => spec;
+
     // Did this gesture turn into a drag? See the class comment.
     private bool dragged;
 

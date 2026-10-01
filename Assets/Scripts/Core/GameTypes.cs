@@ -7,22 +7,25 @@ using UnityEngine;
 /// </summary>
 
 /// <summary>
-/// The two numbers a score is made of, before anything else touches them.
-/// Points is what the tiles are worth; Mult comes from the word's length. This
-/// is what the HUD shows live while tiles are being selected.
+/// The two numbers a score is made of. Both START at the word's LENGTH — so many
+/// letters, so many points, and a multiplier off the same curve — and the tiles
+/// build on that.
+///
+/// It is used for two DIFFERENT moments and they are not the same numbers, which
+/// is the one thing to keep straight here:
+///
+///   SelectionState.Preview   every tile counted  — the live readout while you drag
+///   WordResult.Opening       length alone        — where the walk-through STARTS
+///
+/// ⚠️ There is deliberately no "the 2W factor" field any more. A word multiplier
+/// now fires on its own tile's beat and multiplies whatever has piled up so far,
+/// so there is no single aggregate factor that Points "has already been
+/// multiplied by" — the steps are where that information lives.
 /// </summary>
 public struct ScorePair
 {
     public int Points;
     public float Mult;
-
-    /// <summary>
-    /// The 2W/3W factor, which Points has ALREADY been multiplied by. Kept
-    /// because folding it in destroys it — nothing can recover "x3 word" from
-    /// Points alone — and a readout that wants to call it out will need it.
-    /// Nothing reads it yet.
-    /// </summary>
-    public int WordMultiplier;
 
     /// <summary>The two numbers multiplied — saturated, never wrapped. See ScoreLimits.</summary>
     public int Total => ScoreLimits.Clamp((double)Points * Mult);
@@ -35,22 +38,29 @@ public struct WordResult
     public bool Accepted;
     public int Points;          // final points awarded (0 when rejected)
 
-    /// <summary>Where the two numbers started, before any bookmark.</summary>
-    public ScorePair Base;
+    /// <summary>
+    /// Where the walk-through STARTS: the word's length, on both sides, before a
+    /// single tile has been counted.
+    ///
+    /// ⚠️ NOT what the live preview shows. The preview has every tile in it
+    /// already — see ScorePair. Reading this one as "what the word is worth"
+    /// would print the letter count and call it a score.
+    /// </summary>
+    public ScorePair Opening;
 
-    public int FinalPoints;     // after every bookmark
-    public float FinalMult;     // after every bookmark
+    public int FinalPoints;     // after everything
+    public float FinalMult;     // after everything
 
     /// <summary>
-    /// What each bookmark did, in order. The HUD plays these back one beat at a
-    /// time — and because it's empty when nothing fired, a run with no bookmarks
-    /// scores instantly with nothing to sit through.
+    /// What each contributor did, in order — every tile, then every bookmark,
+    /// then the round, then the mode. The HUD plays these back one beat at a
+    /// time and shakes whatever each one points at.
     /// </summary>
     public System.Collections.Generic.IReadOnlyList<ScoreStep> Steps;
 
     public int TileCount;
 
-    /// <summary>Did anything intervene, or is this just tiles times length?</summary>
+    /// <summary>Did anything happen at all beyond the opening numbers?</summary>
     public bool HasSteps => StepCount > 0;
 
     public int StepCount => Steps == null ? 0 : Steps.Count;
@@ -187,10 +197,13 @@ public struct SelectionState
     public int DiscardsLeft;
 
     /// <summary>
-    /// What the selection is worth right now, before bookmarks — the pair of
-    /// numbers shown live. Bookmarks are deliberately NOT previewed: seeing
-    /// them fire after you commit is the payoff, and a preview that included
-    /// them would hand you the answer.
+    /// What the selection is worth right now: the word's length plus every tile,
+    /// through its own badges. Bookmarks, the librarian and armed items are
+    /// deliberately NOT previewed — seeing them fire after you commit is the
+    /// payoff, and a preview that included them would hand you the answer.
+    ///
+    /// ⚠️ This is a different number from WordResult.Opening, which is the
+    /// length ALONE. The walk-through starts there and climbs back up to this.
     /// </summary>
     public ScorePair Preview;
 

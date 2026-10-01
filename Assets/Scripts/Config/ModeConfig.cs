@@ -22,6 +22,14 @@ public abstract class ModeConfig : ScriptableObject
     [Min(2)] public int minWordLength = 3;
 
     [Header("Scoring")]
+    [Tooltip("The base POINTS a word gets for its LENGTH alone, per letter, " +
+             "before a single tile is counted — the opening beat of the " +
+             "walk-through, and the left-hand number's starting value. Length " +
+             "already sets the multiplier; this is the same fact on the other " +
+             "side of the x, which is what gives a plain word something to " +
+             "animate. 0 turns it off and the walk opens at nothing.")]
+    [Min(0f)] public float pointsPerLetter = 1f;
+
     [Tooltip("The base MULTIPLIER by word length — the right-hand number. Entry 0 " +
              "is a word of Min Word Length, and each entry after it is one letter " +
              "longer. This is the whole reason to reach for a longer word, so it's " +
@@ -89,6 +97,21 @@ public abstract class ModeConfig : ScriptableObject
         float last = lengthMultipliers[lengthMultipliers.Length - 1];
         return last + (index - (lengthMultipliers.Length - 1)) * multiplierPerExtraLetter;
     }
+
+    /// <summary>
+    /// The POINTS a word of this many letters opens on, before any tile.
+    ///
+    /// Deliberately right beside LengthMultiplier: one letter count, two answers,
+    /// and anyone changing how length pays should see both at once. A flat rate
+    /// rather than a curve because that is all the balance has asked for so far —
+    /// if it ever wants 7 letters to be a jump rather than one more point, this
+    /// grows into an array exactly like lengthMultipliers and nothing outside
+    /// changes.
+    ///
+    /// Counted in LETTERS, like everything about length — a "ch" tile is two.
+    /// </summary>
+    public int LengthPoints(int letterCount) =>
+        letterCount <= 0 ? 0 : Mathf.RoundToInt(letterCount * pointsPerLetter);
 
     /// <summary>Creates the live rule object that runs one round of this mode.</summary>
     public abstract GameMode CreateMode();

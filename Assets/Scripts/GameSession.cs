@@ -286,7 +286,7 @@ public class GameSession : MonoBehaviour
 
             // The same first stage the real score uses, so the preview can't
             // drift from what pressing ENTER actually pays.
-            Preview = scorer.Base(chain),
+            Preview = scorer.Preview(chain),
         });
     }
 
@@ -553,8 +553,15 @@ public class GameSession : MonoBehaviour
 
     /// <summary>
     /// Plays the score out before the board reacts, so nothing moves under the
-    /// numbers. The wait is the HUD's tally: one beat per bookmark that fired,
-    /// which means a run with no bookmarks waits for nothing at all.
+    /// numbers: the word's length, then every tile, then the bookmarks, the
+    /// round and the mode, one beat at a time.
+    ///
+    /// ⚠️ THIS IS THE WALK-THROUGH'S ONLY CLOCK. It used to hand the HUD a
+    /// duration and wait that long while the HUD ran its own timer, and the two
+    /// could not stay in step — see ScoreTallyTiming. The widgets are now pure
+    /// listeners: they draw and shake whatever beat they're handed, and this
+    /// decides when. Everything the player SEES still lands at the end, so the
+    /// score and the move counter move together.
     /// </summary>
     private IEnumerator ScoreThenClear(IReadOnlyList<Tile> chain, WordResult result)
     {
@@ -564,8 +571,24 @@ public class GameSession : MonoBehaviour
         tallying = true;
         chainController.InputEnabled = false;
 
+        // The opening frame: both numbers at the word's length, nothing counted.
         GameEvents.RaiseWordSubmitted(result);
-        yield return new WaitForSeconds(ScoreTallyTiming.For(result.StepCount));
+        yield return new WaitForSeconds(ScoreTallyTiming.StepAt(0));
+
+        int beats = result.StepCount;
+        for (int i = 0; i < beats; i++)
+        {
+            GameEvents.RaiseScoreBeat(result.Steps[i]);
+
+            // The LAST beat is held by Finish below instead, or the end of every
+            // word would be two pauses back to back.
+            if (i < beats - 1) yield return new WaitForSeconds(ScoreTallyTiming.StepAt(i + 1));
+        }
+
+        // Paid even when nothing fired, so the final numbers are readable
+        // instead of vanishing the instant the last beat lands.
+        yield return new WaitForSeconds(ScoreTallyTiming.Finish());
+        GameEvents.RaiseScoreWalkEnded();
 
         Score = ScoreLimits.Clamp((long)Score + result.Points);
         mode.OnWordAccepted(result);
@@ -855,19 +878,31 @@ public class GameSession : MonoBehaviour
     /// Can anything actually tell two candidate words apart?
     ///
     /// ⚠️ Usually NOT, and that's the normal case rather than an edge case. The
-    /// candidates are all spelled by the SAME tiles — only the letters they
-    /// resolve to differ — so ScoreCalculator.Base returns identical Points AND
-    /// Mult for every one of them. Only a bookmark that reads the letters
+    /// candidates are all spelled by the SAME tiles in the SAME order — only the
+    /// letters they resolve to differ — so the tile walk returns identical Points
+    /// AND Mult for every one of them. Only a bookmark that reads the letters
     /// (Bookend, Spine, Vowel Fanatic, Deja Vu) or a librarian that scores can
     /// separate them, and a run owns neither until it buys one. When this is
     /// false the alphabetical tiebreak IS the answer, which is why it's worth
     /// asking before doing any work at all.
     ///
-    /// That argument rests on a tile being worth the same whichever letter it
-    /// becomes — true of a wild (always 0) and of a choice tile (its catalog row
-    /// stamps one baseScore for the whole group). ⚠️ A future tile that scored
-    /// the letter it RESOLVED to would break this, and quietly: it would take the
-    /// alphabetically first word rather than the highest-scoring one.
+    /// That argument rests on two things, and both are worth stating because the
+    /// second one moved recently:
+    ///
+    ///  - A tile is worth the same whichever letter it becomes — true of a wild
+    ///    (always 0) and of a choice tile (its catalog row stamps one baseScore
+    ///    for the whole group).
+    ///  - The word's LENGTH is the same for every candidate, which it is because
+    ///    WordValidator.Matches only ever returns words the pattern's own length.
+    ///    Length became the opening POINTS on 2026-09-30, so it is now part of
+    ///    the score rather than just the multiplier — the shortcut survives that,
+    ///    but it is one step closer to the edge than it was.
+    ///
+    /// ⚠️ A future tile that scored the letter it RESOLVED to would break this,
+    /// and quietly: it would take the alphabetically first word rather than the
+    /// highest-scoring one. ModeConfig.pointsPerLetter becoming a per-LETTER
+    /// value rather than a per-letter-COUNT one is exactly that change wearing a
+    /// different hat.
     /// </summary>
     private bool ScoreSeparatesWords =>
         (mode.Bookmarks != null && mode.Bookmarks.Count > 0) || mode.ScoreRule != null;
@@ -894,8 +929,14 @@ public class GameSession : MonoBehaviour
             // and every bookmark and librarian only ever writes into that one.
             // ⚠️ A bookmark that DID something — paid money, touched the run —
             // would fire once per candidate here. They must stay declarative.
+            //
+            // ⚠️ recording: false is not an optimisation to drop. This runs on
+            // every frame of a drag, once per candidate — three wildcards is
+            // hundreds of them — and only Points is read. Recording would build
+            // a step per tile per candidate, each costing a few strings.
             int points = scorer.Evaluate(chain, candidates[i], wordsThisRound,
-                                         mode.Bookmarks, mode.ScoreRule).Points;
+                                         mode.Bookmarks, mode.ScoreRule,
+                                         recording: false).Points;
 
             // Strictly greater, so the first of equal answers wins.
             if (points > bestPoints)

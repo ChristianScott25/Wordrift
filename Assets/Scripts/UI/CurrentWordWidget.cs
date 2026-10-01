@@ -61,6 +61,18 @@ public class CurrentWordWidget : MonoBehaviour
     private Transform holder;
     private bool dirty = true;
 
+    /// <summary>
+    /// The word has been played and these tiles are being counted, so hold them.
+    ///
+    /// ⚠️ WITHOUT THIS THE WORD ROW EMPTIES THE INSTANT PLAY IS PRESSED.
+    /// ChainController.Submit raises the word — which starts the walk-through —
+    /// and then immediately raises an EMPTY selection, which used to land here as
+    /// Clear(). So the one row showing the tiles being scored vanished at exactly
+    /// the moment they started scoring. Same guard ScoreTallyWidget keeps on its
+    /// numbers, for the same reason.
+    /// </summary>
+    private bool walking;
+
     private void Awake()
     {
         self = (RectTransform)transform;
@@ -78,6 +90,10 @@ public class CurrentWordWidget : MonoBehaviour
     {
         GameEvents.SelectionChanged += OnSelectionChanged;
         GameEvents.RoundStarted += OnRoundStarted;
+        GameEvents.WordSubmitted += OnWordSubmitted;
+        GameEvents.ScoreBeat += OnScoreBeat;
+        GameEvents.ScoreWalkEnded += OnWalkEnded;
+        GameEvents.RoundEnded += OnRoundEnded;
         GameLayout.Changed += OnLayoutChanged;
     }
 
@@ -85,7 +101,15 @@ public class CurrentWordWidget : MonoBehaviour
     {
         GameEvents.SelectionChanged -= OnSelectionChanged;
         GameEvents.RoundStarted -= OnRoundStarted;
+        GameEvents.WordSubmitted -= OnWordSubmitted;
+        GameEvents.ScoreBeat -= OnScoreBeat;
+        GameEvents.ScoreWalkEnded -= OnWalkEnded;
+        GameEvents.RoundEnded -= OnRoundEnded;
         GameLayout.Changed -= OnLayoutChanged;
+
+        // Or a re-enabled row would think a walk were still running and ignore
+        // every selection from then on.
+        walking = false;
     }
 
     // Start, not OnEnable — the layout resolves between the two. See GameLayout.
@@ -119,14 +143,75 @@ public class CurrentWordWidget : MonoBehaviour
 
     private void OnLayoutChanged()
     {
+        // ⚠️ Before LayOutTiles, which re-dresses every tile through Tile.Init —
+        // and Init writes localScale absolutely. A pulse still holding its
+        // captured scale would put the OLD size back when it finished. See Jolt.
+        CancelPulses();
+
         PlaceSelf();
         LayOutTiles();
     }
 
-    private void OnRoundStarted() => Clear();
+    private void OnRoundStarted() => StopWalk();
+
+    private void OnRoundEnded(RoundSummary summary) => StopWalk();
+
+    /// <summary>
+    /// The word has been played: hold these tiles up while they're counted,
+    /// rather than letting the empty selection that follows wipe them.
+    /// </summary>
+    private void OnWordSubmitted(WordResult result)
+    {
+        if (result.Accepted) walking = true;
+    }
+
+    /// <summary>
+    /// Shakes the tile that just scored and floats its number off the top of it.
+    ///
+    /// The step carries the TileSpec rather than an index, which is what lets
+    /// this work at all: these are display COPIES of the board's tiles, and the
+    /// spec is the one object both of them hold. See ScoreStep.Actor.
+    /// </summary>
+    private void OnScoreBeat(ScoreStep step)
+    {
+        if (step.Kind != ScoreActor.Tile) return;
+
+        int index = shownSpecs.IndexOf(step.Actor as TileSpec);
+        if (index < 0 || index >= tiles.Count) return;
+
+        var tile = tiles[index];
+        if (tile == null || !tile.gameObject.activeSelf) return;
+
+        // ⚠️ Sampled BEFORE the pulse. Tile.WorldBounds is the renderer's world
+        // AABB, and an AABB GROWS as the sprite inside it rotates — a label
+        // tracking it would drift and jitter in time with the shake.
+        var cam = GameLayout.Current == null ? null : GameLayout.Current.SceneCamera;
+        Rect at = cam == null ? new Rect() : Inspector.ScreenRectOf(tile.WorldBounds, cam);
+
+        Jolt.Pulse(tile.transform);
+
+        if (cam != null) ScorePop.Show(step.Amount, at, step.Side);
+    }
+
+    private void OnWalkEnded() => StopWalk();
+
+    /// <summary>
+    /// Lets go of the played word. `dirty` because NeedsRebuild compares against
+    /// shownSpecs, and the next selection has to be measured against nothing
+    /// rather than against the word that was just taken off the board.
+    /// </summary>
+    private void StopWalk()
+    {
+        walking = false;
+        dirty = true;
+        Clear();
+    }
 
     private void OnSelectionChanged(SelectionState selection)
     {
+        // A walk in progress owns these tiles until it's finished — see `walking`.
+        if (walking) return;
+
         ShowMessage(selection);
 
         var chain = selection.Tiles;
@@ -290,5 +375,16 @@ public class CurrentWordWidget : MonoBehaviour
         for (int i = 0; i < tiles.Count; i++)
             if (tiles[i] != null && tiles[i].gameObject.activeSelf)
                 tiles[i].gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// Puts every tile back to its resting size before something else writes to
+    /// it. Deactivating one restores it on its own (Jolt.OnDisable), so this is
+    /// only needed where a tile stays up and gets re-laid-out under the pulse.
+    /// </summary>
+    private void CancelPulses()
+    {
+        for (int i = 0; i < tiles.Count; i++)
+            if (tiles[i] != null) Jolt.Cancel(tiles[i].transform);
     }
 }

@@ -122,7 +122,7 @@ The screen is a stack of bands, top to bottom:
 |---|---|
 | **Round header** | Who you're up against — the librarian's name, portrait and rule — and your score over the round's target. On a round with no librarian the box stays exactly the same size and shows the round number instead. Beside it, the **tile bag** (how many tiles are left to draw, out of your whole bag) and your **items** (§10). |
 | **Resource strip** | Small readouts: money, moves, discards, round. |
-| **Score × mult** | What the current selection is worth — the tiles' points, times the multiplier your word's length earns. After you hit PLAY this is where the bookmarks are counted in, one at a time. |
+| **Score × mult** | What the current selection is worth — your word's length plus every tile, times the multiplier its length earns. After you hit PLAY this is where the whole score is counted out, a beat at a time (§3). |
 | **Word row** | The word you're spelling, laid out left to right as tiles. When the selection won't score it says **WON'T SCORE** here instead, with the librarian's reason underneath when a librarian is the reason. |
 | **The board** | Where you drag. |
 | **Buttons** | Info, settings, DISCARD, PLAY. |
@@ -276,37 +276,55 @@ board full of tiles that spell nothing — see §6.
 
 ```
         POINTS          ×          MULT
-   what the tiles              how long the
-     are worth                  word is
 ```
 
-**POINTS** is each tile's base score put through its own letter multipliers (2L, 3L), summed,
-then multiplied by every word multiplier (2W, 3W) in the word. A 2W is part of what the tiles
-are worth, so it lives on this side.
+**Both start at the word's LENGTH.** Spell five letters and you open on `5 × 2` before a single
+tile has been counted. Length is the one thing that pays on both sides, which is the whole
+reason to reach for a longer word.
 
-**MULT** comes from **word length in LETTERS**, and nothing else to start with — letters, not
-tiles, which stopped being the same number the day multi-letter tiles arrived (§4):
+Counted in **LETTERS**, not tiles — they stopped being the same number the day multi-letter
+tiles arrived (§4):
 
 | Letters | 3 | 4 | 5 | 6 | 7 | each further letter |
 |---|--:|--:|--:|--:|--:|--:|
+| **Points** | 3 | 4 | 5 | 6 | 7 | +1 |
 | **Mult** | ×1 | ×1.5 | ×2 | ×2.5 | ×3 | +0.5 |
 
-*(`lengthMultipliers` and `multiplierPerExtraLetter`.)*
+*(`pointsPerLetter`, `lengthMultipliers` and `multiplierPerExtraLetter`.)*
 
-🎯 This is the whole reason to reach for a longer word. Five letters is worth double what three
-is before a single tile is upgraded, and because it's the **multiplier** side, length makes
-every points-side upgrade you own worth more too.
+**Then every tile adds itself**, in the order you dragged through them: its own score, through
+its own 2L/3L. A 2W/3W multiplies everything counted so far — see §4, because **where you drag
+it matters**.
 
 **Both numbers are visible while you select**, updating with every tile — so you know exactly
-what a word pays before you commit to it.
+what a word pays before you commit to it. Bookmarks are deliberately not in that preview.
 
-### Then your bookmarks, one at a time
+### Then it all happens again, slowly
 
-When you press PLAY the two numbers are locked in, and each bookmark you own takes its turn
-**in the order their cards sit, left to right**, pushing one side or the other. Each is called out as it
-lands — `BOOKEND   ×2 MULT` — and the numbers move as you watch.
+When you press PLAY the numbers **go back to the length you started from** and build up again,
+one beat at a time, so you can see where the score came from. Whatever is taking its turn
+shakes, and its number floats off it: **blue for Points, red for Mult.**
 
-There are three shapes a bookmark can have, and the difference matters:
+```
+CRATE, with a 3W on the R and BOOKEND owned
+
+  5 LETTERS      5  x 2      the two numbers open on the word's length
+  C      +3      8  x 2      every tile, in the order you dragged it
+  R      +1      9  x 2
+  A      +1     10  x 2
+  T      +1     11  x 2
+  E      +1     12  x 2
+  3W     x3     36  x 2      the word multiplier, on its own tile's beat
+  BOOKEND x2    36  x 4      then your bookmarks, left to right
+                     = 144
+```
+
+Each beat is a little shorter than the one before, so a long word with a lot going on speeds up
+and finishes rather than dragging. A word can never take more than about nine seconds however
+much you pile onto it.
+
+**Your bookmarks take their turns in the order their cards sit, left to right.** There are three
+shapes a bookmark can have, and the difference matters:
 
 | Shape | Example | Note |
 |---|---|---|
@@ -316,10 +334,14 @@ There are three shapes a bookmark can have, and the difference matters:
 
 **This is why bookmark order matters.** `+4 Mult` then `×2 Mult` is not the same as `×2` then
 `+4` — the first doubles the four, the second doesn't. They run left to right in the order the
-cards sit below the board, and **you choose that order** by dragging them (§5).
+cards sit below the board, and **you choose that order** by dragging them (§5). You can't
+reorder them while a word is being counted; the order has already been used by then.
+
+After the bookmarks comes **the round's librarian**, if it has anything to say about the score —
+a round that taxes you taxes what you built, not what you started with.
 
 **Finally**, `POINTS × MULT` is the score — always, with nothing applied afterwards. *(The
-mode-wide `scoreMultiplier`, currently ×1, takes its turn as one more step, so what the readout
+mode-wide `scoreMultiplier`, currently ×1, takes its turn as one more beat, so what the readout
 multiplies out is exactly what you're paid.)*
 
 **A word can't score more than a billion, and can't score less than nothing.** Multipliers
@@ -329,21 +351,28 @@ are held to a ceiling rather than allowed to run off the end of the counter and 
 the ceiling can be reached but never passed. 🚧 A billion is a safety rail, not a design
 choice: if the game ever genuinely wants Balatro-scale numbers, this is the wall to move.
 
-> **Worked example.** `EYE` = E(1) + Y(4) + E(1) = **5 points**, three letters so **×1**.
-> Nothing owned: **5**.
+> **Worked example.** `EYE` = 3 letters, so it opens on **3 points × 1**. Then E(1) + Y(4) +
+> E(1) = **9 points × 1**. Nothing owned: **9**.
 > Now own Vowel Fanatic (2 vowels beats 1 consonant → **+4 Mult**) and Bookend (starts and ends
 > with E → **×2 Mult**), bought in that order:
 >
 > ```
-> 5 × 1                 base
-> 5 × 5     VOWEL FANATIC  +4 MULT
-> 5 × 10    BOOKEND        ×2 MULT     =  50
+> 3 LETTERS      3 x 1
+> E  +1          4 x 1
+> Y  +4          8 x 1
+> E  +1          9 x 1
+> VOWEL FANATIC  9 x 5     +4 MULT
+> BOOKEND        9 x 10    x2 MULT   =  90
 > ```
 >
-> Bought in the *other* order it would be `5 × 2` then `5 × 6` = **30**.
+> Bought in the *other* order it would be `9 × 2` then `9 × 6` = **54**.
 
-🎯 The walk-through only has beats if you own bookmarks, so early rounds resolve instantly and
-the flourish grows as you earn things worth watching.
+🚧 **Round targets have not been retuned for this yet.** Giving every word points for its length
+made everything score roughly 1.7× what it used to, so rounds are easier than they're meant to
+be — round 1 is often a single word. The targets are one field (§12); they'll be turned up once
+the new numbers have been played with.
+
+---
 
 ---
 
@@ -368,8 +397,8 @@ The badge on a tile. Four exist today:
 |:--:|---|--:|
 | **2L** | doubles that tile's own letter score | $5 |
 | **3L** | triples that tile's own letter score | $9 |
-| **2W** | doubles the score of the whole word | $14 |
-| **3W** | triples the score of the whole word | $22 |
+| **2W** | doubles everything counted so far | $14 |
+| **3W** | triples everything counted so far | $22 |
 
 The rules around them:
 
@@ -377,8 +406,15 @@ The rules around them:
   and it lasts the rest of the run.
 - **A tile can carry up to three** *(`maxModifiersPerTile`)*. Letter multipliers stack in order
   (2L then 3L = ×6); word multipliers all multiply together, so a tile with 3W 3W 3W is ×27 on
-  every word it appears in. A full tile stops being a target the shop can offer you, and if
-  every tile in your bag fills up the upgrade row disappears from the shop entirely.
+  whatever has been counted by the time you reach it. A full tile stops being a target the shop
+  can offer you, and if every tile in your bag fills up the upgrade row disappears from the shop
+  entirely.
+- ⚠️ **WHERE YOU DRAG A WORD MULTIPLIER CHANGES THE SCORE.** A 2W/3W takes its turn when the
+  word reaches that tile, and multiplies everything counted up to that point — so a 3W you drag
+  through **last** multiplies the whole word, and the same 3W dragged through second only
+  multiplies the two letters before it. `CRATE` with a 3W on the R is **72** one way and **60**
+  the other. A 2L/3L is not like that: it only ever touches its own tile, so it doesn't care
+  where in the word that tile is.
 - **A stacked tile draws one badge per modifier**, fanned right across the top of the tile.
   🚧 A first-pass visual, not the final treatment — three badges reach most of the way across
   and sit over the letter.
@@ -386,8 +422,9 @@ The rules around them:
   the badge is what tells you it doubles. This is deliberate: one number on the tile, one
   meaning.
 
-🎯 Word multipliers are priced far above letter multipliers because they scale with the whole
-word — a 3W on a common letter is the single most valuable thing in the shop.
+🎯 Word multipliers are priced far above letter multipliers because they scale with everything
+else — a 3W on a common letter is the single most valuable thing in the shop, and finishing your
+word on it is the single biggest thing skill can add to a score.
 
 ### Multi-letter tiles
 
@@ -1059,8 +1096,9 @@ is a discard.
 it changes to say **DOUBLER** — that's the round holding onto it. The next word you play scores
 double, and then it's gone.
 
-You'll see it land in the score box: the walk-through counts your bookmarks one at a time as
-usual, and then a **DOUBLER ×2** beat lands after all of them.
+You'll see it land in the score box: the walk-through counts the word out as usual — length,
+then every tile, then your bookmarks — and then a **DOUBLER ×2** beat lands after all of them,
+with your items box shaking as it does.
 
 **It really is last.** A word's score is `Points × Mult`, and the doubler multiplies the mult —
 so it doubles the finished number, whatever your bookmarks, your tile multipliers or the round's
@@ -1121,6 +1159,7 @@ one. It comes out before release.
 |---|--:|---|
 | Board | 5 × 5 | `Board_5x5.asset` |
 | Minimum word length | 3 | `Mode_RogueDemo.asset` |
+| Length points | 1 per letter (LETTERS, not tiles) — what both numbers start at | `Mode_RogueDemo.asset` |
 | Length multiplier | ×1 / ×1.5 / ×2, then +0.5 a letter (LETTERS, not tiles) | `Mode_RogueDemo.asset` |
 | Score multiplier | ×1 | `Mode_RogueDemo.asset` |
 | Words per round | 20 | `Mode_RogueDemo.asset` |
@@ -1175,7 +1214,7 @@ one. It comes out before release.
 | Spine multiplier | ×2 Mult | `Spine.asset` |
 | Marginalia bonus | +1 Mult a letter | `Marginalia.asset` |
 | Shorthand bonus | +4 Mult | `Shorthand.asset` |
-| Score walk-through pace | 0.45s a step, 0.35s to finish | `ScoreTallyTiming` (code, not an asset) |
+| Score walk-through pace | first beat 0.45s, each next one ×0.95, 0.35s to finish | `ScoreTallyTiming` (code, not an asset) |
 | Score ceiling | 1,000,000,000 points, ×1,000,000 mult | `ScoreLimits` (code, not an asset) |
 
 ---
@@ -1198,6 +1237,8 @@ perks, including interest on savings and a cheaper reroll (§9) · runs that sav
 🚧 **consumables** — two one-shot items, Shuffle and Doubler, bought in the shop and dragged
 onto the board to play (§10) ·
 🚧 **info boxes** — hold a tile, or tap a bookmark or an item, and a card says what it is (§2) ·
+**the score walk-through** — every word's score built in front of you, one beat per tile and
+per bookmark, with whatever is scoring shaking and its number floating off it (§3) ·
 🚧 **the banded screen layout** — round header, resource strip, score, word row, board,
 buttons, with the word you're spelling shown as tiles above the board (§2). The structure is
 real; every pixel of the art is placeholder.

@@ -272,8 +272,14 @@ public class RogueDemoMode : GameMode
         else
         {
             composite.Clear();
-            composite.Add(librarian);
-            for (int i = 0; i < armed.Count; i++) composite.Add(armed[i] as IScoreRule);
+
+            // Each one goes in tagged, because from inside the composite a
+            // librarian and an armed Doubler are both just an IScoreRule — and
+            // the walk-through has to know which thing on screen to shake.
+            composite.Add(librarian, ScoreActor.Librarian);
+            for (int i = 0; i < armed.Count; i++)
+                composite.Add(armed[i] as IScoreRule, ScoreActor.Consumable);
+
             activeRule = composite.IsEmpty ? null : composite;
         }
 
