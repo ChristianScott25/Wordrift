@@ -41,8 +41,10 @@ chain order, then the run's bookmarks in slot order, then the round's rule, then
 multiplier. Each one goes through a `ScoringContext` and records a `ScoreStep` saying what it
 did and WHICH thing on screen did it — `GameSession.ScoreThenClear` steps through them on the
 one clock there is and raises `GameEvents.ScoreBeat`, and the widgets shake whatever each beat
-points at. `ScoreCalculator.Preview` is the same walk with recording off, which is what the HUD
-shows live; sharing the walk is what stops a preview drifting from the score beside it.
+points at. `ScoreCalculator.Opening` is the one place the starting pair is worked out, and the HUD
+shows exactly that while you select — the tiles arriving is the show, so previewing them would
+give it away. It is also where the walk starts, so pressing PLAY moves nothing until the first
+tile lands.
 A bookmark can add points, multiply points, add mult or multiply mult; the additive and
 multiplicative forms don't commute, which is what makes the order bookmarks sit a real decision
 — and since a 2W/3W fires on its own tile's beat, the order the TILES were dragged in is now one

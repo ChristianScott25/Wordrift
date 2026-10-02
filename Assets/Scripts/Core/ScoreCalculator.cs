@@ -23,6 +23,11 @@ using System.Collections.Generic;
 /// makes every word worth roughly 1.7x what it used to be — round targets have
 /// NOT been retuned for that yet.
 ///
+/// ⚠️ THE LIVE READOUT IS Opening() AND NOTHING MORE — it shows what the LENGTH
+/// is worth, never what the tiles add. The whole point of the walk-through is to
+/// show the tiles arriving, and a preview that had already counted them would
+/// give the answer away before the show started. His call, 2026-10-01.
+///
 /// ⚠️ TILE ORDER CHANGES THE SCORE. A 2W/3W fires on its own tile's beat and
 /// multiplies everything piled up so far, so dragging through a 3W last is worth
 /// more than dragging through it first. Deliberate, and the reason this walk is
@@ -41,70 +46,60 @@ public class ScoreCalculator
 {
     private readonly ModeConfig config;
 
-    /// <summary>
-    /// ⚠️ ONE CONTEXT, REUSED, FOR THE LIVE PREVIEW. Preview() runs on every
-    /// frame of a drag and SelectionState's whole contract is that nothing on
-    /// that path allocates — a fresh ScoringContext plus its step list per frame
-    /// would be two allocations sixty times a second. It is only ever touched by
-    /// Preview(), which is never nested inside anything (RaiseSelection resolves
-    /// first and previews second, in sequence).
-    ///
-    /// ⚠️ EVALUATE MUST NOT USE IT. WordResult.Steps is handed out as the
-    /// context's own live List and the HUD walks it across several seconds, while
-    /// Submit() raises an empty selection that previews again immediately —
-    /// sharing one context would throw "Collection was modified" mid-walk.
-    /// </summary>
-    private readonly ScoringContext preview = new();
-
     public ScoreCalculator(ModeConfig config) => this.config = config;
 
     /// <summary>
-    /// What a selection is worth right now — the word's length plus every tile,
-    /// through its own badges. The pair of numbers the HUD shows live.
+    /// The two numbers a word of this length OPENS on, before a single tile is
+    /// counted. Both the live readout while you select AND the first frame of the
+    /// walk-through, which is why there is one method and not two.
     ///
-    /// ⚠️ THIS IS NOT WordResult.Opening. That one is the length ALONE, which is
-    /// where the walk-through starts; this one is where it ends up before any
-    /// bookmark. They were a single method until the walk-through existed, and
-    /// confusing the two prints the letter count where the score should be.
+    /// 🎯 THE LIVE READOUT DELIBERATELY DOES NOT COUNT THE TILES. You see what
+    /// the length is worth; what the tiles add is the thing you press PLAY to
+    /// watch. Showing the finished number first would give away the whole
+    /// walk-through before it ran — his call, 2026-10-01.
     ///
-    /// Safe to call every time the selection changes: it records nothing and
-    /// allocates nothing.
+    /// ⚠️ THE ONE PLACE THE OPENING NUMBERS ARE WORKED OUT. A second copy of
+    /// this expression is how the number you watched while selecting ends up
+    /// disagreeing with the number the walk starts from, on screen, a frame
+    /// apart.
+    ///
+    /// Safe to call on every frame of a drag: no context, no steps, no
+    /// allocation — which is the whole of SelectionState's contract.
     /// </summary>
-    public ScorePair Preview(IReadOnlyList<Tile> chain)
+    public ScorePair Opening(IReadOnlyList<Tile> chain)
     {
-        preview.Reset(recording: false);
+        // LETTERS, not chain.Count: a "ch" tile is two letters out of one cell,
+        // and length is what the player is told both numbers come from.
+        // Null-checked here rather than inside LetterCount so WalkTiles' own
+        // null guard is reachable instead of being thrown past.
+        int letters = chain == null ? 0 : ChainController.LetterCount(chain);
 
-        // ⚠️ The context AFTER the walk, not what WalkTiles returns — that is the
-        // OPENING pair, and handing it back here would show the letter count as
-        // the score for the whole drag.
-        WalkTiles(preview, chain);
-        return new ScorePair { Points = preview.Points, Mult = preview.Mult };
+        return new ScorePair
+        {
+            Points = ScoreLimits.Clamp((long)config.LengthPoints(letters)),
+            Mult = ScoreLimits.ClampMult(config.LengthMultiplier(letters)),
+        };
     }
 
     /// <summary>
     /// Opens the two numbers on the word's length and then walks the tiles into
     /// the context, one beat each. Returns the OPENING pair, before any tile.
     ///
-    /// ⚠️ THE ONE PLACE THE TILE STAGE EXISTS. The live preview and the real
-    /// award both come through here, so they cannot disagree — and a preview that
-    /// computed its number a second way would eventually disagree on screen, next
-    /// to the thing it was previewing.
+    /// ⚠️ THE ONE PLACE THE TILE STAGE EXISTS. Only Evaluate calls it — the live
+    /// readout is Opening() alone and never counts a tile — so there is exactly
+    /// one answer to "what are these tiles worth", written once.
     ///
     /// ⚠️ Indexed, not foreach. `chain` arrives as an IReadOnlyList, so a foreach
-    /// boxes the List's enumerator — and this runs on every frame of a drag, and
-    /// again once per candidate inside GameSession.BestOf. Same reason
-    /// CompositeScoreRule.Score is indexed.
+    /// boxes the List's enumerator. That matters because of GameSession.BestOf,
+    /// which scores once per candidate on a wild chain — hundreds of them, on
+    /// every frame of a drag. Same reason CompositeScoreRule.Score is indexed.
     /// </summary>
     private ScorePair WalkTiles(ScoringContext ctx, IReadOnlyList<Tile> chain)
     {
-        // LETTERS, not chain.Count: a "ch" tile is two letters out of one cell,
-        // and length is what the player is told both numbers come from.
-        int letters = ChainController.LetterCount(chain);
-        ctx.Open(config.LengthPoints(letters), config.LengthMultiplier(letters));
-
-        // Read back rather than recomputed, so the opening the HUD draws is
-        // exactly the opening the score actually started from, clamps included.
-        var opening = new ScorePair { Points = ctx.Points, Mult = ctx.Mult };
+        // The same method the live readout calls, so the number the player was
+        // watching a frame ago is exactly the number this starts from.
+        var opening = Opening(chain);
+        ctx.Open(opening.Points, opening.Mult);
 
         if (chain == null) return opening;
 

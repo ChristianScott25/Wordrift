@@ -24,11 +24,11 @@ using UnityEngine;
 /// which card to shake.
 ///
 /// ⚠️ RECORDING CAN BE SWITCHED OFF, and that is not an optimisation to skip.
-/// The live preview runs this on EVERY FRAME of a drag, and GameSession.BestOf
-/// runs it once per candidate word on a chain holding a wild — which can be
-/// hundreds. Recording allocates roughly three strings per step, and there is now
-/// a step per TILE, so leaving it on down those paths is thousands of strings a
-/// frame. Both of them want the numbers and nothing else.
+/// GameSession.BestOf scores once per candidate word on a chain holding a wild —
+/// which can be hundreds — on every frame of a drag, and reads nothing but the
+/// final Points. Recording allocates roughly three strings per step and there is
+/// now a step per TILE, so leaving it on down that path is thousands of strings
+/// a frame.
 ///
 /// Widen THIS when something needs a fact it can't see (tiles left on the board,
 /// money, the round number) rather than widening every hook signature.
@@ -107,25 +107,6 @@ public class ScoringContext
     {
         Points = ScoreLimits.Clamp((long)points);
         Mult = ScoreLimits.ClampMult(mult);
-    }
-
-    /// <summary>
-    /// Empties this context so it can be used again. ScoreCalculator keeps ONE
-    /// for the live preview, because that path runs every frame of a drag and
-    /// SelectionState's whole contract is that nothing there allocates.
-    /// </summary>
-    public void Reset(bool recording = true)
-    {
-        Word = null;
-        Tiles = null;
-        WordsThisRound = null;
-        MinWordLength = 0;
-        Points = 0;
-        Mult = 0f;
-        Steps.Clear();
-        kind = ScoreActor.None;
-        actor = null;
-        Recording = recording;
     }
 
     /// <summary>

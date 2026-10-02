@@ -286,7 +286,7 @@ public class GameSession : MonoBehaviour
 
             // The same first stage the real score uses, so the preview can't
             // drift from what pressing ENTER actually pays.
-            Preview = scorer.Preview(chain),
+            Preview = scorer.Opening(chain),
         });
     }
 

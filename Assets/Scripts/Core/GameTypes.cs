@@ -11,11 +11,10 @@ using UnityEngine;
 /// letters, so many points, and a multiplier off the same curve — and the tiles
 /// build on that.
 ///
-/// It is used for two DIFFERENT moments and they are not the same numbers, which
-/// is the one thing to keep straight here:
-///
-///   SelectionState.Preview   every tile counted  — the live readout while you drag
-///   WordResult.Opening       length alone        — where the walk-through STARTS
+/// Both the live readout and the walk-through's first frame are the SAME pair —
+/// the length, and nothing else — because the tiles arriving is the show, and a
+/// readout that had already counted them would give it away before PLAY was
+/// pressed. ScoreCalculator.Opening is the one place it is worked out.
 ///
 /// ⚠️ There is deliberately no "the 2W factor" field any more. A word multiplier
 /// now fires on its own tile's beat and multiplies whatever has piled up so far,
@@ -40,11 +39,9 @@ public struct WordResult
 
     /// <summary>
     /// Where the walk-through STARTS: the word's length, on both sides, before a
-    /// single tile has been counted.
-    ///
-    /// ⚠️ NOT what the live preview shows. The preview has every tile in it
-    /// already — see ScorePair. Reading this one as "what the word is worth"
-    /// would print the letter count and call it a score.
+    /// single tile has been counted. The same pair the player was already looking
+    /// at while they selected, so pressing PLAY moves nothing until the first
+    /// tile lands.
     /// </summary>
     public ScorePair Opening;
 
@@ -197,13 +194,15 @@ public struct SelectionState
     public int DiscardsLeft;
 
     /// <summary>
-    /// What the selection is worth right now: the word's length plus every tile,
-    /// through its own badges. Bookmarks, the librarian and armed items are
-    /// deliberately NOT previewed — seeing them fire after you commit is the
-    /// payoff, and a preview that included them would hand you the answer.
+    /// What the word's LENGTH is worth — both numbers, and nothing else in them.
     ///
-    /// ⚠️ This is a different number from WordResult.Opening, which is the
-    /// length ALONE. The walk-through starts there and climbs back up to this.
+    /// 🎯 THE TILES ARE DELIBERATELY NOT COUNTED HERE, and neither are bookmarks,
+    /// the librarian or armed items. Watching them arrive one at a time is what
+    /// pressing PLAY is for; a readout that had already added them up would hand
+    /// the player the answer before the show ran. His call, 2026-10-01.
+    ///
+    /// It is the same pair as WordResult.Opening, off the same method — so the
+    /// numbers don't jump the moment PLAY is pressed.
     /// </summary>
     public ScorePair Preview;
 

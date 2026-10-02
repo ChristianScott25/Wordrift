@@ -122,7 +122,7 @@ The screen is a stack of bands, top to bottom:
 |---|---|
 | **Round header** | Who you're up against — the librarian's name, portrait and rule — and your score over the round's target. On a round with no librarian the box stays exactly the same size and shows the round number instead. Beside it, the **tile bag** (how many tiles are left to draw, out of your whole bag) and your **items** (§10). |
 | **Resource strip** | Small readouts: money, moves, discards, round. |
-| **Score × mult** | What the current selection is worth — your word's length plus every tile, times the multiplier its length earns. After you hit PLAY this is where the whole score is counted out, a beat at a time (§3). |
+| **Score × mult** | What your word's LENGTH is worth, and only that, while you're selecting. After you hit PLAY it's where the whole score gets counted out in front of you, a beat at a time (§3). |
 | **Word row** | The word you're spelling, laid out left to right as tiles. When the selection won't score it says **WON'T SCORE** here instead, with the librarian's reason underneath when a librarian is the reason. |
 | **The board** | Where you drag. |
 | **Buttons** | Info, settings, DISCARD, PLAY. |
@@ -292,23 +292,26 @@ tiles arrived (§4):
 
 *(`pointsPerLetter`, `lengthMultipliers` and `multiplierPerExtraLetter`.)*
 
-**Then every tile adds itself**, in the order you dragged through them: its own score, through
-its own 2L/3L. A 2W/3W multiplies everything counted so far — see §4, because **where you drag
-it matters**.
+**While you select, that's all you see** — `5 × 2` for a five-letter word, whatever tiles are in
+it. The score box shows what the LENGTH is worth and stops there.
 
-**Both numbers are visible while you select**, updating with every tile — so you know exactly
-what a word pays before you commit to it. Bookmarks are deliberately not in that preview.
+🎯 **That's deliberate.** What your tiles and your bookmarks add is the thing you press PLAY to
+watch. A readout that had already added it all up would hand you the ending before the show
+started.
 
-### Then it all happens again, slowly
+### Then you watch it get built
 
-When you press PLAY the numbers **go back to the length you started from** and build up again,
-one beat at a time, so you can see where the score came from. Whatever is taking its turn
-shakes, and its number floats off it: **blue for Points, red for Mult.**
+Press PLAY and the numbers **start exactly where they were** and climb from there, one beat at a
+time. Every tile adds itself, in the order you dragged through them. Then your bookmarks, then
+the round's librarian, then anything you armed.
+
+Whatever is taking its turn **shakes**, and its number floats off it: **blue for Points, red for
+Mult.**
 
 ```
 CRATE, with a 3W on the R and BOOKEND owned
 
-  5 LETTERS      5  x 2      the two numbers open on the word's length
+  5 LETTERS      5  x 2      where the readout already was before you pressed PLAY
   C      +3      8  x 2      every tile, in the order you dragged it
   R      +1      9  x 2
   A      +1     10  x 2
@@ -318,6 +321,10 @@ CRATE, with a 3W on the R and BOOKEND owned
   BOOKEND x2    36  x 4      then your bookmarks, left to right
                      = 144
 ```
+
+⚠️ **The order you dragged through the tiles matters**, because a 2W/3W multiplies everything
+counted so far — the same 3W is worth far more at the *end* of a word than at the start. Full
+explanation in §4.
 
 Each beat is a little shorter than the one before, so a long word with a lot going on speeds up
 and finishes rather than dragging. A word can never take more than about nine seconds however
@@ -351,8 +358,9 @@ are held to a ceiling rather than allowed to run off the end of the counter and 
 the ceiling can be reached but never passed. 🚧 A billion is a safety rail, not a design
 choice: if the game ever genuinely wants Balatro-scale numbers, this is the wall to move.
 
-> **Worked example.** `EYE` = 3 letters, so it opens on **3 points × 1**. Then E(1) + Y(4) +
-> E(1) = **9 points × 1**. Nothing owned: **9**.
+> **Worked example.** `EYE` is 3 letters, so the box reads **3 × 1** while you select it — that
+> is all you get to see. Press PLAY and E(1) + Y(4) + E(1) climb on: **9 × 1**. Nothing owned:
+> **9**.
 > Now own Vowel Fanatic (2 vowels beats 1 consonant → **+4 Mult**) and Bookend (starts and ends
 > with E → **×2 Mult**), bought in that order:
 >

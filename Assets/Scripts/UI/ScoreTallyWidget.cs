@@ -5,14 +5,14 @@ using UnityEngine;
 /// The scoring readout: POINTS x MULT, live while you select and then walked
 /// through a beat at a time once you commit.
 ///
-/// Before PLAY it shows the whole selection — the word's length plus every tile,
-/// through its own badges. Bookmarks, the librarian and armed items are
-/// deliberately absent from that: seeing them land afterwards is the payoff, and
-/// previewing them would just hand the player the answer.
+/// Before PLAY it shows what the word's LENGTH is worth and nothing else — not
+/// the tiles, not the bookmarks. Watching those arrive is what PLAY is for, and
+/// a readout that had already added them up would hand the player the answer
+/// before the show ran.
 ///
-/// After PLAY it opens on WordResult.Opening — the length ALONE, which is where
-/// both numbers start — and then draws each beat it is handed, climbing back
-/// through the preview's number and past it.
+/// After PLAY it opens on exactly that same pair (WordResult.Opening, off the
+/// same ScoreCalculator.Opening) so nothing jumps, and then draws each beat it
+/// is handed as the tiles and everything after them climb on top.
 ///
 /// ⚠️ IT DOES NOT OWN A CLOCK, AND MUST NOT GROW ONE. GameSession.ScoreThenClear
 /// steps the beats and raises them; this draws whatever it is given. The two used
@@ -125,6 +125,7 @@ public class ScoreTallyWidget : MonoBehaviour
             return;
         }
 
+        // The LENGTH only — see the class note. The tiles are the show.
         Draw(selection.Preview.Points, selection.Preview.Mult, "");
         DrawLength(selection.Word);
     }
