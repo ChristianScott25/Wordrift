@@ -358,6 +358,13 @@ recipe/instance split as `TileModifier` → `TileSpec`. The session gets the lis
 about runs. To add a bookmark: subclass `Bookmark`, create the asset, add it to a mode's
 `bookmarks` pool. To add a bookmark that needs new information, widen `ScoringContext`.
 
+**The bag is the mode's, and the UI only ever reads it.** `GameMode.RemainingTiles` (null by
+default) is how the bag view asks what's still undrawn, and `GameSession` passes it straight
+through — the same shape as `Bookmarks` and `ScoreRule`. A widget casting `Board.TileSource`
+would work and would mean the UI knowing that this particular mode happens to draw from a
+`TileBag`. ⚠️ It hands back the bag's OWN list, which drawing mutates, so a reader takes what it
+needs and lets go.
+
 **Money.** `RunState` owns the balance: in through `AddMoney` only, out through
 `TrySpend` only (it refuses rather than going negative), and gone when the run
 is — so there's nothing to persist and no meta-currency to design around. What a

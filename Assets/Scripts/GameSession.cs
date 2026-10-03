@@ -284,8 +284,10 @@ public class GameSession : MonoBehaviour
             CanDiscard = IsPlaying && mode.CanDiscard(chain.Count),
             DiscardsLeft = mode.DiscardsLeft,
 
-            // The same first stage the real score uses, so the preview can't
-            // drift from what pressing ENTER actually pays.
+            // ⚠️ The word's LENGTH and nothing else — NOT what pressing PLAY
+            // pays. The tiles arriving is the walk-through's whole job, so
+            // counting them here would give the ending away first. It is the
+            // same call the walk starts from, so the numbers don't jump.
             Preview = scorer.Opening(chain),
         });
     }
@@ -377,6 +379,21 @@ public class GameSession : MonoBehaviour
     /// </summary>
     public bool CanUseConsumable =>
         IsPlaying && !tallying && board != null && !board.Busy && !board.Resolving;
+
+    /// <summary>
+    /// What this round has left to draw — for the bag view, which is the only
+    /// thing that shows it. Null before the mode has a bag, and null for a mode
+    /// that has none.
+    ///
+    /// A pass-through rather than a widget reaching for Board.TileSource and
+    /// casting it: which SOURCE a round draws from is the mode's business, and
+    /// the UI knowing it happens to be a TileBag would be the UI knowing one
+    /// mode's implementation.
+    ///
+    /// ⚠️ LIVE, NOT A SNAPSHOT — see GameMode.RemainingTiles. Take what you need
+    /// and let go of it.
+    /// </summary>
+    public IReadOnlyList<TileSpec> RemainingTiles => mode?.RemainingTiles;
 
     /// <summary>
     /// Spends the item in a slot. THE ONE PLACE AN ITEM LEAVES THE RUN.

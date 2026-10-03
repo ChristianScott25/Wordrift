@@ -117,12 +117,18 @@ public static class GameLayoutSetup
         var layout = EnsureLayout(canvas, session, board);
         BuildHeader(canvas);
         BuildStrip(canvas);
-        BuildBag(canvas);
+        var bagButton = BuildBag(canvas);
         BuildConsumables(canvas, session);
         InspectBoxSetup.Build(canvas);
         ScorePopSetup.Build(canvas);
+        var bagView = BagViewSetup.Build(canvas, session);
         BuildSystemButtons(canvas);
         BuildWordRow(canvas, board);
+
+        // The button and the panel it opens are built separately, so joining
+        // them up waits until both exist. Without this the button is wired to
+        // nothing and logs an error instead of opening.
+        WordCrushSetup.SetRef(bagButton, "bagView", bagView);
 
         WordCrushSetup.SetRef(session, "layout", layout);
         ShareTheHeaderBand();
@@ -313,7 +319,11 @@ public static class GameLayoutSetup
         WordCrushSetup.SetRef(widget, "chipSprite", Square());
     }
 
-    private static void BuildBag(Canvas canvas)
+    /// <summary>
+    /// Returns the widget so Run can wire it to the panel it opens, which is
+    /// built later — see the call site.
+    /// </summary>
+    private static BagButtonWidget BuildBag(Canvas canvas)
     {
         var root = Reuse<BagButtonWidget>(canvas, "TileBag");
         var widget = root.GetComponent<BagButtonWidget>();
@@ -368,6 +378,7 @@ public static class GameLayoutSetup
         WordCrushSetup.SetRef(widget, "button", button);
         WordCrushSetup.SetRef(widget, "captionLabel", captionText);
         WordCrushSetup.SetRef(widget, "valueLabel", valueText);
+        return widget;
     }
 
     private static void BuildConsumables(Canvas canvas, GameSession session)

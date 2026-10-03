@@ -6,11 +6,9 @@ using UnityEngine.UI;
 /// The tile bag — how many tiles are left to draw this round, out of how many
 /// the run's bag holds.
 ///
-/// 🚧 It is a BUTTON that does nothing yet. Tapping it should open the bag and
-/// show what's still in it, which is a real feature and not this one's job. It
-/// is a button now rather than later so it looks tappable from the day it
-/// appears — a readout that silently becomes interactive is a feature nobody
-/// finds.
+/// Tapping it opens BagViewWidget, which shows what's still in there. This one
+/// is only the readout and the hit area; what the bag CONTAINS is the panel's
+/// business, and where the tiles come from is the mode's.
 /// </summary>
 public class BagButtonWidget : MonoBehaviour
 {
@@ -23,6 +21,11 @@ public class BagButtonWidget : MonoBehaviour
     [SerializeField] private TMP_Text captionLabel;
 
     [SerializeField] private Button button;
+
+    [Tooltip("The panel this opens. A plain reference rather than a bus: there " +
+             "is exactly one caller and one listener, both built by the same " +
+             "editor script in the same scene.")]
+    [SerializeField] private BagViewWidget bagView;
 
     [Header("Look")]
     [SerializeField] private string caption = "TILES";
@@ -87,7 +90,20 @@ public class BagButtonWidget : MonoBehaviour
         valueLabel.color = low ? lowColor : normalColor;
     }
 
-    /// <summary>🚧 Nothing to open yet. Announced so the button isn't silent.</summary>
-    private void OnPressed() =>
-        Debug.Log("Tile bag: contents view isn't built yet.");
+    /// <summary>
+    /// Opens the bag. Logs rather than failing silently if the panel was never
+    /// wired — the reference is written by BagViewSetup, and an unwired button
+    /// looks exactly like the stub this replaced.
+    /// </summary>
+    private void OnPressed()
+    {
+        if (bagView == null)
+        {
+            Debug.LogError("The tile bag button has no view to open. Run " +
+                           "Word Crush > Set Up Game Layout.", this);
+            return;
+        }
+
+        bagView.Open();
+    }
 }

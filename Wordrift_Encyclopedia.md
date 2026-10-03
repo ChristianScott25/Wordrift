@@ -166,8 +166,11 @@ room up there and drop below instead.)*
 learn, but the board is the one place where touching something already means something, and
 putting a box on the screen every time you tap a letter would be worse than a split.)*
 
-🚧 The **tile bag** is tappable but doesn't open yet, and the
-**info** and **settings** buttons don't open anything either. The **librarian's** rule is
+**Tap the tile bag** and it opens over the game, showing every tile you still have to draw
+this round (§6). The game behind it stops responding while it's up — there's no clock in this
+game, so that's all pausing means.
+
+🚧 The **info** and **settings** buttons still don't open anything. The **librarian's** rule is
 already printed in the round header, so it needs no box, and **checkouts** you've bought
 aren't re-readable anywhere yet.
 
@@ -642,6 +645,22 @@ Scrabble's proportions.
   the bag belongs to the run, not the round.
 - When it runs dry, tiles stop falling and the board plays down toward empty.
 - **Upgrades change the bag itself.** That's why a tile you gild in round 1 keeps coming back.
+
+**You can look inside it.** Tap the bag in the round header and a panel opens over the game
+listing everything still to be drawn — tiles grouped by what they are, each with how many are
+left, in alphabetical order. Tap any of them to read it, the same card you'd get from holding
+one on the board. The X in the corner closes it.
+
+Two things worth knowing about what it shows:
+
+- **It's what's LEFT, not what you own.** A round deals 25 tiles onto the board before your
+  first move, so the panel opens showing about three quarters of your bag. It answers "what can
+  still come out", not "what did I buy".
+- **A stamped tile is its own entry.** Three plain A's read `A x3`; an A you put a 3L on sits
+  separately as `A 3L x1`, because it isn't the same tile any more. Buy a second 3L A and the
+  two join up rather than making a third row.
+
+🚧 The panel borrows the info box's background for now, and it has art of its own coming.
 
 **How the mix is decided.** The letter catalog's weights are a *ratio*, and the bag size is a
 separate number; the bag is built by sharing the ratio out over that many tiles, **with a
@@ -1245,6 +1264,8 @@ perks, including interest on savings and a cheaper reroll (§9) · runs that sav
 🚧 **consumables** — two one-shot items, Shuffle and Doubler, bought in the shop and dragged
 onto the board to play (§10) ·
 🚧 **info boxes** — hold a tile, or tap a bookmark or an item, and a card says what it is (§2) ·
+🚧 **the tile bag view** — tap the bag to see everything still to be drawn, grouped and counted
+(§6) ·
 **the score walk-through** — every word's score built in front of you, one beat per tile and
 per bookmark, with whatever is scoring shaking and its number floating off it (§3) ·
 🚧 **the banded screen layout** — round header, resource strip, score, word row, board,
@@ -1257,8 +1278,11 @@ real; every pixel of the art is placeholder.
   flows differently**. All three have seams in the code; no content uses them.
 - **Tile skins as a player-facing thing** — several looks can already share a board, but
   nothing decides which ones a player *has*.
-- **The run-info and settings panels**, behind the two buttons at the bottom left, and **the
-  tile-bag view** behind the bag. All three are buttons that log and do nothing.
+- **The run-info and settings panels**, behind the two buttons at the bottom left. Both are
+  buttons that log and do nothing. (The tile-bag view that used to be listed here is built —
+  §6.)
+- **The bag view showing your WHOLE bag**, with the tiles already drawn greyed out rather than
+  missing. It shows only what's left to draw today, which answers a different question.
 - **Consumables you aim** — drop this one on *that* tile. The two that exist both just happen
   when you press USE; picking a target is the next piece of work (§10).
 

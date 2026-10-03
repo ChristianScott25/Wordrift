@@ -78,8 +78,10 @@ public class ScoringContext
     public float Mult;
 
     /// <summary>
-    /// What happened, in the order it happened. Empty when nothing was recorded,
-    /// which is every preview and every speculative candidate.
+    /// What happened, in the order it happened. Empty whenever Recording is off,
+    /// which is every speculative candidate inside GameSession.BestOf. (The live
+    /// readout never gets this far — it is ScoreCalculator.Opening alone and
+    /// builds no context at all.)
     /// </summary>
     public readonly List<ScoreStep> Steps = new();
 

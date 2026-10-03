@@ -309,6 +309,14 @@ public class RogueDemoMode : GameMode
     }
 
     /// <summary>
+    /// What's still undrawn this round. Null before Attach has built the bag.
+    ///
+    /// ⚠️ Handed straight out, live — see GameMode.RemainingTiles. Nothing here
+    /// copies it, because the one reader opens once and groups what it finds.
+    /// </summary>
+    public override IReadOnlyList<TileSpec> RemainingTiles => bag?.RemainingTiles;
+
+    /// <summary>
     /// A fresh allowance every round, never carried over — see Begin. Spending
     /// it costs no move on purpose: the move budget is for words, and a discard
     /// is what you do when the board won't give you one.

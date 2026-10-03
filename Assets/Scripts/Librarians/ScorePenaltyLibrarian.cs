@@ -9,9 +9,10 @@ using UnityEngine;
 /// the same amount proportionally — which is the point of a percentage.
 ///
 /// The first librarian to use the scoring hook, and the reason it exists. Note
-/// that nothing here is previewed: the live POINTS x MULT readout shows the word
-/// untaxed, and the cut lands as its own named beat in the walk-through after
-/// ENTER. That's the same bargain bookmarks make.
+/// that nothing here is previewed — but then nothing is: the live POINTS x MULT
+/// readout shows what the word's LENGTH is worth and stops there, and the cut
+/// lands as its own named beat in the walk-through after ENTER. That's the same
+/// bargain the tiles and the bookmarks make.
 ///
 /// 🎯 It changes nothing about which words are legal, so unlike every other
 /// librarian you play the round exactly as you would have — and simply come up

@@ -114,9 +114,9 @@ public class ScoreCalculator
             ctx.Acting(ScoreActor.Tile, tile.Spec);
 
             // ⚠️ The source goes in RAW — Record is what upper-cases it, and
-            // Record doesn't run with recording off, so the preview path
-            // allocates no strings. Shown before Face so a resolved wild's beat
-            // reads "E" rather than "*".
+            // Record doesn't run with recording off, so BestOf's hundreds of
+            // speculative candidates cost no strings. Shown before Face so a
+            // resolved wild's beat reads "E" rather than "*".
             string who = string.IsNullOrEmpty(tile.Shown) ? tile.Face : tile.Shown;
 
             // The tile's corner shows the BASE letter value; the badge is what
@@ -168,7 +168,11 @@ public class ScoreCalculator
                                IScoreRule roundRule = null,
                                bool recording = true)
     {
-        // Fresh, never the cached preview one — see the field's warning.
+        // ⚠️ A FRESH ONE EVERY TIME, never a reused instance. WordResult.Steps is
+        // handed out below as this context's own live List, and the HUD walks it
+        // across several seconds of beats while new selections are raised
+        // underneath — anything recycling a context would mutate the list being
+        // walked and throw "Collection was modified" mid-score.
         var ctx = new ScoringContext
         {
             Word = word,

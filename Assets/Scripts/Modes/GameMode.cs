@@ -112,6 +112,22 @@ public abstract class GameMode
     public virtual IScoreRule ScoreRule => null;
 
     /// <summary>
+    /// What this round has left to draw, for a readout that shows the player
+    /// their bag. Null for a mode with no bag at all, which is the default.
+    ///
+    /// It exists because the bag is the mode's business and nothing else's: the
+    /// session owns no tile source, and a widget reaching for one would have to
+    /// know that this mode happens to use a TileBag. Same shape as Bookmarks —
+    /// the mode answers, everyone else obeys.
+    ///
+    /// ⚠️ THIS IS THE BAG'S OWN LIVE LIST, NOT A SNAPSHOT. Drawing a tile
+    /// swap-removes from it, and the board draws as it refills — so a reader
+    /// must take what it needs immediately and never hold the reference.
+    /// Enumerating it while the board is resolving would throw.
+    /// </summary>
+    public virtual System.Collections.Generic.IReadOnlyList<TileSpec> RemainingTiles => null;
+
+    /// <summary>
     /// Hold this consumable until a word is accepted, then let it score that
     /// word. False means the round has nowhere to put it — which is the default,
     /// and which leaves the item unspent.

@@ -110,8 +110,22 @@ public abstract class ModeConfig : ScriptableObject
     ///
     /// Counted in LETTERS, like everything about length — a "ch" tile is two.
     /// </summary>
+    /// ⚠️ Saturated like every other score number. pointsPerLetter has no upper
+    /// bound, so the multiply can run past int.MaxValue — and a float-to-int
+    /// conversion out of range is undefined in C#, landing on int.MinValue in
+    /// practice. That is the same wrap that once turned a real playthrough's
+    /// score NEGATIVE, so this number doesn't get to opt out of the rule.
+    ///
+    /// ⚠️ The multiply stays in FLOAT and is only then widened, which is not
+    /// fussiness: computing it in double instead changes what lands on an exact
+    /// half. (5 letters at 1.7 is 8 the float way and 9 the double way, because
+    /// float rounds the product to exactly 8.5 first.) The default rate of 1 is
+    /// exact either way, but a hand-tuned fractional rate would quietly start
+    /// paying differently. Float overflows to Infinity rather than wrapping, and
+    /// ScoreLimits.Clamp turns that into the ceiling — so keeping the old
+    /// arithmetic costs nothing. See ScoreLimits.
     public int LengthPoints(int letterCount) =>
-        letterCount <= 0 ? 0 : Mathf.RoundToInt(letterCount * pointsPerLetter);
+        letterCount <= 0 ? 0 : ScoreLimits.Clamp((double)(letterCount * pointsPerLetter));
 
     /// <summary>Creates the live rule object that runs one round of this mode.</summary>
     public abstract GameMode CreateMode();

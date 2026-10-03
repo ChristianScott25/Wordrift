@@ -44,7 +44,7 @@ public static class InspectBoxSetup
     /// drawn, and the flat middle is exactly the part 9-slice generates. One
     /// sprite at two sizes is two things to keep in step for no gain.
     /// </summary>
-    private const string BoxSpritePath = "Assets/Sprites/Gameplay UI/Main Item Text Box.png";
+    internal const string BoxSpritePath = "Assets/Sprites/Gameplay UI/Main Item Text Box.png";
 
     /// <summary>
     /// How far in from each edge the sprite stops being a corner and starts being
@@ -61,7 +61,7 @@ public static class InspectBoxSetup
     /// 3 thick, so 8 contains the whole corner with a pixel to spare. Redraw the
     /// corner bigger and this has to grow with it.
     /// </summary>
-    private const int SpriteBorder = 8;
+    internal const int SpriteBorder = 8;
 
     /// <summary>
     /// THE BOX'S WHOLE LOOK, AND ALL OF IT IS WRITTEN ON EVERY RUN.
@@ -240,7 +240,13 @@ public static class InspectBoxSetup
     /// only when something actually had to change, because SaveAndReimport is not
     /// free and this runs on every layout setup.
     /// </summary>
-    private static void StampSpriteImport(string path, int border)
+    /// <summary>
+    /// ⚠️ internal, not private: the bag view draws its panel on the SAME plate
+    /// sprite and needs the same border, and its close button wants the same
+    /// point-filtered uncompressed import. Two copies of this would be two
+    /// chances to differ from what the code assumes.
+    /// </summary>
+    internal static void StampSpriteImport(string path, int border)
     {
         if (AssetImporter.GetAtPath(path) is not TextureImporter importer) return;
 
