@@ -204,17 +204,22 @@ throwing it away.
 |---|---|
 | Tap an empty tile next to your last one | It joins the end |
 | Tap a tile that isn't touching your selection | The selection clears and starts again from that tile |
-| Tap a tile already selected | It and everything after it drop off — tap the last one to undo one letter |
+| Tap an earlier tile in your word | Everything **after** it drops off at once. The tile you tapped stays selected, so you can carry on from it |
+| Tap the last tile in your word | Undoes that letter — when you **lift your finger**, not when you touch, so holding it to read it never flickers it off |
 | Drag onto a tile that isn't adjacent | **Ignored.** A fast swipe skips tiles, and wiping your selection over a sampling gap would be maddening |
 | Tap the board background | Nothing. Deselecting is done by tapping a tile, so a stray tap can't cost you a word |
-| **Press and hold a tile** | Its **info box** opens — what the tile is, what it's worth, what its badges do. It does **not** get selected |
+| **Press and hold a tile** | Its **info box** opens — what the tile is, what it's worth, what its badges do. It does exactly what touching it did (the tap rules above) and nothing more |
 
 **Tiles in motion can't be grabbed.** A tile has to settle before it will respond, so nothing
 slides out from under your finger mid-word. The same goes for holding one to read it.
 
-**Holding never costs you a letter.** The tile is selected the instant you touch it, because
-waiting to find out whether you meant to hold would put a lag on every tap — so when the hold
-does come, the selection is put back exactly as it was. Your word is untouched either way.
+**Holding a tile is a tap that also opens the box.** Whatever happened the instant you touched
+the tile — it joined your word, your word started over from it, or everything after it dropped
+off — stands, and the box opens on top. The tile you touch lights up at once and stays lit;
+nothing snaps back. The one thing a hold cancels is the last-letter undo, which waits for you to
+lift your finger for exactly this reason. *(Until 2026-10-06 a hold put your word back the way
+it was before you touched, so the tile lit up and then snapped off — which felt wrong. Tapping
+an earlier letter also used to drop that letter too, not just the ones after it.)*
 
 ### The two buttons
 

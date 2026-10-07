@@ -8,9 +8,9 @@ using UnityEngine.InputSystem;
 /// Pointer input (touch or mouse) that builds a SELECTION of adjacent tiles.
 /// Two ways in, one result: drag across tiles, or tap them one at a time.
 ///
-/// A THIRD gesture reads rather than selects: PRESS AND HOLD one tile and its
-/// info box opens (see Inspector). Holding is a read on the board and a plain
-/// tap is a read everywhere else, and that split is forced rather than chosen —
+/// A THIRD gesture also reads: PRESS AND HOLD one tile and its info box opens
+/// (see Inspector) over whatever the press already selected. Holding is a
+/// read on the board and a plain tap is a read everywhere else, and that split is forced rather than chosen —
 /// a tap here already means "add this letter", and it is a supported way to
 /// spell a word, so a box on every tap would appear on every letter.
 ///
@@ -69,19 +69,29 @@ public class ChainController : MonoBehaviour
     //
     // ⚠️ THE PRESS FRAME HAS ALREADY SELECTED BY THE TIME WE KNOW IT IS A HOLD.
     // OnTapped runs the instant the finger lands, because deferring it by the
-    // hold threshold would put a visible lag on every tap-to-select. So the
-    // selection as it was BEFORE the press is kept, and putting it back is what
-    // makes holding purely a read.
-    //
-    // Snapshotting the whole chain rather than just un-adding the one tile is
-    // deliberate: OnTapped is allowed to CLEAR the selection and start over when
-    // the tile isn't connectable, so "remove the tile we added" would leave a
-    // hold on a far-away tile having silently wiped the player's word.
-    private readonly List<Tile> chainBeforePress = new();
+    // hold threshold would put a visible lag on every tap-to-select. So a hold
+    // never changes the selection — it only opens the box over whatever the
+    // press already did. That only works because NO press ever deselects the
+    // tile under the finger (see OnTapped and pendingUndo), so there is nothing
+    // to put back. His call, 2026-10-06: the tile you touch lights up at once
+    // and stays lit.
     private Tile pressedTile;
     private Vector2 pressScreenPos;
     private float pressedAt;
     private bool holdFired;
+
+    // A press on the LAST selected tile is a one-letter undo — but only once
+    // the finger lifts, because deselecting on the press frame would flicker
+    // the tile off under a finger that may be about to hold it. It lands only
+    // for a true TAP: no hold fired, the finger stayed within holdSlopPixels,
+    // and the word didn't change at all during the press. Checking just "is it
+    // still last?" isn't enough — drag onto a neighbour and back and the tile
+    // is last again, and the undo would take a letter the player kept.
+    // chainEdits is what catches that: it counts every change to the chain,
+    // so add-then-remove still reads as a change.
+    private Tile pendingUndo;
+    private int chainEdits;
+    private int chainEditsAtUndo;
 
     public void Init(Board board, Camera cam)
     {
@@ -109,6 +119,7 @@ public class ChainController : MonoBehaviour
             // wiping the tiles here would undo a choice the player made.
             dragging = false;
             lastActedOn = null;
+            CancelPendingUndo();
             RedrawLine(null);
             return;
         }
@@ -136,6 +147,10 @@ public class ChainController : MonoBehaviour
         }
         else if (pointer.press.isPressed && dragging)
         {
+            // Moved off the spot: a drag, not a tap, so it can't be an undo.
+            if (Vector2.Distance(pointer.position.ReadValue(), pressScreenPos) > holdSlopPixels)
+                CancelPendingUndo();
+
             if (TryHold(pointer.position.ReadValue()))
             {
                 // The gesture is a read now, not a drag. Ending the drag here is
@@ -159,7 +174,10 @@ public class ChainController : MonoBehaviour
         else if (!pointer.press.isPressed)
         {
             // Release does NOT submit and does NOT clear. It only ends the
-            // drag, so the trailing line stops following the finger.
+            // drag, so the trailing line stops following the finger — and
+            // lands a last-letter undo that the press deferred.
+            LandPendingUndo();
+
             dragging = false;
             lastActedOn = null;
             pressedTile = null;
@@ -178,11 +196,18 @@ public class ChainController : MonoBehaviour
         int existing = chain.IndexOf(tile);
         if (existing >= 0)
         {
-            // Truncate back to it: tapping the last tile is a one-tile undo,
-            // tapping an earlier one drops everything after it. Safe for any
-            // tile because the selection is a path — cutting it anywhere
-            // leaves a shorter valid path.
-            TruncateTo(existing);
+            // The tile under the finger stays selected. Tapping an earlier one
+            // drops everything AFTER it, at once. Tapping the last one is a
+            // one-letter undo, deferred to release (pendingUndo) so a hold on
+            // it never sees it flicker off. Safe for any tile because the
+            // selection is a path — cutting it anywhere leaves a shorter
+            // valid path.
+            if (existing < chain.Count - 1) TruncateTo(existing + 1);
+            else
+            {
+                pendingUndo = tile;
+                chainEditsAtUndo = chainEdits;
+            }
             return;
         }
 
@@ -222,8 +247,7 @@ public class ChainController : MonoBehaviour
     }
 
     /// <summary>
-    /// Remembers what a press landed on, and what the selection looked like
-    /// before it acted. Runs BEFORE OnTapped, which is the whole point.
+    /// Remembers what a press landed on, where, and when.
     /// </summary>
     private void BeginHold(Tile tile, Vector2 screenPos)
     {
@@ -231,9 +255,6 @@ public class ChainController : MonoBehaviour
         pressedTile = tile;
         pressScreenPos = screenPos;
         pressedAt = Time.unscaledTime;
-
-        chainBeforePress.Clear();
-        for (int i = 0; i < chain.Count; i++) chainBeforePress.Add(chain[i]);
     }
 
     /// <summary>
@@ -259,29 +280,12 @@ public class ChainController : MonoBehaviour
 
         holdFired = true;
 
-        // Put the selection back exactly as it was before this press touched it.
-        RestoreChain();
+        // A hold is a read: whatever the press did stands, and a last-letter
+        // undo it queued is called off.
+        CancelPendingUndo();
 
         Inspector.Show(pressedTile.Spec, Inspector.ScreenRectOf(pressedTile.WorldBounds, cam));
         return true;
-    }
-
-    /// <summary>
-    /// Undoes whatever the press frame did to the selection. Only ever called
-    /// with a snapshot taken microseconds-of-gameplay ago, so the tiles in it
-    /// cannot have been cleared from the board in between.
-    /// </summary>
-    private void RestoreChain()
-    {
-        ClearSelectionSilently();
-        for (int i = 0; i < chainBeforePress.Count; i++)
-        {
-            var tile = chainBeforePress[i];
-            if (tile == null) continue;
-            chain.Add(tile);
-            tile.SetSelected(true);
-        }
-        ChainChanged?.Invoke(chain);
     }
 
     private bool IsConnectable(Tile from, Tile to)
@@ -291,8 +295,23 @@ public class ChainController : MonoBehaviour
         return Mathf.Abs(delta.x) + Mathf.Abs(delta.y) == 1;
     }
 
+    /// <summary>
+    /// On release: removes the last tile if the press was a clean tap on it.
+    /// Every condition but "nothing changed" is enforced by cancelling earlier.
+    /// </summary>
+    private void LandPendingUndo()
+    {
+        if (pendingUndo != null && chainEdits == chainEditsAtUndo
+            && chain.Count > 0 && chain[chain.Count - 1] == pendingUndo)
+            TruncateTo(chain.Count - 1);
+        CancelPendingUndo();
+    }
+
+    private void CancelPendingUndo() => pendingUndo = null;
+
     private void AddTile(Tile tile)
     {
+        chainEdits++;
         chain.Add(tile);
         tile.SetSelected(true);
         ChainChanged?.Invoke(chain);
@@ -301,6 +320,7 @@ public class ChainController : MonoBehaviour
     /// <summary>Drops the tile at this index and every one after it.</summary>
     private void TruncateTo(int index)
     {
+        chainEdits++;
         for (int i = chain.Count - 1; i >= index; i--)
         {
             if (chain[i] != null) chain[i].SetSelected(false);
@@ -358,13 +378,14 @@ public class ChainController : MonoBehaviour
     {
         dragging = false;
         pressedTile = null;
-        chainBeforePress.Clear();
+        CancelPendingUndo();
         ClearSelectionSilently();
         ChainChanged?.Invoke(chain);
     }
 
     private void ClearSelectionSilently()
     {
+        chainEdits++;
         foreach (var tile in chain)
             if (tile != null) tile.SetSelected(false);
         chain.Clear();
