@@ -176,7 +176,7 @@ public static class WordActionsSetup
     /// file leaves a readable button rather than an invisible one — though
     /// LoadSprite has already said so loudly.
     /// </summary>
-    private static void Dress(Button button, Color color)
+    internal static void Dress(Button button, Color color)
     {
         if (button == null) return;
 

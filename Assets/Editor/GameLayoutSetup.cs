@@ -44,9 +44,6 @@ public static class GameLayoutSetup
 
     private static readonly Color Panel = new Color(0f, 0f, 0f, 0.35f);
     private static readonly Color Faint = new Color(1f, 1f, 1f, 0.55f);
-    // Multiplied onto the off-white Small Button plate, so this is near-white
-    // rather than the dark slab the flat placeholder used.
-    private static readonly Color InfoColor = new Color(0.86f, 0.88f, 0.92f);
 
     [MenuItem("Word Crush/Set Up Game Layout")]
     public static void SetUp()
@@ -122,13 +119,15 @@ public static class GameLayoutSetup
         InspectBoxSetup.Build(canvas);
         ScorePopSetup.Build(canvas);
         var bagView = BagViewSetup.Build(canvas, session);
-        BuildSystemButtons(canvas);
+        var pauseView = PauseViewSetup.Build(canvas, session);
+        var systemButtons = BuildSystemButtons(canvas);
         BuildWordRow(canvas, board);
 
         // The button and the panel it opens are built separately, so joining
         // them up waits until both exist. Without this the button is wired to
         // nothing and logs an error instead of opening.
         WordCrushSetup.SetRef(bagButton, "bagView", bagView);
+        WordCrushSetup.SetRef(systemButtons, "pauseView", pauseView);
 
         WordCrushSetup.SetRef(session, "layout", layout);
         ShareTheHeaderBand();
@@ -409,19 +408,20 @@ public static class GameLayoutSetup
         // them at runtime — the same reason StatusWidget builds its own chips.
     }
 
-    private static void BuildSystemButtons(Canvas canvas)
+    private static SystemButtonsWidget BuildSystemButtons(Canvas canvas)
     {
         var root = Reuse<SystemButtonsWidget>(canvas, "SystemButtons");
         var widget = root.GetComponent<SystemButtonsWidget>();
 
-        var info = FindOrMakeButton(root.transform, "InfoButton", "i", 0f, 0.46f);
-        // 🚧 "SET", not a gear glyph: the default TMP font has no U+2699, and a
-        // missing character renders as a box, which reads as broken rather than
-        // as a placeholder. Swap it for an icon when there is art.
-        var settings = FindOrMakeButton(root.transform, "SettingsButton", "SET", 0.54f, 1f);
+        // It was the settings button until the pause screen landed (2026-10-06).
+        RenameChild(root.transform, "SettingsButton", "PauseButton");
+
+        var info = FindOrMakeIconButton(root.transform, "InfoButton", "Info Button", 0f, 0.46f);
+        var pause = FindOrMakeIconButton(root.transform, "PauseButton", "Pause Button", 0.54f, 1f);
 
         WordCrushSetup.SetRef(widget, "infoButton", info);
-        WordCrushSetup.SetRef(widget, "settingsButton", settings);
+        WordCrushSetup.SetRef(widget, "pauseButton", pause);
+        return widget;
     }
 
     /// <summary>
@@ -619,33 +619,48 @@ public static class GameLayoutSetup
     private static Sprite Square() =>
         AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/White Square.png");
 
-    private static Button FindOrMakeButton(Transform parent, string name, string label,
-                                           float xMin, float xMax)
+    /// <summary>
+    /// An icon button: the art IS the button, glyph and all, so there is no text
+    /// label — a re-run deletes the "i" / "SET" label an older version made, or
+    /// it would print on top of the drawing.
+    ///
+    /// White in the ColorBlock, so the art shows exactly as drawn; only pressing
+    /// darkens it. These two are always pressable, so unlike PLAY and DISCARD
+    /// there is no state to say anything about.
+    /// </summary>
+    private static Button FindOrMakeIconButton(Transform parent, string name, string spriteName,
+                                               float xMin, float xMax)
     {
         var slot = Slot(parent, name, xMin, 0.1f, xMax, 0.9f);
 
         var image = slot.GetComponent<Image>() ?? slot.AddComponent<Image>();
-        WordCrushSetup.SetSprite(image, WordCrushSetup.LoadSprite("Small Button"), Color.white);
+        WordCrushSetup.SetSprite(image, WordCrushSetup.LoadSprite(spriteName), Color.white);
 
         var button = slot.GetComponent<Button>() ?? slot.AddComponent<Button>();
         button.targetGraphic = image;
 
-        // Neutral: these two are always pressable, so unlike PLAY and DISCARD
-        // they have no state to say anything about.
         var colors = button.colors;
-        colors.normalColor = InfoColor;
-        colors.selectedColor = InfoColor;
-        colors.highlightedColor = new Color(1f, 1f, 1f, 1f);
+        colors.normalColor = Color.white;
+        colors.selectedColor = Color.white;
+        colors.highlightedColor = Color.white;
         colors.pressedColor = new Color(0.72f, 0.74f, 0.80f);
         colors.fadeDuration = 0.06f;
         button.colors = colors;
 
-        var text = slot.GetComponentInChildren<TMP_Text>(true)
-                   ?? WordCrushSetup.MakeText(slot.transform, "Label", 46,
-                                              TextAlignmentOptions.Center);
-        text.text = label;
-        text.color = new Color(0.12f, 0.13f, 0.17f);
-        WordCrushSetup.Stretch(text.gameObject);
+        var oldLabel = slot.GetComponentInChildren<TMP_Text>(true);
+        if (oldLabel != null) Object.DestroyImmediate(oldLabel.gameObject);
+
         return button;
+    }
+
+    /// <summary>
+    /// Renames a child in place, so a re-run after a rename reuses the object
+    /// (and every scene reference to it) instead of building a second one beside
+    /// the old.
+    /// </summary>
+    private static void RenameChild(Transform parent, string from, string to)
+    {
+        var old = parent.Find(from);
+        if (old != null && parent.Find(to) == null) old.name = to;
     }
 }

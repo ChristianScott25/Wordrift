@@ -75,8 +75,14 @@ public class WordActionsWidget : MonoBehaviour
     // Start, not OnEnable — the layout resolves between the two. See GameLayout.
     private void Start() => PlaceSelf();
 
-    private void PlaceSelf() =>
-        GameLayout.Attach((RectTransform)transform, LayoutBand.Buttons, bandXMin, bandXMax);
+    private void PlaceSelf()
+    {
+        // PLAY is the right END of the row, so its art goes flush right — that's
+        // what lines it up with the board's right edge.
+        if (GameLayout.Attach((RectTransform)transform, LayoutBand.Buttons, bandXMin, bandXMax) &&
+            submitButton != null)
+            GameLayout.HugEdge((RectTransform)submitButton.transform, toLeft: false);
+    }
 
     private void OnSubmit()
     {

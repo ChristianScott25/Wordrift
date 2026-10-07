@@ -377,8 +377,21 @@ public class GameSession : MonoBehaviour
     /// board mid-fall or mid-tally is one whose tile map is about to change under
     /// whatever the item does to it.
     /// </summary>
-    public bool CanUseConsumable =>
-        IsPlaying && !tallying && board != null && !board.Busy && !board.Resolving;
+    public bool CanUseConsumable => IsAtRest;
+
+    /// <summary>
+    /// The round is live and nothing is moving: no score walk, no fall, no
+    /// clear waiting to compact. The same three conditions that gate a save,
+    /// which is why both spending an item and leaving mid-round ask it.
+    ///
+    /// ⚠️ !mode.IsRoundOver as well as IsPlaying: the round is over the moment
+    /// the mode says so, but IsPlaying only flips when Update next calls
+    /// EndRound. A UI tap handled before GameSession.Update in that frame would
+    /// otherwise see a finished round as live — and LeaveToMenu would save it.
+    /// </summary>
+    public bool IsAtRest =>
+        IsPlaying && mode != null && !mode.IsRoundOver &&
+        !tallying && board != null && !board.Busy && !board.Resolving;
 
     /// <summary>
     /// What this round has left to draw — for the bag view, which is the only
@@ -716,6 +729,32 @@ public class GameSession : MonoBehaviour
     {
         leavingScene = true;
         StartCoroutine(LoadAfterBeat(sceneName, delay));
+    }
+
+    /// <summary>
+    /// Leaves the round for the menu WITHOUT ending the run — the pause
+    /// screen's MAIN MENU. The run is saved on the way out, so CONTINUE picks it
+    /// up exactly here. Returns false, and does nothing, unless IsAtRest.
+    ///
+    /// ⚠️ REFUSES MID-WORD ON PURPOSE. A save must never be taken with the board
+    /// moving (see FlushSaveWhenSettled), and a word still scoring may be the
+    /// one that ends the round and sends the run to the shop — leaving then
+    /// would race that. Waiting a second or two for the board to settle is the
+    /// whole cost.
+    /// </summary>
+    public bool LeaveToMenu(string sceneName)
+    {
+        if (!IsAtRest || leavingScene) return false;
+
+        // Unconditionally, not only when a save is owed: the board is at rest,
+        // so this is always a safe snapshot, and it can't leave the file behind
+        // a change that forgot to call RequestSave.
+        saveDirty = false;
+        SaveRun();
+
+        leavingScene = true;
+        SceneManager.LoadScene(sceneName);
+        return true;
     }
 
     private IEnumerator LoadAfterBeat(string sceneName, float delay)

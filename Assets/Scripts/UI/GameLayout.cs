@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>The bands the gameplay screen is divided into, top to bottom.</summary>
 public enum LayoutBand
@@ -219,8 +220,8 @@ public class GameLayout : MonoBehaviour
     /// how a world-space thing tells a canvas widget where it is on screen.
     ///
     /// ⚠️ NOT a licence to do your own WorldToScreenPoint / scaleFactor maths.
-    /// WorldRectOf and CanvasYOf below are still the only two places the camera
-    /// and the canvas are reconciled; this exists so a widget can hand the camera
+    /// WorldRectOf, CanvasYOf and CanvasXOf below are still the only places the
+    /// camera and the canvas are reconciled; this exists so a widget can hand the camera
     /// to the one shared helper rather than keep a second reference to it.
     /// </summary>
     public Camera SceneCamera => sceneCamera;
@@ -268,6 +269,49 @@ public class GameLayout : MonoBehaviour
     }
 
     /// <summary>
+    /// A world-space x as a canvas-space x, measured from the canvas's left edge.
+    /// CanvasYOf's twin, for the same reason it lives here.
+    /// </summary>
+    public float CanvasXOf(float worldX)
+    {
+        if (sceneCamera == null || canvas == null || canvas.scaleFactor <= 0f) return 0f;
+
+        float screenX = sceneCamera.WorldToScreenPoint(new Vector3(worldX, 0f, 0f)).x;
+        return screenX / canvas.scaleFactor;
+    }
+
+    /// <summary>
+    /// Shrinks a button whose art keeps its shape (preserveAspect) so the art
+    /// sits FLUSH against one side of its slot rather than centred in it.
+    ///
+    /// A centred square in a slightly wider slot leaves a sliver either side,
+    /// which is invisible mid-row and obvious at the end of one: it's what put
+    /// the info button a few units left of the board's edge and PLAY a few
+    /// inside it. Call it after Attach, on the button at each END of a row.
+    /// Idempotent — it starts from the slot's own anchors every time.
+    /// </summary>
+    public static void HugEdge(RectTransform rect, bool toLeft)
+    {
+        if (rect == null) return;
+
+        var image = rect.GetComponent<Image>();
+        if (image == null || image.sprite == null) return;
+
+        Vector2 art = image.sprite.rect.size;
+        if (art.x <= 0f || art.y <= 0f) return;
+
+        rect.offsetMin = new Vector2(0f, rect.offsetMin.y);
+        rect.offsetMax = new Vector2(0f, rect.offsetMax.y);
+
+        float width = rect.rect.width;
+        float artWidth = Mathf.Min(width, rect.rect.height * art.x / art.y);
+        float spare = Mathf.Max(0f, width - artWidth);
+
+        if (toLeft) rect.offsetMax = new Vector2(-spare, rect.offsetMax.y);
+        else rect.offsetMin = new Vector2(spare, rect.offsetMin.y);
+    }
+
+    /// <summary>
     /// Resolves the band stack against the current screen and frames the camera.
     ///
     /// Called by GameSession.Awake once the board exists, and again by Update
@@ -290,6 +334,7 @@ public class GameLayout : MonoBehaviour
         Rect usable = UsableRect();
         LayOutBands(usable);
         FrameBoard();
+        FitButtonsToBoard(usable);
 
         IsResolved = true;
         Changed?.Invoke();
@@ -426,6 +471,37 @@ public class GameLayout : MonoBehaviour
         rect.pivot = Vector2.zero;
         rect.anchoredPosition = new Vector2(at.x, at.y);
         rect.sizeDelta = new Vector2(at.width, at.height);
+    }
+
+    /// <summary>
+    /// Narrows (or widens) the button band to the board's DRAWN width, so the
+    /// row's two ends line up with the board's edges.
+    ///
+    /// The bands all share the usable width, but the board usually doesn't fill
+    /// it: when its band is the tight axis it's narrower, and its border always
+    /// pokes a little past the tiles. A button row sized to the band therefore
+    /// overhung the board on one phone and sat inside it on another. Measured
+    /// off BackingSize, after FrameBoard, because the camera decides where the
+    /// board lands. Never past the safe area.
+    /// </summary>
+    private void FitButtonsToBoard(Rect usable)
+    {
+        if (board == null || sceneCamera == null) return;
+        if (!rects.TryGetValue(LayoutBand.Buttons, out var row)) return;
+
+        float half = board.BackingSize.x * 0.5f;
+        if (half <= 0f) return;
+
+        float left = CanvasXOf(board.BoardCenter.x - half);
+        float right = CanvasXOf(board.BoardCenter.x + half);
+
+        left = Mathf.Max(left, usable.xMin - sideMargin);
+        right = Mathf.Min(right, usable.xMax + sideMargin);
+        if (right - left <= 0f) return;
+
+        var fitted = new Rect(left, row.y, right - left, row.height);
+        rects[LayoutBand.Buttons] = fitted;
+        Place(Container(LayoutBand.Buttons), fitted);
     }
 
     /// <summary>

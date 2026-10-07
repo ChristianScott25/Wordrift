@@ -21,6 +21,10 @@ using UnityEngine.UI;
 /// are two of them in two scenes so a value tuned on one drifts from the other.
 /// There is exactly one bag view, in one scene, so the ordinary rule applies:
 /// structure every run, styling only when something is new.
+///
+/// Its builders are internal because PauseViewSetup builds the pause screen out
+/// of the SAME backdrop, plate and close button — one look, one place, so the
+/// two panels can't drift apart.
 /// </summary>
 public static class BagViewSetup
 {
@@ -32,9 +36,9 @@ public static class BagViewSetup
     private const float TopInset = 0.085f;
 
     /// <summary>Panel padding, the header's height, and the close button, in canvas units.</summary>
-    private const float Pad = 40f;
-    private const float HeaderHeight = 56f;
-    private const float CloseSize = 68f;
+    internal const float Pad = 40f;
+    internal const float HeaderHeight = 56f;
+    internal const float CloseSize = 68f;
 
     /// <summary>
     /// Four across, and the row has to FIT or the rightmost tile is clipped by
@@ -65,7 +69,7 @@ public static class BagViewSetup
     /// art of its own.
     /// </summary>
     private static readonly Color PanelColor = new Color(0.78f, 0.78f, 0.80f, 1f);
-    private static readonly Color InkColor = new Color(0.10f, 0.09f, 0.12f, 1f);
+    internal static readonly Color InkColor = new Color(0.10f, 0.09f, 0.12f, 1f);
     private static readonly Color QuietColor = new Color(0.27f, 0.25f, 0.29f, 1f);
 
     internal static BagViewWidget Build(Canvas canvas, GameSession session)
@@ -131,7 +135,7 @@ public static class BagViewSetup
     /// bug; here it is the feature. It is safe only because the root is off
     /// whenever the view is closed.
     /// </summary>
-    private static void BuildBackdrop(Transform parent)
+    internal static void BuildBackdrop(Transform parent)
     {
         var go = Slot(parent, "Backdrop");
         Fill((RectTransform)go.transform);
@@ -141,7 +145,7 @@ public static class BagViewSetup
         image.raycastTarget = true;
     }
 
-    private static GameObject BuildPanel(Transform parent)
+    internal static GameObject BuildPanel(Transform parent)
     {
         var go = Slot(parent, "Panel");
 
@@ -177,7 +181,7 @@ public static class BagViewSetup
         return go;
     }
 
-    private static Button BuildClose(Transform parent)
+    internal static Button BuildClose(Transform parent)
     {
         var go = Slot(parent, "Close");
 
@@ -285,7 +289,7 @@ public static class BagViewSetup
     /// ended up stretched across the whole header, underneath the count and the
     /// close button, with nothing on screen to say why.
     /// </summary>
-    private static void HeaderBand(RectTransform rect, float fromX, float toX,
+    internal static void HeaderBand(RectTransform rect, float fromX, float toX,
                                    float insetLeft, float insetRight)
     {
         rect.anchorMin = new Vector2(fromX, 1f);
@@ -295,7 +299,7 @@ public static class BagViewSetup
         rect.offsetMax = new Vector2(-insetRight, -Pad);
     }
 
-    private static void Fill(RectTransform rect)
+    internal static void Fill(RectTransform rect)
     {
         rect.anchorMin = Vector2.zero;
         rect.anchorMax = Vector2.one;
@@ -304,7 +308,7 @@ public static class BagViewSetup
         rect.localScale = Vector3.one;
     }
 
-    private static GameObject Slot(Transform parent, string name)
+    internal static GameObject Slot(Transform parent, string name)
     {
         var existing = parent.Find(name);
         if (existing != null) return existing.gameObject;
@@ -319,7 +323,7 @@ public static class BagViewSetup
     /// NEW — styling is worth tuning on a real screen and a re-run that reset it
     /// would be infuriating. Position is structure and is ours every run.
     /// </summary>
-    private static TMP_Text Label(Transform parent, string name, float size,
+    internal static TMP_Text Label(Transform parent, string name, float size,
                                   TextAlignmentOptions align, Color color, string placeholder)
     {
         var existing = parent.Find(name);

@@ -125,7 +125,7 @@ The screen is a stack of bands, top to bottom:
 | **Score × mult** | What your word's LENGTH is worth, and only that, while you're selecting. After you hit PLAY it's where the whole score gets counted out in front of you, a beat at a time (§3). |
 | **Word row** | The word you're spelling, laid out left to right as tiles. When the selection won't score it says **WON'T SCORE** here instead, with the librarian's reason underneath when a librarian is the reason. |
 | **The board** | Where you drag. |
-| **Buttons** | Info, settings, DISCARD, PLAY. |
+| **Buttons** | Info, pause, DISCARD, PLAY. |
 
 The buttons are one shared plate, coloured in code — **PLAY green, DISCARD red, both grey
 when they won't do anything.** So DISCARD still tells you what it will cost
@@ -170,7 +170,7 @@ putting a box on the screen every time you tap a letter would be worse than a sp
 this round (§6). The game behind it stops responding while it's up — there's no clock in this
 game, so that's all pausing means.
 
-🚧 The **info** and **settings** buttons still don't open anything. The **librarian's** rule is
+🚧 The **info** button still doesn't open anything. The **pause** button does — see §6, *Pausing*. The **librarian's** rule is
 already printed in the round header, so it needs no box, and **checkouts** you've bought
 aren't re-readable anywhere yet.
 
@@ -816,6 +816,24 @@ appearing. That's a development rule, not a game rule: it exists so a run in pro
 quietly keep playing by yesterday's numbers, and it will go away once the numbers stop moving.
 
 ❓ There is one save slot and no way to name, browse, or export a run.
+
+### Pausing
+
+The **pause** button (bottom left, beside info) opens the pause screen over the game.
+
+- **Nothing underneath can be touched while it's open** — not the board, not the buttons, not
+  your items. Your selected word is left exactly as it was.
+- **It doesn't stop time, because there's no clock to stop.** A word that was already being
+  scored when you paused finishes scoring underneath.
+- **The X closes it** and you carry straight on.
+- **MAIN MENU saves the run and leaves.** The menu then shows **CONTINUE**, which puts you back in
+  the same round, exactly as you left it — same board, bag, score, moves and discards.
+- **MAIN MENU is greyed out while a word is still scoring or tiles are still falling**, for a
+  second or two at most. The run can only be saved with the board standing still, and a word
+  still scoring might be the one that wins the round.
+
+🚧 **TEMPORARY:** MAIN MENU is the only thing on it, and it borrows the tile bag's panel art.
+Settings and anything else a pause screen should hold come later.
 
 ---
 

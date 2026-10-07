@@ -35,6 +35,9 @@ public class BoardBackground : MonoBehaviour
     [Tooltip("Nudge away from the camera, so nothing z-sorts in front of a tile.")]
     [SerializeField] private float depthOffset = 0.1f;
 
+    /// <summary>Square size as a multiple of one cell — everything above 1 is the border.</summary>
+    public float CellScale => cellScale;
+
     private readonly List<SpriteRenderer> cells = new();
     private Transform root;
     private bool warnedAboutAlpha;

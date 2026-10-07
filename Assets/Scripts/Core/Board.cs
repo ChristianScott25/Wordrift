@@ -55,6 +55,22 @@ public class Board : MonoBehaviour
     public Vector2 BoardCenter { get; private set; }
     public Vector2 BoardSize { get; private set; }
 
+    /// <summary>
+    /// The board as it's DRAWN: BoardSize plus the backing's border, which
+    /// sticks out half of (cellScale - 1) cells past the tiles on every side.
+    /// What anything lining itself up with the board's visible edge wants —
+    /// BoardSize is the tiles alone, and is a little narrower than what you see.
+    /// </summary>
+    public Vector2 BackingSize
+    {
+        get
+        {
+            if (background == null) background = GetComponent<BoardBackground>();
+            float extra = background != null ? (background.CellScale - 1f) * cellSize : 0f;
+            return BoardSize + new Vector2(extra, extra);
+        }
+    }
+
     /// <summary>Tiles on the board right now, counting ones still falling in.</summary>
     public int TileCount => tiles.Count;
 
