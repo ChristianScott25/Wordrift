@@ -41,20 +41,28 @@ public static class BagViewSetup
     internal const float CloseSize = 68f;
 
     /// <summary>
-    /// Four across, and the row has to FIT or the rightmost tile is clipped by
-    /// the scroll mask. The sum is padding + cells + gaps against the viewport:
-    ///
-    ///   8 + 4x210 + 3x14 + 8  =  898     the grid needs this
-    ///   1080 x 0.92 - 2x40    =  913.6   the viewport has this
-    ///
-    /// ⚠️ Those two numbers are only ever this close by arithmetic, not by
-    /// anything Unity enforces — 215 was 4 units too wide and simply cut the
-    /// fourth column. Re-do the sum if any of Columns, Cell, Spacing, Pad or
-    /// SideInset moves.
+    /// A starting grid, so the panel looks right in the editor. At runtime
+    /// BagViewWidget overwrites the cell and column count from its size slider
+    /// and the grid's real width — which is why there is no longer a hand-done
+    /// "does the row fit" sum to keep in step here. ⚠️ `Spacing` is still read:
+    /// the widget takes it as the NARROWEST gap and the row gap.
     /// </summary>
     private const int Columns = 4;
     private static readonly Vector2 Cell = new Vector2(210f, 150f);
     private static readonly Vector2 Spacing = new Vector2(14f, 16f);
+
+    /// <summary>
+    /// 🚧 The size slider: a strip along the panel's bottom, a thin line, and a
+    /// round knob. Borrowed sprites — the flat white square for the line and the
+    /// badge circle for the knob — until it gets art of its own.
+    /// </summary>
+    private const string SliderLinePath = "Assets/Sprites/White Square.png";
+    private const string SliderKnobPath = "Assets/Sprites/Score Multiplier - White.png";
+    private const float SliderHeight = 80f;
+    private const float SliderLineHeight = 12f;
+    private const float SliderKnobSize = 64f;
+    private const float SliderGap = 16f;
+    private static readonly Color KnobColor = new Color(1f, 0.97f, 0.90f, 1f);
 
     private static readonly Color BackdropColor = new Color(0f, 0f, 0f, 0.55f);
 
@@ -110,12 +118,14 @@ public static class BagViewSetup
 
         var close = BuildClose(panel.transform);
         var grid = BuildScroll(panel.transform);
+        var slider = BuildSizeSlider(panel.transform);
 
         WordCrushSetup.SetRef(widget, "root", root);
         WordCrushSetup.SetRef(widget, "session", session);
         WordCrushSetup.SetRef(widget, "grid", grid);
         WordCrushSetup.SetRef(widget, "countLabel", count);
         WordCrushSetup.SetRef(widget, "closeButton", close);
+        WordCrushSetup.SetRef(widget, "sizeSlider", slider);
 
         var skin = AssetDatabase.LoadAssetAtPath<TileSkin>("Assets/GameData/Skins/TileSkin_White.asset");
         if (skin != null) WordCrushSetup.SetRef(widget, "skin", skin);
@@ -218,7 +228,8 @@ public static class BagViewSetup
         var scrollRect = (RectTransform)scrollGo.transform;
         scrollRect.anchorMin = Vector2.zero;
         scrollRect.anchorMax = Vector2.one;
-        scrollRect.offsetMin = new Vector2(Pad, Pad);
+        // The bottom leaves room for the size slider underneath.
+        scrollRect.offsetMin = new Vector2(Pad, Pad + SliderHeight + SliderGap);
         scrollRect.offsetMax = new Vector2(-Pad, -(Pad + HeaderHeight + 16f));
 
         var viewGo = Slot(scrollGo.transform, "Viewport");
@@ -276,6 +287,98 @@ public static class BagViewSetup
         scroll.verticalScrollbar = null;
 
         return grid;
+    }
+
+    /// <summary>
+    /// The tile-size slider, along the bottom of the panel — where the thumb
+    /// already is. Unity's own Slider with no fill bar: a line and a knob.
+    ///
+    /// Range, value and listener are the WIDGET's business (it owns the
+    /// min/max and the remembered setting), so only the look and structure are
+    /// built here. It is outside the scroll view, so the two never compete for
+    /// a drag; and it sits inside the panel, over the backdrop, so it changes
+    /// nothing about what the board can be touched by.
+    /// </summary>
+    private static Slider BuildSizeSlider(Transform parent)
+    {
+        bool isNew = parent.Find("Size Slider") == null;
+        var go = Slot(parent, "Size Slider");
+
+        var rect = (RectTransform)go.transform;
+        rect.anchorMin = new Vector2(0f, 0f);
+        rect.anchorMax = new Vector2(1f, 0f);
+        rect.pivot = new Vector2(0.5f, 0f);
+        rect.offsetMin = new Vector2(Pad, Pad);
+        rect.offsetMax = new Vector2(-Pad, Pad + SliderHeight);
+
+        // ⚠️ An invisible hit area the height of the whole strip. The line is
+        // 12 units tall — far too thin for a finger — so a tap ANYWHERE in the
+        // strip lands here and the Slider jumps the knob to it. Safe: it is
+        // inside the panel, which already blocks everything under it.
+        var hit = go.GetComponent<Image>() ?? go.AddComponent<Image>();
+        hit.color = new Color(1f, 1f, 1f, 0f);
+        hit.raycastTarget = true;
+
+        // The line.
+        var lineGo = Slot(go.transform, "Background");
+        var lineRect = (RectTransform)lineGo.transform;
+        lineRect.anchorMin = new Vector2(0f, 0.5f);
+        lineRect.anchorMax = new Vector2(1f, 0.5f);
+        lineRect.pivot = new Vector2(0.5f, 0.5f);
+        lineRect.sizeDelta = new Vector2(-SliderKnobSize, SliderLineHeight);
+        lineRect.anchoredPosition = Vector2.zero;
+
+        var line = lineGo.GetComponent<Image>() ?? lineGo.AddComponent<Image>();
+        if (line.sprite == null) line.sprite = LoadSprite(SliderLinePath);
+        line.type = Image.Type.Simple;
+        line.preserveAspect = false;
+        line.raycastTarget = false;   // the strip behind it takes the taps
+        if (isNew) line.color = InkColor;
+
+        // ⚠️ The knob's travel is inset by half a knob each side, so at either
+        // end it stops flush with the line's end rather than hanging off it.
+        var areaGo = Slot(go.transform, "Handle Slide Area");
+        var areaRect = (RectTransform)areaGo.transform;
+        areaRect.anchorMin = Vector2.zero;
+        areaRect.anchorMax = Vector2.one;
+        areaRect.offsetMin = new Vector2(SliderKnobSize * 0.5f, 0f);
+        areaRect.offsetMax = new Vector2(-SliderKnobSize * 0.5f, 0f);
+
+        var knobGo = Slot(areaGo.transform, "Handle");
+        var knobRect = (RectTransform)knobGo.transform;
+        knobRect.sizeDelta = new Vector2(SliderKnobSize, 0f);
+
+        var knob = knobGo.GetComponent<Image>() ?? knobGo.AddComponent<Image>();
+        if (knob.sprite == null) knob.sprite = LoadSprite(SliderKnobPath);
+        knob.preserveAspect = true;
+        knob.raycastTarget = true;
+        if (isNew) knob.color = KnobColor;
+
+        var slider = go.GetComponent<Slider>() ?? go.AddComponent<Slider>();
+        slider.fillRect = null;
+        slider.handleRect = knobRect;
+        slider.targetGraphic = knob;
+        slider.direction = Slider.Direction.LeftToRight;
+        // Smooth, not stepped: the tile grows under the finger. The widget
+        // sets this again on Awake; it's here so the editor shows the truth.
+        slider.wholeNumbers = false;
+        slider.minValue = 0f;
+        slider.maxValue = 1f;
+        slider.navigation = new Navigation { mode = Navigation.Mode.None };
+
+        // Just so the knob sits somewhere sensible in the editor — the widget
+        // puts it where the player left it.
+        if (isNew) slider.SetValueWithoutNotify(0.5f);
+
+        return slider;
+    }
+
+    private static Sprite LoadSprite(string path)
+    {
+        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        if (sprite == null)
+            Debug.LogWarning($"Bag view: no sprite at {path}, so the size slider draws a plain box there.");
+        return sprite;
     }
 
     // ---- small builders -----------------------------------------------------

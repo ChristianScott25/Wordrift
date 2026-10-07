@@ -44,6 +44,7 @@ public class BagTileView : MonoBehaviour, IPointerClickHandler
     private const float BadgeSize = 0.36f;
 
     private TileSpec spec;
+    private TileSkin skin;
     private float bodySize;
 
     private Image body;
@@ -68,18 +69,15 @@ public class BagTileView : MonoBehaviour, IPointerClickHandler
         go.transform.SetParent(parent, false);
 
         var view = go.AddComponent<BagTileView>();
-        view.Build(cell, gap);
+        view.Build();
+        view.Resize(cell, gap);
         return view;
     }
 
-    private void Build(Vector2 cell, float gap)
+    /// <summary>Makes the children, once. Every size and position is Resize's job.</summary>
+    private void Build()
     {
-        // Square, and as big as the cell allows once the count has its share.
-        bodySize = Mathf.Max(1f, Mathf.Min(cell.y, cell.x * 0.58f));
-
         body = Make<Image>(transform, "Body");
-        Place(body.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
-              new Vector2(bodySize, bodySize), Vector2.zero);
 
         // ⚠️ THE ONLY RAYCAST TARGET IN HERE. Anything else would eat the tap
         // meant for this — the same rule ConsumableSlotView's label follows.
@@ -97,22 +95,43 @@ public class BagTileView : MonoBehaviour, IPointerClickHandler
         // in step.
         letterLabel.enableAutoSizing = true;
         letterLabel.fontSizeMin = 8f;
-        letterLabel.fontSizeMax = bodySize * 0.60f;
 
         scoreLabel = Text(body.transform, "Score", TextAlignmentOptions.BottomRight);
         Stretch(scoreLabel.rectTransform, new Vector2(0.50f, 0.04f), new Vector2(0.94f, 0.42f));
+
+        // Auto-sized for the same reason the letter is: "x13" fits at this size
+        // today, but tileBagSize is one Inspector field and "x104" would not.
+        countLabel = Text(transform, "Count", TextAlignmentOptions.Left);
+        countLabel.enableAutoSizing = true;
+        countLabel.fontSizeMin = 8f;
+    }
+
+    /// <summary>
+    /// Sizes everything to a grid cell. Called once on creation and again
+    /// whenever the bag view's size slider moves, so it must be safe to repeat:
+    /// it only ever SETS sizes, never scales what is already there.
+    /// </summary>
+    /// <param name="cell">The grid cell this fills, in canvas units.</param>
+    /// <param name="gap">Between the tile and its count.</param>
+    public void Resize(Vector2 cell, float gap)
+    {
+        // Square, and as big as the cell allows once the count has its share.
+        bodySize = Mathf.Max(1f, Mathf.Min(cell.y, cell.x * 0.58f));
+
+        Place(body.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+              new Vector2(bodySize, bodySize), Vector2.zero);
+
+        letterLabel.fontSizeMax = bodySize * 0.60f;
         scoreLabel.fontSize = bodySize * 0.22f;
 
-        countLabel = Text(transform, "Count", TextAlignmentOptions.Left);
         Place(countLabel.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
               new Vector2(Mathf.Max(10f, cell.x - bodySize - gap), bodySize),
               new Vector2(bodySize + gap, 0f));
-        // Auto-sized for the same reason the letter is: "x13" fits at this size
-        // today, but tileBagSize is one Inspector field and "x104" would not.
         countLabel.fontSize = bodySize * 0.30f;
-        countLabel.enableAutoSizing = true;
-        countLabel.fontSizeMin = 8f;
         countLabel.fontSizeMax = bodySize * 0.30f;
+
+        // Badge size comes from bodySize too, and they were placed for the old one.
+        if (spec != null) DrawBadges(skin);
     }
 
     /// <summary>
@@ -124,6 +143,7 @@ public class BagTileView : MonoBehaviour, IPointerClickHandler
     public void Bind(TileSpec spec, int copies, TileSkin skin, Color countColor)
     {
         this.spec = spec;
+        this.skin = skin;
 
         if (spec == null)
         {

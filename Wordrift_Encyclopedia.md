@@ -656,6 +656,14 @@ listing everything still to be drawn — tiles grouped by what they are, each wi
 left, in alphabetical order. Tap any of them to read it, the same card you'd get from holding
 one on the board. The X in the corner closes it.
 
+**A slider along the bottom sets how big the tiles are.** Drag right for bigger tiles, left
+for smaller ones. It slides smoothly, and the tiles grow and shrink with your finger. The
+biggest size fits **2 per row** and the smallest fits **6**; it starts at the size that fits 4.
+A row always holds as many whole tiles as fit, and the spare room goes into the gaps between
+them, so every row still lines up with both edges of the panel. The game remembers where you
+left it — across rounds, and after you close the app. 🚧 **TEMPORARY:** the slider's look is borrowed art
+(a plain line and the badge circle as the knob) until it gets sprites of its own.
+
 Two things worth knowing about what it shows:
 
 - **It's what's LEFT, not what you own.** A round deals 25 tiles onto the board before your
