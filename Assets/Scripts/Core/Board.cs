@@ -233,6 +233,7 @@ public class Board : MonoBehaviour
         Busy = false;
         resolving = 0;   // the routines that would have decremented it are gone
         TileSource?.Reset();  // a finite bag is whole again for the replay
+        DisposeReleased();    // a played word's tiles, if a walk was cut short
 
         // The shape again, not the set of cells the last round left behind: a
         // librarian may have closed some, and the replay is a different round.
@@ -547,6 +548,41 @@ public class Board : MonoBehaviour
         resolving++;
         StartCoroutine(ResolveRoutine());
     }
+
+    /// <summary>
+    /// Takes tiles off the board WITHOUT destroying them, and starts the
+    /// collapse and refill straight away — a played word, whose tiles fly up
+    /// into the word row while the board refills underneath the score count.
+    ///
+    /// ⚠️ The tiles are the CALLER's to animate and the BOARD's to destroy: they
+    /// go on `released` and stay alive until DisposeReleased, or until
+    /// ResetBoard sweeps them, so a round torn down mid-flight can't strand a
+    /// tile in the scene. They are out of the tile map from this moment, so
+    /// nothing that plays, falls, saves or hit-tests can see them.
+    ///
+    /// DISCARD still goes through RemoveTiles — nothing flies there.
+    /// </summary>
+    public void ReleaseTiles(IEnumerable<Tile> toRelease)
+    {
+        foreach (var tile in toRelease)
+        {
+            if (tile == null) continue;
+            tiles.Remove(tile.Cell);
+            released.Add(tile);
+        }
+        resolving++;
+        StartCoroutine(ResolveRoutine());
+    }
+
+    /// <summary>Destroys every tile ReleaseTiles handed out.</summary>
+    public void DisposeReleased()
+    {
+        foreach (var tile in released)
+            if (tile != null) Destroy(tile.gameObject);
+        released.Clear();
+    }
+
+    private readonly List<Tile> released = new();
 
     private IEnumerator ResolveRoutine()
     {

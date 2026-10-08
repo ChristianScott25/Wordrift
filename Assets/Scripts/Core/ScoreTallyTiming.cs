@@ -43,6 +43,19 @@ public static class ScoreTallyTiming
     public const float FinishSeconds = 0.35f;
 
     /// <summary>
+    /// The played tiles lift off the board one after another, this far apart,
+    /// and each takes FlightSeconds to land in the word row. The pop is the
+    /// row's solid tiles going away once the count is over.
+    ///
+    /// ⚠️ GameSession does NOT read these. It waits for the tiles to REPORT
+    /// that they've landed (Tile.IsSettled), so the word row animating them
+    /// is the only thing that times a flight — one clock, still.
+    /// </summary>
+    public const float FlightStaggerSeconds = 0.07f;
+    public const float FlightSeconds = 0.25f;
+    public const float PopSeconds = 0.15f;
+
+    /// <summary>
     /// 1 is normal; higher is faster. A speed setting in the options is one write
     /// to this and nothing else — which is why every wait goes through StepAt
     /// rather than reading StepSeconds.
@@ -55,6 +68,11 @@ public static class ScoreTallyTiming
     /// <summary>How long to hold on beat number `index`, counting the opening as 0.</summary>
     public static float StepAt(int index) =>
         StepSeconds * Mathf.Pow(StepDecay, Mathf.Max(0, index)) / Mathf.Max(0.01f, Speed);
+
+    /// <summary>The flight's numbers, through the same speed knob.</summary>
+    public static float FlightStagger() => FlightStaggerSeconds / Mathf.Max(0.01f, Speed);
+    public static float Flight() => FlightSeconds / Mathf.Max(0.01f, Speed);
+    public static float Pop() => PopSeconds / Mathf.Max(0.01f, Speed);
 
     /// <summary>The closing hold, through the same speed knob.</summary>
     public static float Finish() => FinishSeconds / Mathf.Max(0.01f, Speed);

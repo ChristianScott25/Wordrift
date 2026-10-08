@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -41,6 +42,11 @@ public class CurrentWordWidget : MonoBehaviour
              "underneath them.")]
     [Range(0.4f, 1f)][SerializeField] private float tileAreaFraction = 0.66f;
 
+    [Tooltip("How much of a tile's BODY shows while the word is only spelled, " +
+             "not played. The letter, score and badges always show in full. The " +
+             "played tiles fly up and land on these, which is what turns them solid.")]
+    [Range(0.05f, 1f)][SerializeField] private float ghostAlpha = 0.4f;
+
     [Header("Message")]
     [Tooltip("Shown UNDER the tiles when the selection won't score.")]
     [SerializeField] private TMP_Text messageLabel;
@@ -56,6 +62,17 @@ public class CurrentWordWidget : MonoBehaviour
 
     private readonly List<Tile> tiles = new();
     private readonly List<TileSpec> shownSpecs = new();
+
+    // Which row tiles a played tile has landed on — those are drawn solid.
+    // Only ever true during a walk; everything else is faded.
+    private readonly List<bool> landed = new();
+
+    // The board's own tiles, mid-air. Borrowed: the BOARD destroys them at the
+    // end of the count (Board.DisposeReleased); this only flies and hides them.
+    private readonly List<Tile> fliers = new();
+
+    // The solid tiles shrinking away after the count. See OnWalkEnded.
+    private Coroutine popRoutine;
 
     private RectTransform self;
     private Transform holder;
@@ -91,6 +108,7 @@ public class CurrentWordWidget : MonoBehaviour
         GameEvents.SelectionChanged += OnSelectionChanged;
         GameEvents.RoundStarted += OnRoundStarted;
         GameEvents.WordSubmitted += OnWordSubmitted;
+        GameEvents.TilesLaunched += OnTilesLaunched;
         GameEvents.ScoreBeat += OnScoreBeat;
         GameEvents.ScoreWalkEnded += OnWalkEnded;
         GameEvents.RoundEnded += OnRoundEnded;
@@ -102,6 +120,7 @@ public class CurrentWordWidget : MonoBehaviour
         GameEvents.SelectionChanged -= OnSelectionChanged;
         GameEvents.RoundStarted -= OnRoundStarted;
         GameEvents.WordSubmitted -= OnWordSubmitted;
+        GameEvents.TilesLaunched -= OnTilesLaunched;
         GameEvents.ScoreBeat -= OnScoreBeat;
         GameEvents.ScoreWalkEnded -= OnWalkEnded;
         GameEvents.RoundEnded -= OnRoundEnded;
@@ -110,6 +129,13 @@ public class CurrentWordWidget : MonoBehaviour
         // Or a re-enabled row would think a walk were still running and ignore
         // every selection from then on.
         walking = false;
+        GroundFliers();
+        popRoutine = null;   // a disabled object's coroutines are already dead
+
+        // A pop or a bump cut off here would leave tiles at whatever scale it
+        // had reached; clearing makes the next word re-dress them from scratch.
+        dirty = true;
+        Clear();
     }
 
     // Start, not OnEnable — the layout resolves between the two. See GameLayout.
@@ -162,7 +188,9 @@ public class CurrentWordWidget : MonoBehaviour
     /// </summary>
     private void OnWordSubmitted(WordResult result)
     {
-        if (result.Accepted) walking = true;
+        if (!result.Accepted) return;
+        walking = true;
+        landed.Clear();
     }
 
     /// <summary>
@@ -193,7 +221,132 @@ public class CurrentWordWidget : MonoBehaviour
         if (cam != null) ScorePop.Show(step.Amount, at, step.Side);
     }
 
-    private void OnWalkEnded() => StopWalk();
+    /// <summary>
+    /// Flies each of the played word's board tiles up onto its faded twin in
+    /// the row, one after another. Each landing turns its twin solid and hides
+    /// the board tile.
+    ///
+    /// ⚠️ Every flight must START in here — GameSession checks IsSettled the
+    /// moment this returns. See GameEvents.TilesLaunched.
+    /// </summary>
+    private void OnTilesLaunched(IReadOnlyList<Tile> chain)
+    {
+        if (!walking || chain == null) return;
+
+        // The row should already be showing exactly this word — it's the
+        // selection the player just pressed PLAY on. Rebuilt if not, so index
+        // i is always chain[i]'s twin.
+        if (NeedsRebuild(chain)) Rebuild(chain);
+
+        float stagger = ScoreTallyTiming.FlightStagger();
+        float seconds = ScoreTallyTiming.Flight();
+
+        for (int i = 0; i < chain.Count; i++)
+        {
+            var flier = chain[i];
+            if (flier == null) continue;
+
+            var twin = i < tiles.Count ? tiles[i] : null;
+            if (twin == null || !twin.gameObject.activeSelf)
+            {
+                flier.gameObject.SetActive(false);
+                continue;
+            }
+
+            // The row tiles are smaller than the board's, so the flier shrinks
+            // on the way. Worked out in world scale because the two hang off
+            // different parents.
+            var parent = flier.transform.parent;
+            float parentScale = parent == null ? 1f : parent.lossyScale.x;
+            float targetScale = twin.transform.lossyScale.x / Mathf.Max(0.0001f, parentScale);
+
+            fliers.Add(flier);
+            int index = i;
+            flier.FlyTo(twin.transform.position, targetScale, i * stagger, seconds,
+                        f => Land(f, index));
+        }
+    }
+
+    private void Land(Tile flier, int index)
+    {
+        if (flier != null) flier.gameObject.SetActive(false);
+        if (!walking || index >= tiles.Count || tiles[index] == null) return;
+
+        while (landed.Count <= index) landed.Add(false);
+        landed[index] = true;
+        tiles[index].SetBodyAlpha(1f);
+        StartCoroutine(Bump(tiles[index].transform));
+    }
+
+    /// <summary>
+    /// A small swell on landing — deliberately NOT Jolt, which is the score
+    /// beat's shake; a landing that looked like a beat would read as a point
+    /// being scored before the count has started.
+    /// </summary>
+    private static IEnumerator Bump(Transform target)
+    {
+        const float seconds = 0.12f;
+        float rest = target.localScale.x;
+        for (float t = 0f; t < seconds; t += Time.deltaTime)
+        {
+            if (target == null) yield break;
+            float hump = Mathf.Sin(Mathf.PI * (t / seconds));
+            target.localScale = Vector3.one * rest * (1f + 0.08f * hump);
+            yield return null;
+        }
+        if (target != null) target.localScale = Vector3.one * rest;
+    }
+
+    /// <summary>
+    /// The count is over: the solid tiles do a quick pop — a slight swell, then
+    /// shrink to nothing — and the row is free for the next word.
+    /// </summary>
+    private void OnWalkEnded()
+    {
+        walking = false;
+        dirty = true;
+        GroundFliers();
+        StopAllCoroutines();   // landing bumps — the pop writes the same scales
+        CancelPulses();
+        popRoutine = StartCoroutine(PopAway());
+    }
+
+    private IEnumerator PopAway()
+    {
+        float seconds = ScoreTallyTiming.Pop();
+        var rest = new List<float>(tiles.Count);
+        for (int i = 0; i < tiles.Count; i++)
+            rest.Add(tiles[i] == null ? 0f : tiles[i].transform.localScale.x);
+
+        for (float t = 0f; t < seconds; t += Time.deltaTime)
+        {
+            float k = t / seconds;
+            // Up to 1.15 over the first third, then down to nothing.
+            float factor = k < 0.3f
+                ? Mathf.Lerp(1f, 1.15f, k / 0.3f)
+                : Mathf.Lerp(1.15f, 0f, (k - 0.3f) / 0.7f);
+
+            for (int i = 0; i < tiles.Count; i++)
+                if (tiles[i] != null && tiles[i].gameObject.activeSelf)
+                    tiles[i].transform.localScale = Vector3.one * rest[i] * factor;
+            yield return null;
+        }
+
+        popRoutine = null;
+        Clear();
+    }
+
+    /// <summary>
+    /// Hides any board tile still in the air. Hiding counts as landing (see
+    /// Tile.OnDisable), so GameSession can never be left waiting on one.
+    /// </summary>
+    private void GroundFliers()
+    {
+        for (int i = 0; i < fliers.Count; i++)
+            if (fliers[i] != null && fliers[i].gameObject.activeSelf)
+                fliers[i].gameObject.SetActive(false);
+        fliers.Clear();
+    }
 
     /// <summary>
     /// Lets go of the played word. `dirty` because NeedsRebuild compares against
@@ -204,6 +357,9 @@ public class CurrentWordWidget : MonoBehaviour
     {
         walking = false;
         dirty = true;
+        GroundFliers();
+        StopAllCoroutines();
+        popRoutine = null;
         Clear();
     }
 
@@ -211,6 +367,17 @@ public class CurrentWordWidget : MonoBehaviour
     {
         // A walk in progress owns these tiles until it's finished — see `walking`.
         if (walking) return;
+
+        // ⚠️ The session raises an EMPTY selection right after the walk ends,
+        // which would Clear() the row before the pop is seen. An empty one is
+        // ignored while popping; a real new word cuts the pop short.
+        if (popRoutine != null)
+        {
+            if (selection.Tiles == null || selection.Tiles.Count == 0) return;
+            StopCoroutine(popRoutine);
+            popRoutine = null;
+            dirty = true;
+        }
 
         ShowMessage(selection);
 
@@ -366,12 +533,18 @@ public class CurrentWordWidget : MonoBehaviour
             // re-lays the labels out against it and re-fans the badges, and all
             // three have to move together when the cell size changes.
             board.DressDisplayTile(tiles[i], shownSpecs[i], tiles[i].transform.position, cellSize);
+
+            // Faded until a played tile lands on it. Re-applied on every dress,
+            // so a re-layout mid-walk keeps the landed ones solid.
+            bool solid = walking && i < landed.Count && landed[i];
+            tiles[i].SetBodyAlpha(solid ? 1f : ghostAlpha);
         }
     }
 
     private void Clear()
     {
         shownSpecs.Clear();
+        landed.Clear();
         for (int i = 0; i < tiles.Count; i++)
             if (tiles[i] != null && tiles[i].gameObject.activeSelf)
                 tiles[i].gameObject.SetActive(false);

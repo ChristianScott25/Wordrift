@@ -150,7 +150,7 @@ public class Tile : MonoBehaviour
     public string Options { get; private set; }
 
     public Vector2Int Cell { get; set; }
-    public bool IsSettled => !moving;
+    public bool IsSettled => !moving && !flying;
 
     /// <summary>The spec's baseScore: what this tile is worth before any of its modifiers apply.</summary>
     public int LetterPoints { get; private set; }
@@ -188,7 +188,13 @@ public class Tile : MonoBehaviour
 
     private Vector3 targetPosition;
     private bool moving;
+    private bool flying;
     private float baseScale = 1f;
+
+    // How much of the BODY shows — 1 normally, less for the word row's faded
+    // "not played yet" tiles. Kept across Init on purpose: the row re-dresses
+    // its tiles whenever the word grows, and must not un-fade them by doing so.
+    private float bodyAlpha = 1f;
     private bool selected;
     private Coroutine flashRoutine;
 
@@ -529,7 +535,19 @@ public class Tile : MonoBehaviour
 
     private void SetColor(Color color)
     {
+        color.a *= bodyAlpha;
         if (tileRenderer != null) tileRenderer.color = color;
+    }
+
+    /// <summary>
+    /// Fades the tile BODY only — the letter, the score corner and the badges
+    /// stay at full strength, so a faded tile is still perfectly readable.
+    /// The word row uses it for "spelled, not played yet". 1 = solid.
+    /// </summary>
+    public void SetBodyAlpha(float alpha)
+    {
+        bodyAlpha = Mathf.Clamp01(alpha);
+        SetColor(selected ? selectedColor : RestingColor);
     }
 
     /// <summary>
@@ -547,7 +565,7 @@ public class Tile : MonoBehaviour
 
     private void Update()
     {
-        if (!moving) return;
+        if (!moving || flying) return;
         transform.position = Vector3.MoveTowards(transform.position, targetPosition, fallSpeed * Time.deltaTime);
         if ((transform.position - targetPosition).sqrMagnitude < 0.0001f)
         {
@@ -615,10 +633,73 @@ public class Tile : MonoBehaviour
         flashRoutine = null;
     }
 
+    /// <summary>
+    /// Flies the tile to a spot, resizing it on the way, after a delay — the
+    /// played word lifting off the board into the word row. Eases out, so each
+    /// tile settles into place rather than slamming into it.
+    ///
+    /// ⚠️ IsSettled is false from the moment this is CALLED, delay included.
+    /// That is what GameSession waits on before it starts counting the score,
+    /// so a tile still waiting its turn must not look landed.
+    ///
+    /// Lifted above every other tile from the moment it's told to fly, so it
+    /// never passes under a neighbour or a falling refill. Not put back: a flown tile is hidden on landing and destroyed
+    /// at the end of the count, never returned to the board.
+    /// </summary>
+    public void FlyTo(Vector3 target, float targetScale, float delay, float seconds,
+                      System.Action<Tile> landed)
+    {
+        if (!gameObject.activeInHierarchy) { landed?.Invoke(this); return; }
+
+        if (flashRoutine != null) { StopCoroutine(flashRoutine); flashRoutine = null; }
+        moving = false;
+        flying = true;
+
+        // Lifted NOW, not when the delay ends: the board refills while a long
+        // word's last tiles are still waiting their turn, and a new tile
+        // falling into a waiting tile's cell at the same sorting order flickers.
+        foreach (var r in GetComponentsInChildren<Renderer>(true))
+            r.sortingOrder += FlightSortingLift;
+
+        StartCoroutine(FlightRoutine(target, targetScale, delay, seconds, landed));
+    }
+
+    private IEnumerator FlightRoutine(Vector3 target, float targetScale, float delay,
+                                      float seconds, System.Action<Tile> landed)
+    {
+        if (delay > 0f) yield return new WaitForSeconds(delay);
+
+        Vector3 from = transform.position;
+        float fromScale = transform.localScale.x;
+
+        for (float t = 0f; t < seconds; t += Time.deltaTime)
+        {
+            float k = 1f - Mathf.Pow(1f - t / seconds, 3f);   // ease-out cubic
+            transform.position = Vector3.LerpUnclamped(from, target, k);
+            transform.localScale = Vector3.one * Mathf.LerpUnclamped(fromScale, targetScale, k);
+            yield return null;
+        }
+
+        transform.position = target;
+        transform.localScale = Vector3.one * targetScale;
+        targetPosition = target;
+        flying = false;
+        landed?.Invoke(this);
+    }
+
+    // ⚠️ Deactivating a tile stops its coroutines, flight included — and a tile
+    // stuck "flying" would never read settled, so GameSession would wait on it
+    // forever. Hiding a tile mid-flight therefore counts as landing it.
+    private void OnDisable() => flying = false;
+
+    // Far above anything a resting tile or badge uses (+4 per badge pair).
+    private const int FlightSortingLift = 100;
+
     /// <summary>Shrink away, then destroy the GameObject.</summary>
     public void Demolish()
     {
         StopAllCoroutines();
+        flying = false;
         StartCoroutine(DemolishRoutine());
     }
 

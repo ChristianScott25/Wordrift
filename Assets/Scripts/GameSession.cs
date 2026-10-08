@@ -55,8 +55,9 @@ public class GameSession : MonoBehaviour
     private string bestWord = "";
     private int bestWordPoints;
 
-    // True while a scored word is being walked through on the HUD. The board
-    // hasn't cleared yet and input is off; the round must not end mid-tally.
+    // True while a scored word is being walked through on the HUD — its tiles
+    // flying up and the board refilling underneath. Input is off; the round
+    // must not end mid-tally, and no save may be written.
     private bool tallying;
 
     // Every word accepted this round. Bookmarks read it to spot a repeat, so it
@@ -578,13 +579,27 @@ public class GameSession : MonoBehaviour
             bestWord = word;
         }
 
+        // ⚠️ Forget the played tiles' resolved faces BEFORE the empty selection
+        // that follows this submit lands: ShowResolvedLetters would put every
+        // wild back to "*" — mid-flight, so a wild would fly up as a star and
+        // land on a twin reading "C". They never return to the board, so there
+        // is nothing to restore.
+        resolvedShowing.Clear();
+
         StartCoroutine(ScoreThenClear(chain, result));
     }
 
     /// <summary>
-    /// Plays the score out before the board reacts, so nothing moves under the
-    /// numbers: the word's length, then every tile, then the bookmarks, the
-    /// round and the mode, one beat at a time.
+    /// Lifts the word off the board, then plays the score out: the word's
+    /// length, then every tile, then the bookmarks, the round and the mode, one
+    /// beat at a time.
+    ///
+    /// The tiles are RELEASED the moment the word is played (2026-10-07, his
+    /// call) — they fly up into the word row and the board collapses and
+    /// refills underneath the count, so the next word can be planned while the
+    /// numbers run. Input stays off until the end, and the save still waits for
+    /// !tallying, so nothing can act on the new tiles early. The refill draws
+    /// exactly what it always did, in the same order — only sooner.
     ///
     /// ⚠️ THIS IS THE WALK-THROUGH'S ONLY CLOCK. It used to hand the HUD a
     /// duration and wait that long while the HUD ran its own timer, and the two
@@ -603,6 +618,23 @@ public class GameSession : MonoBehaviour
 
         // The opening frame: both numbers at the word's length, nothing counted.
         GameEvents.RaiseWordSubmitted(result);
+
+        // Off the board, still alive: the word row flies them up, and the board
+        // refills behind them. Then wait for every one to LAND — asked of the
+        // tiles, never timed here, so this stays the walk's only clock. With
+        // nothing listening nothing flies, every tile reads settled, and the
+        // count starts at once.
+        board.ReleaseTiles(chain);
+        GameEvents.RaiseTilesLaunched(chain);
+
+        // Anything nobody launched is hidden rather than left drawn on top of
+        // the tiles now falling into its cell. (The board still owns it, and
+        // destroys it at the end with the rest.)
+        for (int i = 0; i < chain.Count; i++)
+            if (chain[i] != null && chain[i].IsSettled) chain[i].gameObject.SetActive(false);
+
+        yield return new WaitUntil(() => AllLanded(chain));
+
         yield return new WaitForSeconds(ScoreTallyTiming.StepAt(0));
 
         int beats = result.StepCount;
@@ -623,7 +655,7 @@ public class GameSession : MonoBehaviour
         Score = ScoreLimits.Clamp((long)Score + result.Points);
         mode.OnWordAccepted(result);
         GameEvents.RaiseScoreChanged(Score);
-        board.RemoveTiles(chain);
+        board.DisposeReleased();
 
         tallying = false;
         if (IsPlaying) chainController.InputEnabled = true;
@@ -633,6 +665,13 @@ public class GameSession : MonoBehaviour
         RequestSave();
 
         if (mode.IsRoundOver) EndRound();
+    }
+
+    private static bool AllLanded(IReadOnlyList<Tile> chain)
+    {
+        for (int i = 0; i < chain.Count; i++)
+            if (chain[i] != null && !chain[i].IsSettled) return false;
+        return true;
     }
 
     // ---- Saving -------------------------------------------------------------

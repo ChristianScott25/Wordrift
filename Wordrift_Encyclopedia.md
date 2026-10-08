@@ -140,6 +140,14 @@ it. The row lays the same tiles out in a line, above the board and out of the wa
 their score corners and their multiplier badges, so you can see what you're about to play.
 A long word shrinks its tiles to fit rather than running off the side.
 
+While you're spelling, the row's tiles are **faded** — the letters, scores and badges show in
+full, only the tile body is see-through. That means *spelled, not played yet*. Press PLAY and
+the real tiles **lift off the board** one after another, a beat apart, and land on their faded
+copies, which turn solid. Only once the last one has landed does the score start counting.
+Meanwhile the board **refills straight away** — the gaps close and new tiles fall in while the
+numbers run, so you can be planning your next word. You can't touch the board until the count
+is over. When it is, the row's tiles pop away.
+
 **The bookmarks** stand up out of the top edge of the board like bookmarks in a book — only
 their tops show. They're still dragged left and right to reorder, and that order is still the
 order they score in.

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 /// <summary>
 /// The one channel between gameplay and the UI. GameSession raises these;
@@ -38,6 +39,20 @@ public static class GameEvents
     public static event Action<ScoreStep> ScoreBeat;
 
     /// <summary>
+    /// A played word's tiles have just left the board — released, not
+    /// destroyed — and whoever draws the word row may fly them to it. Raised
+    /// right after WordSubmitted.
+    ///
+    /// ⚠️ The list is BORROWED, valid only for the callback; copy it.
+    /// ⚠️ A listener must start every flight INSIDE the callback: GameSession
+    /// checks Tile.IsSettled on the very next line, and a tile not yet told to
+    /// fly reads as landed, which would start the count early. With no
+    /// listener at all, nothing flies and the count simply starts — the
+    /// session never depends on the row.
+    /// </summary>
+    public static event Action<IReadOnlyList<Tile>> TilesLaunched;
+
+    /// <summary>
     /// The walk-through is over — put everything back.
     ///
     /// ⚠️ A listener must ALSO release on RoundStarted and RoundEnded. This fires
@@ -53,5 +68,6 @@ public static class GameEvents
     public static void RaiseWordSubmitted(WordResult result) => WordSubmitted?.Invoke(result);
     public static void RaiseRoundEnded(RoundSummary summary) => RoundEnded?.Invoke(summary);
     public static void RaiseScoreBeat(ScoreStep step) => ScoreBeat?.Invoke(step);
+    public static void RaiseTilesLaunched(IReadOnlyList<Tile> tiles) => TilesLaunched?.Invoke(tiles);
     public static void RaiseScoreWalkEnded() => ScoreWalkEnded?.Invoke();
 }
