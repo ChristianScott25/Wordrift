@@ -42,8 +42,18 @@ public static class GameLayoutSetup
         "Item Panel",
     };
 
-    private static readonly Color Panel = new Color(0f, 0f, 0f, 0.35f);
     private static readonly Color Faint = new Color(1f, 1f, 1f, 0.55f);
+
+    // 🚧 The boxes that used to be see-through black panels — the round header
+    // and the resource chips — now sit on the Medium Button art (2026-10-07).
+    // The art is CREAM, so every word drawn on it has to be dark ink instead of
+    // the white it was; these are those inks.
+    private const string PlateArt = "Medium Button";
+    private const float PlateBorderScale = 2.5f;   // same chunkiness as the info box
+    private static readonly Color Ink = new Color(0.12f, 0.13f, 0.17f);
+    private static readonly Color QuietInk = new Color(0.12f, 0.13f, 0.17f, 0.65f);
+    private static readonly Color UrgentInk = new Color(0.78f, 0.16f, 0.16f);
+    private static readonly Color ClearedInk = new Color(0.12f, 0.55f, 0.22f);
 
     [MenuItem("Word Crush/Set Up Game Layout")]
     public static void SetUp()
@@ -275,7 +285,7 @@ public static class GameLayoutSetup
         var root = Reuse<RoundBannerWidget>(canvas, "RoundHeader");
         var widget = root.GetComponent<RoundBannerWidget>();
 
-        Backdrop(root);
+        Plate(root);
 
         var title = Slot(root.transform, "Title", 0f, 0.76f, 1f, 1f);
         var text = Text(title, 40, TextAlignmentOptions.Center);
@@ -300,6 +310,17 @@ public static class GameLayoutSetup
         var score = Slot(root.transform, "Score", 0.32f, 0.06f, 0.98f, 0.36f);
         var scoreText = Text(score, 46, TextAlignmentOptions.Center);
 
+        // ⚠️ INK WRITTEN EVERY RUN, not only on a new label like Text() does —
+        // the background changed under these, so labels left white from an
+        // earlier run would be white on cream and unreadable. The score's colour
+        // is the WIDGET's (it turns green on a cleared target), so it goes there.
+        text.color = Ink;
+        powerText.color = QuietInk;
+        scoreCaptionText.color = QuietInk;
+        scoreText.color = Ink;
+        WordCrushSetup.SetColor(widget, "normalColor", Ink);
+        WordCrushSetup.SetColor(widget, "clearedColor", ClearedInk);
+
         WordCrushSetup.SetRef(widget, "titleLabel", text);
         WordCrushSetup.SetRef(widget, "powerLabel", powerText);
         WordCrushSetup.SetRef(widget, "scoreLabel", scoreText);
@@ -315,7 +336,16 @@ public static class GameLayoutSetup
     {
         var root = Reuse<StatusWidget>(canvas, "ResourceStrip");
         var widget = root.GetComponent<StatusWidget>();
-        WordCrushSetup.SetRef(widget, "chipSprite", Square());
+        WordCrushSetup.SetRef(widget, "plateSprite", PlateSprite());
+        WordCrushSetup.SetFloat(widget, "plateBorderScale", PlateBorderScale);
+
+        // Written every run for the same reason as the header's ink: these were
+        // tuned for white text on a dark see-through box, and the box is cream
+        // now. The plate is drawn white so the art shows as drawn.
+        WordCrushSetup.SetColor(widget, "chipColor", Color.white);
+        WordCrushSetup.SetColor(widget, "labelColor", QuietInk);
+        WordCrushSetup.SetColor(widget, "valueColor", Ink);
+        WordCrushSetup.SetColor(widget, "urgentColor", UrgentInk);
     }
 
     /// <summary>
@@ -534,15 +564,39 @@ public static class GameLayoutSetup
         Object.DestroyImmediate(go);
     }
 
-    /// <summary>A flat panel behind a box, so it reads as a box at all. 🚧 Placeholder.</summary>
-    private static void Backdrop(GameObject root)
+    /// <summary>
+    /// The Medium Button art behind a box, 9-sliced so it stretches to any shape
+    /// with its corners left alone. 🚧 Borrowed until the boxes get art of their own.
+    ///
+    /// ⚠️ WRITTEN EVERY RUN, not only on a new Image: it replaced a see-through
+    /// black square that is already saved in the scene, and a "only when new"
+    /// guard would leave that square there forever.
+    ///
+    /// Sliced, and deliberately not through WordCrushSetup.SetSprite — that sets
+    /// preserveAspect, and stretching is the entire point of a 9-slice.
+    /// </summary>
+    private static void Plate(GameObject root)
     {
-        var image = root.GetComponent<Image>();
-        if (image != null) return;
+        var image = root.GetComponent<Image>() ?? root.AddComponent<Image>();
+        image.sprite = PlateSprite();
+        image.type = UnityEngine.UI.Image.Type.Sliced;
+        image.fillCenter = true;
+        image.preserveAspect = false;
+        image.color = Color.white;
+        image.pixelsPerUnitMultiplier = 1f / PlateBorderScale;
+    }
 
-        image = root.AddComponent<Image>();
-        image.sprite = Square();
-        image.color = Panel;
+    /// <summary>
+    /// The Medium Button sprite, with its 9-slice border stamped onto the import
+    /// settings first — the file had none, and a Sliced image with no border is
+    /// just a stretched one. Harmless to PLAY/DISCARD, which draw it Simple and
+    /// so never read the border.
+    /// </summary>
+    private static Sprite PlateSprite()
+    {
+        string path = $"Assets/Sprites/Gameplay UI/{PlateArt}.png";
+        InspectBoxSetup.StampSpriteImport(path, InspectBoxSetup.SpriteBorder);
+        return WordCrushSetup.LoadSprite(PlateArt);
     }
 
     /// <summary>

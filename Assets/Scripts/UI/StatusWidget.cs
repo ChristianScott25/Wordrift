@@ -20,7 +20,14 @@ using UnityEngine.UI;
 public class StatusWidget : MonoBehaviour
 {
     [Header("Chip look")]
-    [SerializeField] private Sprite chipSprite;
+    [Tooltip("The chip's background — the Medium Button art, 9-sliced so only its " +
+             "flat middle stretches and the corners stay crisp at any chip shape.")]
+    [SerializeField] private Sprite plateSprite;
+
+    [Tooltip("How chunky the plate's corners are. Bigger = bigger corners. Same " +
+             "knob as the info box's Border Scale.")]
+    [Min(0.01f)][SerializeField] private float plateBorderScale = 2.5f;
+
 
     [SerializeField] private Color chipColor = new Color(0f, 0f, 0f, 0.35f);
     [SerializeField] private Color labelColor = new Color(1f, 1f, 1f, 0.55f);
@@ -44,7 +51,6 @@ public class StatusWidget : MonoBehaviour
         public RectTransform Rect;
         public TMP_Text Label;
         public TMP_Text Value;
-        public Image Bar;
     }
 
     private readonly List<ChipView> views = new();
@@ -111,20 +117,6 @@ public class StatusWidget : MonoBehaviour
             view.Value.text = chip.Value;
             view.Value.color = color;
         }
-
-        // A negative fraction means "this chip is a number, not a gauge" — money
-        // and the round number have no full to be a fraction of.
-        if (view.Bar != null)
-        {
-            bool hasBar = chip.Fraction >= 0f;
-            if (view.Bar.gameObject.activeSelf != hasBar)
-                view.Bar.gameObject.SetActive(hasBar);
-            if (hasBar)
-            {
-                view.Bar.fillAmount = Mathf.Clamp01(chip.Fraction);
-                view.Bar.color = color;
-            }
-        }
     }
 
     /// <summary>
@@ -162,46 +154,39 @@ public class StatusWidget : MonoBehaviour
         rect.SetParent(transform, false);
 
         var background = go.GetComponent<Image>();
-        background.sprite = chipSprite;
+        background.sprite = plateSprite;
         background.color = chipColor;
         background.raycastTarget = false;
 
+        // Sliced: the chip is tall and narrow and the art is 2:1, so a plain
+        // stretch would smear the corners and thicken the side outlines.
+        if (plateSprite != null)
+        {
+            background.type = Image.Type.Sliced;
+            background.fillCenter = true;
+            background.pixelsPerUnitMultiplier = 1f / plateBorderScale;
+        }
+
+        // Margins keep the words off the plate's outline.
         var label = MakeText(rect, "Label", labelSize, labelColor, TextAlignmentOptions.Top);
+        label.margin = new Vector4(6f, 8f, 6f, 0f);
         label.rectTransform.anchorMin = new Vector2(0f, 0.52f);
         label.rectTransform.anchorMax = new Vector2(1f, 1f);
         label.rectTransform.offsetMin = Vector2.zero;
         label.rectTransform.offsetMax = Vector2.zero;
 
         var value = MakeText(rect, "Value", valueSize, valueColor, TextAlignmentOptions.Bottom);
+        value.margin = new Vector4(6f, 0f, 6f, 8f);
         value.rectTransform.anchorMin = new Vector2(0f, 0f);
         value.rectTransform.anchorMax = new Vector2(1f, 0.55f);
         value.rectTransform.offsetMin = Vector2.zero;
         value.rectTransform.offsetMax = Vector2.zero;
-
-        // A thin gauge along the bottom edge, hidden unless the chip has a
-        // fraction. Placeholder treatment — it's here so "running out" reads
-        // without having to parse "4/20".
-        var barGo = new GameObject("Bar", typeof(RectTransform), typeof(Image));
-        var barRect = (RectTransform)barGo.transform;
-        barRect.SetParent(rect, false);
-        barRect.anchorMin = new Vector2(0f, 0f);
-        barRect.anchorMax = new Vector2(1f, 0f);
-        barRect.pivot = new Vector2(0.5f, 0f);
-        barRect.offsetMin = new Vector2(6f, 0f);
-        barRect.offsetMax = new Vector2(-6f, 5f);
-
-        var bar = barGo.GetComponent<Image>();
-        bar.sprite = chipSprite;
-        bar.type = Image.Type.Filled;
-        bar.fillMethod = Image.FillMethod.Horizontal;
-        bar.raycastTarget = false;
 
         return new ChipView
         {
             Rect = rect,
             Label = label,
             Value = value,
-            Bar = bar,
         };
     }
 
