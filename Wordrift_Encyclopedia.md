@@ -323,7 +323,9 @@ time. Every tile adds itself, in the order you dragged through them. Then your b
 the round's librarian, then anything you armed.
 
 Whatever is taking its turn **shakes**, and its number floats off it: **blue for Points, red for
-Mult.**
+Mult.** That floating number is the only label a beat gets — there's no caption naming it under
+the score line (cut 2026-10-08). The table below names each beat for the reader, not because
+the screen does.
 
 ```
 CRATE, with a 3W on the R and BOOKEND owned
@@ -633,8 +635,9 @@ Details worth knowing:
 - **Deja Vu counts repeats within a round only** — the list resets when a new round starts.
   Nothing in the game stops you playing the same word twice, so this turns a quirk into a
   tactic: spell `EYE`, then spell it again for +10.
-- **Each bookmark is named as it fires.** Pressing PLAY walks the two numbers forward one
-  bookmark at a time — `BOOKEND   ×2 MULT` — rather than jumping to a total.
+- **Each bookmark shows itself as it fires.** Pressing PLAY walks the two numbers forward one
+  bookmark at a time — the card shakes and its `×2` floats off it — rather than jumping to a
+  total.
 
 ❓ **Editions** — Balatro's holographic / negative / foil upgrades applied to a joker — are
 planned but not built. A bookmark you own is already stored as its own object rather than as a

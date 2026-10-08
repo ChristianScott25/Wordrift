@@ -243,7 +243,7 @@ public class ScoringContext
 public struct ScoreStep
 {
     public string Source;   // "BOOKEND", "E", "3W"
-    public string Detail;   // "x2 MULT" — the caption line, display only
+    public string Detail;   // "x2 MULT" — display only; nothing shows it since the caption went (2026-10-08)
     public string Amount;   // "x2" — what floats up beside the thing that did it
     public ScoreSide Side;  // which number moved; what the HUD highlights
     public int Points;      // after this step

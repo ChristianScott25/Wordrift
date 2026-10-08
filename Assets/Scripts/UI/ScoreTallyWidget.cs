@@ -30,6 +30,9 @@ using UnityEngine;
 /// owns a band: a box that empties out leaves a hole, and a box that comes and
 /// goes makes the bands around it look like they moved. It rests at 0 x 0
 /// instead.
+///
+/// No caption naming each beat ("BOOKEND   x2 MULT") since 2026-10-08, his call:
+/// the numbers floating off whatever fired already say it.
 /// </summary>
 public class ScoreTallyWidget : MonoBehaviour
 {
@@ -39,9 +42,6 @@ public class ScoreTallyWidget : MonoBehaviour
 
     [Tooltip("The whole line — POINTS x MULT = TOTAL — as one rich-text label.")]
     [SerializeField] private TMP_Text lineLabel;
-
-    [Tooltip("Names whatever is firing during the walk-through. Blank the rest of the time.")]
-    [SerializeField] private TMP_Text stepLabel;
 
     [Header("Place in band")]
     [Range(0f, 1f)][SerializeField] private float bandXMin = 0f;
@@ -156,7 +156,7 @@ public class ScoreTallyWidget : MonoBehaviour
         }
 
         // The LENGTH only — see the class note. The tiles are the show.
-        Draw(selection.Preview.Points, selection.Preview.Mult, "");
+        Draw(selection.Preview.Points, selection.Preview.Mult);
     }
 
     /// <summary>
@@ -168,7 +168,7 @@ public class ScoreTallyWidget : MonoBehaviour
         if (!result.Accepted) return;
 
         walking = true;
-        Draw(result.Opening.Points, result.Opening.Mult, "");
+        Draw(result.Opening.Points, result.Opening.Mult);
     }
 
     /// <summary>
@@ -177,7 +177,7 @@ public class ScoreTallyWidget : MonoBehaviour
     /// </summary>
     private void OnScoreBeat(ScoreStep step)
     {
-        Draw(step.Points, step.Mult, $"{step.Source}   {step.Detail}");
+        Draw(step.Points, step.Mult);
         Flash(step.Side);
 
         // Only the beats with nothing on screen behind them. Everything else is
@@ -204,15 +204,14 @@ public class ScoreTallyWidget : MonoBehaviour
     }
 
     /// <summary>The box with nothing selected: zeros, not a blank.</summary>
-    private void DrawResting() => Draw(0, 0f, "");
+    private void DrawResting() => Draw(0, 0f);
 
-    private void Draw(int points, float mult, string step)
+    private void Draw(int points, float mult)
     {
         this.points = points;
         this.mult = mult;
         hit = 0;
         Render();
-        if (stepLabel != null) stepLabel.text = step;
     }
 
     /// <summary>

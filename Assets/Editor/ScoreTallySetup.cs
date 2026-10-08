@@ -45,10 +45,6 @@ public static class ScoreTallySetup
 
     private static readonly Color QuietColor = new Color(0.12f, 0.13f, 0.17f, 0.75f);
 
-    /// What QuietColor used to be. See Restyle — it is how "nobody ever touched
-    /// this" is told apart from "somebody chose this".
-    private static readonly Color OldQuietColor = new Color(1f, 1f, 1f, 0.75f);
-
     [MenuItem("Word Crush/Set Up Score Tally")]
     public static void SetUp()
     {
@@ -108,36 +104,31 @@ public static class ScoreTallySetup
         // The five-label layout — POINTS, x, MULT, then "5 LETTERS" and the total
         // on lines of their own — became ONE line, "3 x 1 = 3" (his call,
         // 2026-10-07). The old labels go, so a re-run can't leave them drawn
-        // under the new one.
-        foreach (string retired in new[] { PointsName, TimesName, MultName, TotalName, LengthName })
+        // under the new one. The beat caption under it ("BOOKEND   x2 MULT")
+        // went too (2026-10-08, his call) — the floating numbers already say it.
+        foreach (string retired in new[] { PointsName, TimesName, MultName, TotalName, LengthName, StepName })
         {
             var old = shown.transform.Find(retired);
             if (old != null) Object.DestroyImmediate(old.gameObject);
         }
 
-        // POINTS x MULT = TOTAL, in the top of the band. Auto-sized so a big
+        // POINTS x MULT = TOTAL, filling the band. Auto-sized so a big
         // late-run score shrinks to fit rather than running off the sides.
-        var line = Band(shown.transform, LineName, 0.38f, 1f, 64, Color.white);
+        var line = Band(shown.transform, LineName, 0f, 1f, 64, Color.white);
         line.enableAutoSizing = true;
         line.fontSizeMin = 28f;
         line.fontSizeMax = 64f;
         line.richText = true;
         line.textWrappingMode = TextWrappingModes.NoWrap;
 
-        // Named on every beat of the walk-through: "BOOKEND   x2 MULT".
-        var step = Band(shown.transform, StepName, 0f, 0.38f, 28, QuietColor);
-
         WordCrushSetup.SetRef(widget, "root", shown);
         WordCrushSetup.SetRef(widget, "lineLabel", line);
-        WordCrushSetup.SetRef(widget, "stepLabel", step);
 
         // See the note on these constants: forced, not preserved — they have
         // to agree with the floating numbers, and the line is built from them.
         WordCrushSetup.SetColor(widget, "pointsColor", PointsColor);
         WordCrushSetup.SetColor(widget, "multColor", MultColor);
         WordCrushSetup.SetColor(widget, "quietColor", QuietColor);
-
-        Restyle(step);
     }
 
     /// <summary>
@@ -166,30 +157,6 @@ public static class ScoreTallySetup
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
         return label;
-    }
-
-    /// <summary>
-    /// Moves a label off this script's OLD default colour and onto its current
-    /// one — and leaves anything else alone.
-    ///
-    /// ⚠️ Colour normally survives a re-run, because it's styling worth tuning on
-    /// a real screen and a generator that reset it would be infuriating. That
-    /// rule is intact: this only touches a label still carrying the exact value
-    /// this script itself wrote, which is how "nobody has ever looked at this"
-    /// is told apart from "somebody chose this". Anything hand-picked fails the
-    /// comparison and is kept.
-    /// </summary>
-    private static void Restyle(TMP_Text label)
-    {
-        if (label == null) return;
-
-        Color was = label.color;
-        bool untouched = Mathf.Approximately(was.r, OldQuietColor.r)
-                      && Mathf.Approximately(was.g, OldQuietColor.g)
-                      && Mathf.Approximately(was.b, OldQuietColor.b)
-                      && Mathf.Approximately(was.a, OldQuietColor.a);
-
-        if (untouched) label.color = QuietColor;
     }
 
     private static GameObject FindOrCreate(Transform parent, string name)
