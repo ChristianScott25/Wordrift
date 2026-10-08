@@ -90,13 +90,18 @@ public class GameLayout : MonoBehaviour
     [SerializeField]
     private BandSetting[] bands =
     {
-        new BandSetting { band = LayoutBand.RoundHeader,   weight = 0.155f, minHeight = 200f },
+        // Retuned 2026-10-07: a shorter header (so the librarian box, the bag
+        // and the items box share one top and bottom edge), a one-line score,
+        // and a word row tall enough that its tiles come out about the size of
+        // the board's. GameLayoutSetup.MoveBandsOn carries a scene still on
+        // the OLD table across to this one.
+        new BandSetting { band = LayoutBand.RoundHeader,   weight = 0.108f, minHeight = 200f },
         new BandSetting { band = LayoutBand.ResourceStrip, weight = 0.033f, minHeight = 52f },
-        new BandSetting { band = LayoutBand.Score,         weight = 0.085f, minHeight = 110f },
-        new BandSetting { band = LayoutBand.WordRow,       weight = 0.075f, minHeight = 96f },
+        new BandSetting { band = LayoutBand.Score,         weight = 0.060f, minHeight = 100f },
+        new BandSetting { band = LayoutBand.WordRow,       weight = 0.140f, minHeight = 120f },
         new BandSetting { band = LayoutBand.Bookmarks,     weight = 0.042f, minHeight = 70f },
-        new BandSetting { band = LayoutBand.Board,         weight = 0.440f, minHeight = 240f },
-        new BandSetting { band = LayoutBand.Buttons,       weight = 0.070f, minHeight = 110f },
+        new BandSetting { band = LayoutBand.Board,         weight = 0.420f, minHeight = 240f },
+        new BandSetting { band = LayoutBand.Buttons,       weight = 0.066f, minHeight = 110f },
     };
 
     [Header("Spacing, in canvas units")]

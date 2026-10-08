@@ -27,6 +27,7 @@ public static class ScoreTallySetup
     private const string TotalName = "Total";
     private const string StepName = "Step";
     private const string LengthName = "Length";
+    private const string LineName = "Line";
 
     private static readonly Vector2 TopCenter = new Vector2(0.5f, 1f);
 
@@ -98,56 +99,73 @@ public static class ScoreTallySetup
                      ?? widgetRoot.AddComponent<ScoreTallyWidget>();
 
         // A child container, never the widget itself: the widget stays active
-        // so it keeps hearing events while this is hidden.
+        // so it keeps hearing events while this is hidden. STRETCHED to the
+        // band since 2026-10-07 — it was a fixed 1000x195 box centred on the
+        // widget, taller than the band it sat in.
         var shown = FindOrCreate(widgetRoot.transform, RootName);
-        WordCrushSetup.Anchor(shown, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1000f, 195f));
+        WordCrushSetup.Stretch(shown);
 
-        // POINTS  x  MULT, on one line, deliberately two separate numbers.
-        var points = Label(shown.transform, PointsName, 64, TextAlignmentOptions.Right,
-                           new Vector2(-180f, 0f), new Vector2(300f, 80f), PointsColor, "0");
-        var times = Label(shown.transform, TimesName, 44, TextAlignmentOptions.Center,
-                          new Vector2(0f, -6f), new Vector2(80f, 80f), QuietColor, "x");
-        var mult = Label(shown.transform, MultName, 64, TextAlignmentOptions.Left,
-                         new Vector2(180f, 0f), new Vector2(300f, 80f), MultColor, "x1");
+        // The five-label layout — POINTS, x, MULT, then "5 LETTERS" and the total
+        // on lines of their own — became ONE line, "3 x 1 = 3" (his call,
+        // 2026-10-07). The old labels go, so a re-run can't leave them drawn
+        // under the new one.
+        foreach (string retired in new[] { PointsName, TimesName, MultName, TotalName, LengthName })
+        {
+            var old = shown.transform.Find(retired);
+            if (old != null) Object.DestroyImmediate(old.gameObject);
+        }
 
-        // Where BOTH numbers come from, now that length is the base score as
-        // well as the multiplier: "5 LETTERS". It had a field on the widget and
-        // no label at all until 2026-09-30, so the caption had never once
-        // rendered — and it explains more than it used to.
-        var length = Label(shown.transform, LengthName, 24, TextAlignmentOptions.Center,
-                           new Vector2(0f, -74f), new Vector2(1000f, 32f), QuietColor, "");
-
-        // What the two of them come to.
-        var total = Label(shown.transform, TotalName, 34, TextAlignmentOptions.Center,
-                          new Vector2(0f, -104f), new Vector2(1000f, 44f), QuietColor, "0");
+        // POINTS x MULT = TOTAL, in the top of the band. Auto-sized so a big
+        // late-run score shrinks to fit rather than running off the sides.
+        var line = Band(shown.transform, LineName, 0.38f, 1f, 64, Color.white);
+        line.enableAutoSizing = true;
+        line.fontSizeMin = 28f;
+        line.fontSizeMax = 64f;
+        line.richText = true;
+        line.textWrappingMode = TextWrappingModes.NoWrap;
 
         // Named on every beat of the walk-through: "BOOKEND   x2 MULT".
-        var step = Label(shown.transform, StepName, 28, TextAlignmentOptions.Center,
-                         new Vector2(0f, -146f), new Vector2(1000f, 36f), QuietColor, "");
+        var step = Band(shown.transform, StepName, 0f, 0.38f, 28, QuietColor);
 
         WordCrushSetup.SetRef(widget, "root", shown);
-        WordCrushSetup.SetRef(widget, "pointsLabel", points);
-        WordCrushSetup.SetRef(widget, "multLabel", mult);
-        WordCrushSetup.SetRef(widget, "totalLabel", total);
+        WordCrushSetup.SetRef(widget, "lineLabel", line);
         WordCrushSetup.SetRef(widget, "stepLabel", step);
-        WordCrushSetup.SetRef(widget, "lengthLabel", length);
 
-        // See the note on these two constants: forced, not preserved.
+        // See the note on these constants: forced, not preserved — they have
+        // to agree with the floating numbers, and the line is built from them.
         WordCrushSetup.SetColor(widget, "pointsColor", PointsColor);
         WordCrushSetup.SetColor(widget, "multColor", MultColor);
+        WordCrushSetup.SetColor(widget, "quietColor", QuietColor);
 
-        // The two numbers' own serialized colours are overwritten by the widget
-        // on its first Draw, so these only matter for what the Inspector shows.
-        // Kept in step with the fields above so the two never look different.
-        points.color = PointsColor;
-        mult.color = MultColor;
-
-        // The quiet three were white at 75% against a light blue-grey background,
-        // which was always hard to read and matters a great deal more now that
-        // the step caption names every beat of the walk-through.
-        Restyle(times);
-        Restyle(total);
         Restyle(step);
+    }
+
+    /// <summary>
+    /// A label stretched across the container between two heights (fractions
+    /// of it). Position every run; size and colour only when new.
+    /// </summary>
+    private static TMP_Text Band(Transform parent, string name, float yMin, float yMax,
+                                 float size, Color color)
+    {
+        var existing = parent.Find(name);
+        TMP_Text label = existing != null ? existing.GetComponent<TMP_Text>() : null;
+
+        if (label == null)
+        {
+            if (existing != null) Object.DestroyImmediate(existing.gameObject);
+            label = WordCrushSetup.MakeText(parent, name, size, TextAlignmentOptions.Center);
+            label.text = "";
+            label.color = color;   // white on the line: its colours are all inline tags
+        }
+
+        label.alignment = TextAlignmentOptions.Center;
+        var rect = label.rectTransform;
+        rect.anchorMin = new Vector2(0f, yMin);
+        rect.anchorMax = new Vector2(1f, yMax);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        return label;
     }
 
     /// <summary>
@@ -182,29 +200,6 @@ public static class ScoreTallySetup
         var made = WordCrushSetup.NewUI(name);
         made.transform.SetParent(parent, false);
         return made;
-    }
-
-    /// <summary>
-    /// Finds or makes one label. Position is ours on every run; size, colour and
-    /// text are set only when the label is new, so tuning survives.
-    /// </summary>
-    private static TMP_Text Label(Transform parent, string name, float size,
-                                  TextAlignmentOptions align, Vector2 offset,
-                                  Vector2 box, Color color, string placeholder)
-    {
-        var existing = parent.Find(name);
-        TMP_Text label = existing != null ? existing.GetComponent<TMP_Text>() : null;
-
-        if (label == null)
-        {
-            var made = WordCrushSetup.MakeText(parent, name, size, align);
-            made.color = color;
-            made.text = placeholder;
-            label = made;
-        }
-
-        WordCrushSetup.Anchor(label.gameObject, new Vector2(0.5f, 1f), offset, box);
-        return label;
     }
 
     private static void PlaceInScene(GameObject prefab)

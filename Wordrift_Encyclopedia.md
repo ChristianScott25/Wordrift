@@ -308,8 +308,9 @@ tiles arrived (§4):
 
 *(`pointsPerLetter`, `lengthMultipliers` and `multiplierPerExtraLetter`.)*
 
-**While you select, that's all you see** — `5 × 2` for a five-letter word, whatever tiles are in
-it. The score box shows what the LENGTH is worth and stops there.
+**While you select, that's all you see** — `5 x 2 = 10` for a five-letter word, whatever tiles
+are in it. The score box shows what the LENGTH is worth and stops there. It's a single line,
+POINTS x MULT = TOTAL, and the total keeps up on its own as the two numbers climb during PLAY.
 
 🎯 **That's deliberate.** What your tiles and your bookmarks add is the thing you press PLAY to
 watch. A readout that had already added it all up would hand you the ending before the show

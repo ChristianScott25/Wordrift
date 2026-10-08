@@ -115,10 +115,17 @@ public static class WordActionsSetup
         var shown = FindOrCreate(widgetRoot.transform, RootName);
         WordCrushSetup.Stretch(shown);
 
+        // Each plate is two button-heights wide with one gap between them, out of
+        // the button row's sum in GameLayoutSetup (ButtonHeight / ButtonGap) —
+        // which is what makes these the same height as the info and pause icons.
+        // As fractions of THIS widget's share of the row: 4H + gap.
+        const float share = 4f * GameLayoutSetup.ButtonHeight + GameLayoutSetup.ButtonGap;
+        const float split = 2f * GameLayoutSetup.ButtonHeight / share;
+
         var discard = FindOrCreateButton(shown.transform, DiscardName, "DISCARD",
-                                         0f, 0.48f, DiscardColor);
+                                         0f, split, DiscardColor);
         var submit = FindOrCreateButton(shown.transform, SubmitName, "PLAY",
-                                        0.52f, 1f, SubmitColor);
+                                        1f - split, 1f, SubmitColor);
 
         Dress(discard, DiscardColor);
         Dress(submit, SubmitColor);

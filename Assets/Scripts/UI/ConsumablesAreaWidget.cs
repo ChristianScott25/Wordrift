@@ -49,6 +49,10 @@ public class ConsumablesAreaWidget : MonoBehaviour
 
     [SerializeField] private float slotGap = 8f;
 
+    [Tooltip("How far the slots sit inside the area's edges — clears the plate " +
+             "the area is drawn on. 0 with no plate.")]
+    [Min(0f)][SerializeField] private float plateInset;
+
     [Tooltip("Reads ITEMS, or names what's armed to score the next word.")]
     [SerializeField] private TMP_Text captionLabel;
 
@@ -255,10 +259,15 @@ public class ConsumablesAreaWidget : MonoBehaviour
             // BeginItemDrag. Anchors and offsets alone would leave a card that
             // had been dragged and put back sitting half a slot off.
             rect.pivot = new Vector2(0.5f, 0.5f);
+            // Even shares of the width INSIDE the inset: slot i's left edge is
+            // inset + i × (width − 2 × inset) / shown, written as an anchor
+            // plus an offset so it still follows the area when it resizes.
             rect.anchorMin = new Vector2(i * pitch, 0f);
             rect.anchorMax = new Vector2((i + 1) * pitch, 1f - captionRoom);
-            rect.offsetMin = new Vector2(slotGap * 0.5f, 0f);
-            rect.offsetMax = new Vector2(-slotGap * 0.5f, 0f);
+            rect.offsetMin = new Vector2(plateInset * (1f - 2f * i * pitch) + slotGap * 0.5f,
+                                         plateInset);
+            rect.offsetMax = new Vector2(plateInset * (1f - 2f * (i + 1) * pitch) - slotGap * 0.5f,
+                                         0f);
         }
     }
 

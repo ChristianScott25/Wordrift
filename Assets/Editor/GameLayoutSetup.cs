@@ -44,6 +44,27 @@ public static class GameLayoutSetup
 
     private static readonly Color Faint = new Color(1f, 1f, 1f, 0.55f);
 
+    /// <summary>
+    /// THE BUTTON ROW IS SIX BUTTON-HEIGHTS AND THREE GAPS WIDE, so every button
+    /// comes out the same height (2026-10-07). Info and pause are square art, one
+    /// height wide each; DISCARD and PLAY are 2:1 plates, two heights wide each.
+    /// With a gap of 3% of the row between neighbours: 6H + 3 × 0.03 = 1, so
+    /// H = 0.1517 of the row. Every fraction below falls out of that — and every
+    /// image is preserveAspect inside its slot, so when the BAND is the shorter
+    /// side instead, all four shrink to the band's height together and still match.
+    /// WordActionsSetup holds the DISCARD/PLAY half of the same sum.
+    /// </summary>
+    internal const float ButtonGap = 0.03f;
+    internal const float ButtonHeight = (1f - 3f * ButtonGap) / 6f;
+    private const float SystemButtonsEnd = 2f * ButtonHeight + ButtonGap;
+    private const float IconSplit = ButtonHeight / SystemButtonsEnd;
+
+    /// <summary>
+    /// How far the items box's slots and caption sit inside its plate, in canvas
+    /// units — enough to clear the plate's outline.
+    /// </summary>
+    private const float ItemsPlateInset = 14f;
+
     // 🚧 The boxes that used to be see-through black panels — the round header
     // and the resource chips — now sit on the Medium Button art (2026-10-07).
     // The art is CREAM, so every word drawn on it has to be dark ink instead of
@@ -54,6 +75,7 @@ public static class GameLayoutSetup
     private static readonly Color QuietInk = new Color(0.12f, 0.13f, 0.17f, 0.65f);
     private static readonly Color UrgentInk = new Color(0.78f, 0.16f, 0.16f);
     private static readonly Color ClearedInk = new Color(0.12f, 0.55f, 0.22f);
+    private static readonly Color ArmedInk = new Color(0.70f, 0.47f, 0.05f);   // gold that reads on cream
 
     [MenuItem("Word Crush/Set Up Game Layout")]
     public static void SetUp()
@@ -104,6 +126,10 @@ public static class GameLayoutSetup
         // longer float over the board at a fixed 1040 wide.
         WordActionsSetup.Run();
 
+        // Same rule again: the score readout became one line on 2026-10-07, and
+        // its prefab is rebuilt by its own script, which opens the scene itself.
+        ScoreTallySetup.Run();
+
         var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
 
         var canvas = Object.FindFirstObjectByType<Canvas>();
@@ -122,6 +148,7 @@ public static class GameLayoutSetup
         RemoveRetired(canvas);
 
         var layout = EnsureLayout(canvas, session, board);
+        MoveBandsOn(layout);
         BuildHeader(canvas);
         BuildStrip(canvas);
         var bagButton = BuildBag(canvas);
@@ -300,6 +327,12 @@ public static class GameLayoutSetup
         // hard against the portrait's edge and left a wide gap on the right.
         var power = Slot(root.transform, "Power", 0.32f, 0.54f, 0.98f, 0.74f);
         var powerText = Text(power, 24, TextAlignmentOptions.Center);
+
+        // Auto-sized, every run: the header got shorter on 2026-10-07 and a
+        // two-line rule at a fixed 24 would spill out of its slot.
+        powerText.enableAutoSizing = true;
+        powerText.fontSizeMin = 14f;
+        powerText.fontSizeMax = 24f;
         powerText.color = Faint;
 
         var scoreCaption = Slot(root.transform, "ScoreCaption", 0.32f, 0.36f, 0.98f, 0.54f);
@@ -415,10 +448,21 @@ public static class GameLayoutSetup
         var root = Reuse<ConsumablesAreaWidget>(canvas, "Consumables");
         var widget = root.GetComponent<ConsumablesAreaWidget>();
 
-        var caption = Slot(root.transform, "Caption", 0f, 0.74f, 1f, 1f);
+        // 🚧 On the same plate as the librarian box (2026-10-07), so the three
+        // boxes along the top share one top and bottom edge and read as a set.
+        // Not a raycast target: the slots inside are what take presses and
+        // drags, and a plate that caught a miss would only get in their way.
+        Plate(root);
+        root.GetComponent<Image>().raycastTarget = false;
+        WordCrushSetup.SetFloat(widget, "plateInset", ItemsPlateInset);
+
+        // Inside the plate's top edge rather than on it. Ink, every run — it is
+        // on cream now, and the white it was would vanish.
+        var caption = Slot(root.transform, "Caption", 0.06f, 0.72f, 0.94f, 0.95f);
         var captionText = Text(caption, 22, TextAlignmentOptions.Center);
-        captionText.color = Faint;
         if (string.IsNullOrEmpty(captionText.text)) captionText.text = "ITEMS";
+        WordCrushSetup.SetColor(widget, "captionColor", QuietInk);
+        WordCrushSetup.SetColor(widget, "armedColor", ArmedInk);
 
         WordCrushSetup.SetRef(widget, "captionLabel", captionText);
         WordCrushSetup.SetRef(widget, "slotSprite", Square());
@@ -446,8 +490,9 @@ public static class GameLayoutSetup
         // It was the settings button until the pause screen landed (2026-10-06).
         RenameChild(root.transform, "SettingsButton", "PauseButton");
 
-        var info = FindOrMakeIconButton(root.transform, "InfoButton", "Info Button", 0f, 0.46f);
-        var pause = FindOrMakeIconButton(root.transform, "PauseButton", "Pause Button", 0.54f, 1f);
+        // See ButtonRow for where these two fractions come from.
+        var info = FindOrMakeIconButton(root.transform, "InfoButton", "Info Button", 0f, IconSplit);
+        var pause = FindOrMakeIconButton(root.transform, "PauseButton", "Pause Button", 1f - IconSplit, 1f);
 
         WordCrushSetup.SetRef(widget, "infoButton", info);
         WordCrushSetup.SetRef(widget, "pauseButton", pause);
@@ -469,7 +514,65 @@ public static class GameLayoutSetup
 
         WordCrushSetup.SetRef(widget, "messageLabel", text);
         WordCrushSetup.SetRef(widget, "board", board);
+
+        // More of the (now taller) row for the tiles, less for the message
+        // strip that's empty most of the time. Moved only off the OLD default,
+        // so a value chosen in the Inspector is kept.
+        var split = new SerializedObject(widget).FindProperty("tileAreaFraction");
+        if (split != null && Mathf.Approximately(split.floatValue, 0.66f))
+            WordCrushSetup.SetFloat(widget, "tileAreaFraction", 0.72f);
     }
+
+    /// <summary>
+    /// Carries a scene still on the OLD band table across to the new one
+    /// (2026-10-07) — and leaves it alone otherwise.
+    ///
+    /// ⚠️ Band weights are normally NOT written here, so tuning survives a re-run.
+    /// That rule is intact: this only fires when every band still holds exactly
+    /// the value the old table shipped with, which is how "nobody has touched
+    /// this" is told apart from "somebody tuned it". Same trick as
+    /// ScoreTallySetup.Restyle. A tuned table is left as it is, with a note.
+    /// </summary>
+    private static void MoveBandsOn(GameLayout layout)
+    {
+        var so = new SerializedObject(layout);
+        var bands = so.FindProperty("bands");
+        if (bands == null || !bands.isArray) return;
+
+        float[] oldWeights = { 0.155f, 0.033f, 0.085f, 0.075f, 0.042f, 0.44f, 0.07f };
+        float[] oldMins = { 200f, 52f, 110f, 96f, 70f, 240f, 110f };
+        float[] newWeights = { 0.108f, 0.033f, 0.060f, 0.140f, 0.042f, 0.42f, 0.066f };
+        float[] newMins = { 200f, 52f, 100f, 120f, 70f, 240f, 110f };
+
+        if (bands.arraySize != oldWeights.Length) return;
+
+        for (int i = 0; i < oldWeights.Length; i++)
+        {
+            var band = bands.GetArrayElementAtIndex(i);
+            if (LayoutBandOf(band) != i ||
+                !Mathf.Approximately(band.FindPropertyRelative("weight").floatValue, oldWeights[i]) ||
+                !Mathf.Approximately(band.FindPropertyRelative("minHeight").floatValue, oldMins[i]))
+            {
+                Debug.Log("GameLayout's band table has been tuned by hand, so it was left alone. " +
+                          "The 2026-10-07 table is in GameLayout's C# defaults if you want it.");
+                return;
+            }
+        }
+
+        for (int i = 0; i < newWeights.Length; i++)
+        {
+            var band = bands.GetArrayElementAtIndex(i);
+            band.FindPropertyRelative("weight").floatValue = newWeights[i];
+            band.FindPropertyRelative("minHeight").floatValue = newMins[i];
+        }
+
+        so.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(layout);
+        Debug.Log("GameLayout's bands moved to the 2026-10-07 table.");
+    }
+
+    private static int LayoutBandOf(SerializedProperty band) =>
+        band.FindPropertyRelative("band").enumValueIndex;
 
     /// <summary>
     /// Divides the header band between the librarian box, the tile bag and the
@@ -487,8 +590,13 @@ public static class GameLayoutSetup
     private static void ShareTheHeaderBand()
     {
         Share<RoundBannerWidget>(0f, 0.52f);
-        Share<BagButtonWidget>(0.54f, 0.78f);
-        Share<ConsumablesAreaWidget>(0.80f, 1f);
+        Share<BagButtonWidget>(0.53f, 0.79f);
+        Share<ConsumablesAreaWidget>(0.81f, 1f);
+
+        // The button row lives in another band, but its split is the same kind
+        // of number and is written for the same reason.
+        Share<SystemButtonsWidget>(0f, SystemButtonsEnd);
+        Share<WordActionsWidget>(SystemButtonsEnd + ButtonGap, 1f);
     }
 
     /// <summary>Removes a child left behind by an earlier shape of this layout.</summary>
@@ -685,7 +793,9 @@ public static class GameLayoutSetup
     private static Button FindOrMakeIconButton(Transform parent, string name, string spriteName,
                                                float xMin, float xMax)
     {
-        var slot = Slot(parent, name, xMin, 0.1f, xMax, 0.9f);
+        // The FULL band height, like PLAY and DISCARD. It was 0.1-0.9, which is
+        // why the icons came out a fifth shorter than the buttons beside them.
+        var slot = Slot(parent, name, xMin, 0f, xMax, 1f);
 
         var image = slot.GetComponent<Image>() ?? slot.AddComponent<Image>();
         WordCrushSetup.SetSprite(image, WordCrushSetup.LoadSprite(spriteName), Color.white);

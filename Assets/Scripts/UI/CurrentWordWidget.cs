@@ -40,7 +40,7 @@ public class CurrentWordWidget : MonoBehaviour
 
     [Tooltip("How much of the band the TILES get. The rest is the message strip " +
              "underneath them.")]
-    [Range(0.4f, 1f)][SerializeField] private float tileAreaFraction = 0.66f;
+    [Range(0.4f, 1f)][SerializeField] private float tileAreaFraction = 0.72f;
 
     [Tooltip("How much of a tile's BODY shows while the word is only spelled, " +
              "not played. The letter, score and badges always show in full. The " +
@@ -165,6 +165,12 @@ public class CurrentWordWidget : MonoBehaviour
         rect.anchorMax = new Vector2(1f, 1f - tileAreaFraction);
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
+
+        // Shrinks to fit: the strip got shorter when the tiles got the room
+        // (2026-10-07), and WON'T SCORE plus a librarian's reason is two lines.
+        messageLabel.enableAutoSizing = true;
+        messageLabel.fontSizeMin = 18f;
+        messageLabel.fontSizeMax = 44f;
     }
 
     private void OnLayoutChanged()
