@@ -16,6 +16,7 @@ MonoBehaviour:
   boardShape: {fileID: 11400000, guid: 6e341966805774ebab975c05bfb0cacd, type: 2}
   letterSet: {fileID: 11400000, guid: 6d97dafb14cc54f7a8ae45fe2c470957, type: 2}
   minWordLength: 3
+  pointsPerLetter: 1
   lengthMultipliers:
   - 1
   - 1.5
@@ -71,6 +72,10 @@ MonoBehaviour:
   consumables:
   - {fileID: 11400000, guid: 56af1b5756e8b40758089a738979eb28, type: 2}
   - {fileID: 11400000, guid: 16fd8adace0b44923be38e5e1eafa78f, type: 2}
+  - {fileID: 11400000, guid: 4b79c162b6bd440c3b17bf84b916a4d8, type: 2}
+  - {fileID: 11400000, guid: 4835baad6a01f47a2b1c37c9610be261, type: 2}
+  - {fileID: 11400000, guid: 661136247a248405a82069e9824dada7, type: 2}
+  - {fileID: 11400000, guid: 9a014ff62f42b4c4a80a23cafc0f1a95, type: 2}
   maxConsumables: 2
   rerollBasePrice: 5
   rerollPriceGrowth: 1.5

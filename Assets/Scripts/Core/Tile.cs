@@ -100,8 +100,24 @@ public class Tile : MonoBehaviour
     [SerializeField] private float invalidFlashSeconds = 0.25f;
     [SerializeField] private float demolishSeconds = 0.15f;
 
-    /// <summary>The persistent identity this tile is the body of (see TileSpec).</summary>
+    [Tooltip("How far a tile turns while it shrinks away (discards, cleared lines, " +
+             "a redraw). 0 = no spin, just the shrink.")]
+    [SerializeField] private float demolishSpinDegrees = 360f;
+
+    /// <summary>
+    /// What this tile PLAYS AS — the spec everything that spells, scores, shows
+    /// or describes it reads. The same object as Origin for every tile except one
+    /// an item has turned into a wild for the round (see BecomeWild).
+    /// </summary>
     public TileSpec Spec { get; private set; }
+
+    /// <summary>
+    /// The bag tile this tile was DEALT AS — its identity in RunState.TileBag,
+    /// which is what a save writes down and what goes back in the bag on a
+    /// redraw. ⚠️ Read this, not Spec, for anything about where the tile came
+    /// from: a blotted tile's Spec is a throwaway wild that is in no bag.
+    /// </summary>
+    public TileSpec Origin { get; private set; }
 
     /// <summary>
     /// What this tile plays as — the WHOLE spelling, lowercased. Usually one
@@ -151,6 +167,10 @@ public class Tile : MonoBehaviour
 
     public Vector2Int Cell { get; set; }
     public bool IsSettled => !moving && !flying;
+
+    // Told to move, but its turn hasn't come yet (MoveTo with a delay). Hidden
+    // and still until then; `moving` is already true, so it isn't settled.
+    private bool waitingTurn;
 
     /// <summary>The spec's baseScore: what this tile is worth before any of its modifiers apply.</summary>
     public int LetterPoints { get; private set; }
@@ -204,18 +224,9 @@ public class Tile : MonoBehaviour
         // moving: Face and Options both normalise the authored string, which
         // ALLOCATES, and the selection path walks every tile in the chain on
         // every frame of a drag.
-        Spec = spec;
-        Letters = spec.Spelling;
-        Face = spec.Face;
-        Options = spec.Options;
-        IsUndecided = spec.IsWild || spec.IsChoice;
-        LetterPoints = spec.baseScore;
+        Origin = spec;
+        Stamp(spec);
         Cell = cell;
-        Modifiers.Clear();
-
-        // Before ApplyLook writes the face: a tile being re-initialised must not
-        // inherit the letter some earlier selection resolved it to.
-        shownLetters = null;
 
         if (tileRenderer == null) tileRenderer = GetComponent<SpriteRenderer>();
         ApplyLook(look);
@@ -237,6 +248,44 @@ public class Tile : MonoBehaviour
         LayOutLabels(sprite);
         LayOutSelectionBox(sprite);
         ApplyModifierVisuals();
+    }
+
+    /// <summary>
+    /// Takes on everything a spec says the tile plays as. Shared by Init and
+    /// BecomeWild so the two can't stamp different fields.
+    /// </summary>
+    private void Stamp(TileSpec spec)
+    {
+        Spec = spec;
+        Letters = spec.Spelling;
+        Face = spec.Face;
+        Options = spec.Options;
+        IsUndecided = spec.IsWild || spec.IsChoice;
+        LetterPoints = spec.baseScore;
+        Modifiers.Clear();
+
+        // Before anything writes the face: a re-stamped tile must not inherit
+        // the letter some earlier selection resolved it to.
+        shownLetters = null;
+    }
+
+    /// <summary>
+    /// Turns this tile into a wild FOR AS LONG AS IT IS ON THE BOARD —
+    /// WildTileConsumable. It plays exactly like a bought wild: 0 points, no badges, any
+    /// letter. His call, 2026-10-08: a wild keeping a 3W is the combination the
+    /// shop deliberately refuses to sell.
+    ///
+    /// Origin is left alone, so the bag, the shop and the next round never see
+    /// the change: the save still names the tile it was dealt as, and a redraw
+    /// puts THAT back in the bag.
+    /// </summary>
+    public void BecomeWild(TileSpec wild)
+    {
+        if (wild == null || !wild.IsWild) return;
+        Stamp(wild);
+        RefreshLetterLabel();
+        ApplyModifierVisuals();   // hides the badges and puts "*" in the corner
+        name = $"Tile * ({Cell.x},{Cell.y})";
     }
 
     /// <summary>
@@ -557,15 +606,47 @@ public class Tile : MonoBehaviour
     /// </summary>
     private Color RestingColor => normalColor;
 
-    public void MoveTo(Vector3 target)
+    /// <summary>
+    /// Slides to a spot at fallSpeed. With a delay, the tile is HIDDEN where it
+    /// stands until its turn, then appears and moves — how the board deals tiles
+    /// in one at a time (see ITileFillAnimation). Hidden because a new tile
+    /// starts above the board, and a deal's worth of them hovering there in a
+    /// stack would look broken.
+    ///
+    /// ⚠️ IsSettled is false from the moment this is CALLED, delay included —
+    /// same rule as FlyTo — so Board.TileAt can't hand out a tile that hasn't
+    /// arrived, and the board's settle wait covers the whole deal for free.
+    /// Hidden by SCALE, not by switching renderers off: the badges and the
+    /// selection box keep their own on/off state, and blanket re-enabling would
+    /// show ones the tile doesn't have.
+    /// </summary>
+    public void MoveTo(Vector3 target, float delay = 0f)
     {
         targetPosition = target;
         moving = true;
+
+        if (delay <= 0f || !gameObject.activeInHierarchy) return;
+        waitingTurn = true;
+        transform.localScale = Vector3.zero;
+        StartCoroutine(WaitTurnRoutine(delay));
+    }
+
+    private IEnumerator WaitTurnRoutine(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        EndWait();
+    }
+
+    private void EndWait()
+    {
+        if (!waitingTurn) return;
+        waitingTurn = false;
+        transform.localScale = Vector3.one * baseScale;
     }
 
     private void Update()
     {
-        if (!moving || flying) return;
+        if (!moving || flying || waitingTurn) return;
         transform.position = Vector3.MoveTowards(transform.position, targetPosition, fallSpeed * Time.deltaTime);
         if ((transform.position - targetPosition).sqrMagnitude < 0.0001f)
         {
@@ -690,25 +771,46 @@ public class Tile : MonoBehaviour
     // ⚠️ Deactivating a tile stops its coroutines, flight included — and a tile
     // stuck "flying" would never read settled, so GameSession would wait on it
     // forever. Hiding a tile mid-flight therefore counts as landing it.
-    private void OnDisable() => flying = false;
+    //
+    // The same goes for a tile waiting its turn to fall: its wait is a coroutine
+    // too, so it is put where it was going rather than left hidden and unsettled.
+    private void OnDisable()
+    {
+        flying = false;
+        if (!waitingTurn) return;
+        EndWait();
+        transform.position = targetPosition;
+        moving = false;
+    }
 
     // Far above anything a resting tile or badge uses (+4 per badge pair).
     private const int FlightSortingLift = 100;
 
-    /// <summary>Shrink away, then destroy the GameObject.</summary>
-    public void Demolish()
+    /// <summary>
+    /// Spin and shrink away, then destroy the GameObject. The delay is how a
+    /// clear ripples outward (Board.RemoveTiles): every tile is told at once and
+    /// waits its turn. The board waits until the object is really GONE before
+    /// anything falls into its cell, so the timing lives here and nowhere else.
+    /// </summary>
+    public void Demolish(float delay = 0f)
     {
         StopAllCoroutines();
         flying = false;
-        StartCoroutine(DemolishRoutine());
+        waitingTurn = false;
+        StartCoroutine(DemolishRoutine(delay));
     }
 
-    private IEnumerator DemolishRoutine()
+    private IEnumerator DemolishRoutine(float delay)
     {
+        if (delay > 0f) yield return new WaitForSeconds(delay);
+
         float start = transform.localScale.x;
+        Quaternion from = transform.localRotation;
         for (float t = 0f; t < demolishSeconds; t += Time.deltaTime)
         {
-            transform.localScale = Vector3.one * Mathf.Lerp(start, 0f, t / demolishSeconds);
+            float k = t / demolishSeconds;
+            transform.localScale = Vector3.one * Mathf.Lerp(start, 0f, k);
+            transform.localRotation = from * Quaternion.Euler(0f, 0f, -demolishSpinDegrees * k);
             yield return null;
         }
         Destroy(gameObject);

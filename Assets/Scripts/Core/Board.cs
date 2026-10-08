@@ -29,6 +29,18 @@ public class Board : MonoBehaviour
     [Tooltip("Pause after tiles are demolished, before the rest fall in.")]
     [SerializeField] private float settleDelay = 0.18f;
 
+    [Tooltip("A clear that ripples out from one tile (a cleared row or column, a " +
+             "redraw): seconds between one ring of tiles spinning away and the next.")]
+    [Min(0f)][SerializeField] private float rippleStep = 0.07f;
+
+    [Tooltip("A full deal (the opening board, a redraw): seconds between one tile " +
+             "dropping in and the next.")]
+    [Min(0f)][SerializeField] private float dealStep = 0.05f;
+
+    [Tooltip("An everyday refill (after a word, a discard, a cleared line): seconds " +
+             "between one column's new tiles dropping in and the next column's.")]
+    [Min(0f)][SerializeField] private float sweepStep = 0.06f;
+
     public float CellSize => cellSize;
 
     /// <summary>True while tiles are being demolished / falling; input is blocked.</summary>
@@ -125,6 +137,21 @@ public class Board : MonoBehaviour
     /// fits an endless draw over the mode's LetterSet.
     /// </summary>
     public ITileSource TileSource { get; set; }
+
+    /// <summary>
+    /// When each new tile of an everyday refill starts to fall (see
+    /// ITileFillAnimation). Null = SweepColumns at this board's sweepStep.
+    /// </summary>
+    public ITileFillAnimation RefillAnimation { get; set; }
+
+    /// <summary>
+    /// When each tile of a full deal starts to fall — the opening board and a
+    /// Redraw. Null = DealRowByRow at this board's dealStep.
+    /// </summary>
+    public ITileFillAnimation DealAnimation { get; set; }
+
+    private ITileFillAnimation Refilling => RefillAnimation ?? new SweepColumns(sweepStep);
+    private ITileFillAnimation Dealing => DealAnimation ?? new DealRowByRow(dealStep);
 
     private readonly Dictionary<Vector2Int, Tile> tiles = new();
 
@@ -463,7 +490,7 @@ public class Board : MonoBehaviour
             return false;
         }
 
-        StartCoroutine(ShuffleRoutine(moved));
+        StartCoroutine(HoldInputUntilSettled(moved));
         return true;
     }
 
@@ -505,13 +532,14 @@ public class Board : MonoBehaviour
     }
 
     /// <summary>
-    /// Holds input until the slide finishes. Input is gated unconditionally,
-    /// unlike ResolveRoutine's GateInputWhileResolving: that flag exists for a
-    /// mode that drips tiles in forever and so never settles, and a shuffle
-    /// always settles. A tile that happened not to move would otherwise be
-    /// grabbable while the rest of the board was still sliding.
+    /// Holds input until these tiles have landed — a shuffle's slide, or the
+    /// opening deal. Input is gated unconditionally, unlike ResolveRoutine's
+    /// GateInputWhileResolving: that flag exists for a mode that drips tiles in
+    /// forever and so never settles, and both of these always settle. A tile
+    /// that has already landed would otherwise be grabbable while the rest of
+    /// the board was still moving.
     /// </summary>
-    private IEnumerator ShuffleRoutine(List<Tile> moved)
+    private IEnumerator HoldInputUntilSettled(List<Tile> moved)
     {
         Busy = true;
         yield return new WaitUntil(() => moved.TrueForAll(t => t == null || t.IsSettled));
@@ -535,19 +563,149 @@ public class Board : MonoBehaviour
         return occupied;
     }
 
+    // ---- What items do to the board ----
+
+    /// <summary>
+    /// Every tile in the same row (horizontal) or column as this cell — what
+    /// LineClearConsumable clears. Walked through columnCells like
+    /// Shuffle is, so the order never comes from a HashSet or a Dictionary.
+    /// </summary>
+    public List<Tile> TilesInLine(Vector2Int cell, bool horizontal)
+    {
+        var line = new List<Tile>();
+        foreach (int column in Columns)
+        {
+            if (!horizontal && column != cell.x) continue;
+            if (!columnCells.TryGetValue(column, out var list)) continue;
+            foreach (var c in list)
+            {
+                if (horizontal && c.y != cell.y) continue;
+                if (tiles.TryGetValue(c, out var tile) && tile != null) line.Add(tile);
+            }
+        }
+        return line;
+    }
+
+    /// <summary>
+    /// Turns the tile on a cell into a wild until it leaves the board
+    /// (WildTileConsumable, and a resumed round putting one back). The wild is a
+    /// spec off the catalog's "*" row and lives on the Tile alone — it is in no
+    /// bag — so nothing past this round can see it. See Tile.BecomeWild.
+    ///
+    /// ⚠️ A FRESH SPEC PER TILE, NEVER ONE SHARED WILD. The word row finds the
+    /// tile a score beat belongs to by the spec OBJECT (ScoreStep.Actor), so two
+    /// blotted tiles sharing one spec would both pulse on the first one's beat.
+    ///
+    /// False when there's nothing to change: no tile, a tile mid-fall, or one
+    /// that's already a wild. A choice tile is allowed — one letter of three
+    /// becoming any of 26 is still an upgrade.
+    /// </summary>
+    public bool MakeWild(Tile tile)
+    {
+        if (tile == null || !tile.IsSettled || tile.Spec == null || tile.Spec.IsWild) return false;
+        if (!tiles.TryGetValue(tile.Cell, out var onBoard) || onBoard != tile) return false;
+        if (letterSet == null) return false;
+
+        var wild = letterSet.CreateSpec(TileSpec.WildSpelling);
+        if (!wild.IsWild) return false;
+
+        tile.BecomeWild(wild);
+        return true;
+    }
+
+    /// <summary>
+    /// Puts every tile on the board back in the bag and deals a new board —
+    /// RedrawConsumable. Return first, then draw (his call, 2026-10-08), so a
+    /// few of the same tiles can come straight back; it also means it always
+    /// works, however empty the bag is.
+    ///
+    /// ⚠️ It returns each tile's ORIGIN, never its Spec: a blotted tile goes
+    /// back as the tile it was dealt as, and the throwaway wild is simply lost.
+    ///
+    /// Walks OccupiedInOrder so the tiles go back in a stable order — the bag
+    /// indexes into its list, so a different order would deal a different board
+    /// from the same seed. The new board falls in through the ordinary resolve,
+    /// so Busy and Resolving cover it exactly as they cover a cleared word.
+    ///
+    /// Looks: the old board spins away in rings spreading out from `rippleFrom`
+    /// (where the item was dropped), and the new one is DEALT, a tile at a time.
+    /// </summary>
+    public bool Redraw(Vector2Int rippleFrom)
+    {
+        if (Busy || Resolving || TileSource == null) return false;
+
+        var occupied = OccupiedInOrder();
+        if (occupied.Count == 0) return false;
+
+        var vanishing = new List<Tile>(occupied.Count);
+        foreach (var cell in occupied)
+        {
+            if (!tiles.TryGetValue(cell, out var tile) || tile == null) continue;
+            tiles.Remove(cell);
+            TileSource.Return(tile.Origin);
+            tile.Demolish(RippleDelay(cell, rippleFrom));
+            vanishing.Add(tile);
+        }
+
+        resolving++;
+        StartCoroutine(ResolveRoutine(vanishing, Dealing));
+        return true;
+    }
+
+    /// <summary>
+    /// The cell closest to a world point — where an item that targets no tile
+    /// was dropped, so its effect can still start under the finger. Walks
+    /// columnCells, so a tie always goes the same way.
+    /// </summary>
+    public Vector2Int CellNearest(Vector3 world)
+    {
+        Vector2Int best = default;
+        float bestDistance = float.MaxValue;
+        foreach (int column in Columns)
+        {
+            if (!columnCells.TryGetValue(column, out var list)) continue;
+            foreach (var cell in list)
+            {
+                float d = ((Vector2)(CellToWorld(cell) - world)).sqrMagnitude;
+                if (d >= bestDistance) continue;
+                bestDistance = d;
+                best = cell;
+            }
+        }
+        return best;
+    }
+
     // ---- Clearing and settling ----
 
-    public void RemoveTiles(IEnumerable<Tile> toRemove)
+    /// <summary>
+    /// Spins the tiles away and lets the board fall and refill — a discard, or a
+    /// cleared row or column.
+    ///
+    /// With `rippleFrom`, the clear spreads out from that cell: it goes first,
+    /// then every tile one ring away, then two, `rippleStep` apart. A ring is
+    /// max(|dx|, |dy|), so a line spreads equally both ways and a whole board
+    /// spreads in squares. Without it (a discard, which has no one starting
+    /// tile), they all go at once.
+    ///
+    /// Out of the tile map at once either way, so nothing can select, save or
+    /// hit-test a tile that's still spinning.
+    /// </summary>
+    public void RemoveTiles(IEnumerable<Tile> toRemove, Vector2Int? rippleFrom = null)
     {
+        var vanishing = new List<Tile>();
         foreach (var tile in toRemove)
         {
             if (tile == null) continue;
             tiles.Remove(tile.Cell);
-            tile.Demolish();
+            tile.Demolish(rippleFrom.HasValue ? RippleDelay(tile.Cell, rippleFrom.Value) : 0f);
+            vanishing.Add(tile);
         }
         resolving++;
-        StartCoroutine(ResolveRoutine());
+        StartCoroutine(ResolveRoutine(vanishing, Refilling));
     }
+
+    private float RippleDelay(Vector2Int cell, Vector2Int from) =>
+        Mathf.Max(Mathf.Abs(cell.x - from.x), Mathf.Abs(cell.y - from.y)) * rippleStep;
 
     /// <summary>
     /// Takes tiles off the board WITHOUT destroying them, and starts the
@@ -571,7 +729,7 @@ public class Board : MonoBehaviour
             released.Add(tile);
         }
         resolving++;
-        StartCoroutine(ResolveRoutine());
+        StartCoroutine(ResolveRoutine(null, Refilling));
     }
 
     /// <summary>Destroys every tile ReleaseTiles handed out.</summary>
@@ -584,33 +742,85 @@ public class Board : MonoBehaviour
 
     private readonly List<Tile> released = new();
 
-    private IEnumerator ResolveRoutine()
+    /// <summary>
+    /// Waits for the cleared tiles to finish leaving, then collapses the stack
+    /// and refills it.
+    ///
+    /// ⚠️ It waits until every VANISHING tile is actually destroyed — not a fixed
+    /// time — so nothing ever falls through a tile that's still spinning away,
+    /// however long a ripple runs. The tile owns how long it takes (Demolish);
+    /// the board just watches. A played word has nothing vanishing (its tiles
+    /// fly off), so it keeps the old fixed settleDelay.
+    /// </summary>
+    private IEnumerator ResolveRoutine(List<Tile> vanishing, ITileFillAnimation fill)
     {
         if (GateInputWhileResolving) Busy = true;
-        yield return new WaitForSeconds(settleDelay);
+
+        if (vanishing != null && vanishing.Count > 0)
+            yield return new WaitUntil(() => vanishing.TrueForAll(t => t == null));
+        else
+            yield return new WaitForSeconds(settleDelay);
 
         // Wait only on the tiles this clear actually set in motion. Waiting on
         // every tile would never finish in a mode that drips new ones in.
-        var moved = ApplyGravityAndRefill();
+        var moved = ApplyGravityAndRefill(fill);
         resolving--;
         yield return new WaitUntil(() => moved.TrueForAll(t => t == null || t.IsSettled));
 
         if (GateInputWhileResolving) Busy = false;
     }
 
+    /// <summary>
+    /// The opening fill (Build, ResetBoard): every empty cell DEALT in, a tile at
+    /// a time, with input held until the last one lands.
+    ///
+    /// Tiles are spawned — and so drawn from the bag — in the same order as
+    /// ever; the deal only decides when each one starts to fall.
+    /// </summary>
     private void FillEmptyCells()
     {
         var empties = cells.Where(c => !tiles.ContainsKey(c)).ToList();
+        var dealt = new List<(Tile tile, Vector3 target)>();
         foreach (var cell in Refill.CellsToFill(empties))
         {
             if (tiles.ContainsKey(cell)) continue;
             Vector3 target = CellToWorld(cell);
-            SpawnTile(cell, target, target);
+            var start = new Vector3(target.x, ColumnTopY(cell.x) + cellSize * 1.5f, target.z);
+            var tile = SpawnTile(cell, start, start);
+            if (tile != null) dealt.Add((tile, target));
         }
+
+        var moved = Launch(dealt, Dealing);
+        if (moved.Count > 0) StartCoroutine(HoldInputUntilSettled(moved));
+    }
+
+    /// <summary>
+    /// Sends freshly spawned tiles to their cells on the animation's schedule.
+    /// They were spawned standing at their start points, so this is the only
+    /// place their fall begins.
+    /// </summary>
+    private static List<Tile> Launch(List<(Tile tile, Vector3 target)> spawned,
+                                     ITileFillAnimation fill)
+    {
+        var moved = new List<Tile>(spawned.Count);
+        if (spawned.Count == 0) return moved;
+
+        var cellsFilled = new List<Vector2Int>(spawned.Count);
+        foreach (var s in spawned) cellsFilled.Add(s.tile.Cell);
+
+        var delays = new float[spawned.Count];
+        fill?.Delays(cellsFilled, delays);
+
+        for (int i = 0; i < spawned.Count; i++)
+        {
+            spawned[i].tile.MoveTo(spawned[i].target, delays[i]);
+            moved.Add(spawned[i].tile);
+        }
+        return moved;
     }
 
     /// <summary>Returns every tile this pass set moving, for the settle wait.</summary>
-    private List<Tile> ApplyGravityAndRefill()
+    private List<Tile> ApplyGravityAndRefill(ITileFillAnimation fill)
     {
         var moved = new List<Tile>();
         var occupied = new HashSet<Vector2Int>(tiles.Keys);
@@ -630,6 +840,9 @@ public class Board : MonoBehaviour
         }
 
         // New tiles enter stacked above their column so they visibly fall in.
+        // Spawned (and drawn) in the same order as ever; `fill` only decides
+        // when each one starts to fall.
+        var spawnedTiles = new List<(Tile tile, Vector3 target)>();
         foreach (var column in Refill.CellsToFill(plan.Empties).GroupBy(c => c.x))
         {
             var ordered = column.OrderBy(c => c.y).ToList();
@@ -638,11 +851,12 @@ public class Board : MonoBehaviour
             {
                 Vector3 target = CellToWorld(ordered[i]);
                 var start = new Vector3(target.x, topY + cellSize * (i + 1.5f), target.z);
-                var spawned = SpawnTile(ordered[i], start, target);
-                if (spawned != null) moved.Add(spawned);
+                var spawned = SpawnTile(ordered[i], start, start);
+                if (spawned != null) spawnedTiles.Add((spawned, target));
             }
         }
 
+        moved.AddRange(Launch(spawnedTiles, fill));
         return moved;
     }
 

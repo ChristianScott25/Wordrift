@@ -9,13 +9,13 @@ using UnityEngine;
 /// GameSession.UseConsumable resolves it and refuses a drop that found nothing,
 /// which costs the player nothing because the refusal comes before the spend.
 ///
-/// 🚧 No consumable declares BoardTile yet — there are two items and neither
-/// wants a target. The path is there for the first one that does.
+/// Strikethrough, Bookworm and Ink Blot target a tile (2026-10-08); Shuffle,
+/// Doubler and Second Edition don't.
 /// </summary>
 public enum ConsumableTarget
 {
     /// <summary>
-    /// Drop it anywhere on the board and it happens. Both of today's items.
+    /// Drop it anywhere on the board and it happens.
     /// </summary>
     None,
 
@@ -57,11 +57,15 @@ public class ConsumableUse
 
     /// <summary>
     /// The tile the item was dropped on, for a BoardTile consumable. Null for
-    /// an untargeted one, which is every item there is today.
+    /// an untargeted one.
     /// </summary>
     public Tile Tile;
 
-    /// <summary>That tile's cell. Default for an untargeted item.</summary>
+    /// <summary>
+    /// That tile's cell — or, for an untargeted item, the cell nearest where it
+    /// was dropped, so its effect can still start under the finger
+    /// (RedrawConsumable's ripple).
+    /// </summary>
     public Vector2Int Cell;
 }
 
@@ -148,10 +152,8 @@ public abstract class Consumable : ScriptableObject, IInspectable
         info.Title = Title.ToUpperInvariant();
         info.Body = Power;
 
-        // 🚧 No item declares a target yet, so this chip never appears. It is
-        // here now because the day one does, the box saying so is the only thing
-        // that will tell the player this one has to be dropped on something
-        // particular rather than anywhere on the board.
+        // The only thing that tells the player this one has to be dropped on
+        // something particular rather than anywhere on the board.
         if (Targets == ConsumableTarget.BoardTile) info.Tag("DROP ON A TILE");
     }
 

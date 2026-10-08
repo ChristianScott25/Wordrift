@@ -148,6 +148,18 @@ Meanwhile the board **refills straight away** — the gaps close and new tiles f
 numbers run, so you can be planning your next word. You can't touch the board until the count
 is over. When it is, the row's tiles pop away.
 
+**How tiles arrive** (2026-10-08 — nothing drops in all at once any more):
+
+- **Everyday refills** — after a word, a discard or a cleared line — **sweep across** column by
+  column, left to right, a beat apart. A column's new tiles fall together.
+- **A full board is dealt**, one tile at a time: the bottom row left to right, then the next row
+  up. That's the opening board of every round, a restart, and SECOND EDITION (§10). You can't
+  touch the board until the last tile lands.
+- **Tiles that leave spin as they shrink away** — a discard all at once, a cleared line or a
+  redeal in a ripple spreading out from where the item was dropped (§10).
+
+🚧 All the timings are first guesses, tunable on the Board and the Tile prefab.
+
 **The bookmarks** stand up out of the top edge of the board like bookmarks in a book — only
 their tops show. They're still dragged left and right to reorder, and that order is still the
 order they score in.
@@ -1118,12 +1130,18 @@ They're the opposite bargain from a checkout. A checkout is expensive, permanent
 the whole run; a consumable is cheap, single-use and changes one moment. 🎯 That's what they're
 for — the round where the board has gone stupid, or the word you can see is worth double.
 
-**There are two.**
+**There are six.** Three you drop anywhere on the board, three you drop on one particular tile.
 
-| | Costs | What it does |
-|---|--:|---|
-| **SHUFFLE** | 🚧 $6 | The tiles on the board swap into new places. Nothing is added, nothing is removed |
-| **DOUBLER** | 🚧 $8 | The next word you play scores **double**, after everything else has been counted |
+| | Costs | Aim | What it does |
+|---|--:|---|---|
+| **SHUFFLE** | 🚧 $6 | anywhere | The tiles on the board swap into new places. Nothing is added, nothing is removed |
+| **DOUBLER** | 🚧 $8 | anywhere | The next word you play scores **double**, after everything else has been counted |
+| **SECOND EDITION** | 🚧 $7 | anywhere | Every tile on the board goes back in the bag, and a fresh board is dealt |
+| **STRIKETHROUGH** | 🚧 $6 | a tile | Clears that tile's whole **row**. Doesn't use your discards |
+| **BOOKWORM** | 🚧 $6 | a tile | Clears that tile's whole **column**. Doesn't use your discards |
+| **INK BLOT** | 🚧 $10 | a tile | That tile becomes a **wild** until it leaves the board. Your bag isn't changed |
+
+*(The last four were added on 2026-10-08, to have more to test with.)*
 
 ### Using one
 
@@ -1138,7 +1156,9 @@ anyway — it's deliberate enough to need no confirmation, and it's the gesture 
 to be aimed at a particular tile will need.)*
 
 **Let go anywhere off the board and nothing happens.** The item goes back in the box unspent,
-so changing your mind halfway is free.
+so changing your mind halfway is free. The three you aim at a tile are the same, one step
+stricter: let go on the board but **not on a tile** (an empty cell, a gap) and nothing happens
+either. Their info box says **DROP ON A TILE**.
 
 **An item won't lift at all while the board is busy** — mid-fall after a word, or while the
 score is still being counted out. Nothing is spent, and you find out before you've aimed.
@@ -1162,7 +1182,7 @@ is a discard.
 
 ### DOUBLER
 
-**Press USE and nothing visible happens yet.** The item leaves your box and the caption above
+**Drop it on the board and nothing visible happens yet.** The item leaves your box and the caption above
 it changes to say **DOUBLER** — that's the round holding onto it. The next word you play scores
 double, and then it's gone.
 
@@ -1182,21 +1202,55 @@ beats in the walk-through.
 something to hold "just in case" at the end of a round — it's something to use when you can see
 the word.
 
+### SECOND EDITION
+
+A redeal. The old board **spins away in rings**, starting at the tile nearest where you dropped
+it and spreading outward; every tile goes back into your bag; then a whole new board is
+**dealt**, one tile at a time, bottom row first — drawn from the bag like any refill. **Back first, then the draw** — so a few of the same tiles
+can come straight back, and it always fills the board, however low the bag is. The bag count is
+the same afterwards as before.
+
+🎯 Where SHUFFLE keeps your letters and moves them, this swaps them out. It's the answer to a
+board of bad letters that you don't want to spend discards on. A tile an INK BLOT had turned wild
+goes back in the bag as the tile it really is.
+
+### STRIKETHROUGH and BOOKWORM
+
+Drop one on a tile and every tile in that tile's **row** (Strikethrough) or **column** (Bookworm)
+is cleared, then the board falls and refills from the bag — exactly like a discard. The clear
+**ripples**: the tile you dropped it on spins away first, then its neighbours on both sides, then
+the next ones out, to the edges. But **your
+discards count doesn't move**: the item is what you paid. Like a discard, the cleared tiles are
+gone for the round and back in the bag next round.
+
+Every tile in the line goes, upgrades and all — a 3W in the way is a 3W lost for this round.
+
+### INK BLOT
+
+Drop it on a tile and that tile becomes a **wild** — it can be any letter, exactly like a bought
+one. It stays a wild **for as long as it's on the board**: shuffle it and it's still a wild;
+quit and come back and it's still a wild. Play it, discard it, clear it or redeal it and it's gone,
+and next round that tile is dealt as what it always was. **Your bag never changes.**
+
+It's a **plain** wild: worth 0, and any badges the tile had are gone while it's blotted. That's
+deliberate — a wild that keeps its 3W is the one thing the shop refuses to sell (§8). It won't
+work on a tile that's already a wild (and isn't spent); it *will* work on a choice tile, which
+goes from three letters to all 26.
+
 ### The rules of carrying them
 
 - **Two at a time.** The shop still offers a third when you're full, with the buy button reading
   **ITEMS FULL**, because knowing what you're turning down is part of the decision (§8).
 - **You can hold two of the same one.** An item you spend isn't an item you own, so the shop
-  never filters out something you're already carrying — and with only two items in the game,
-  filtering would leave the row empty most visits.
+  never filters out something you're already carrying.
 - **They survive between rounds and through the shop**, and they survive quitting and coming
   back — including a Doubler you'd already armed, which comes back armed.
 - **Nothing gives you one for free.** The shop is the only source.
 
-🚧 **This is a first pass and it's meant to grow.** Two items, both of which just happen when you
-press USE. The interesting ones are the ones you'd aim — drop this on *that* tile — and those
-need a way to pick a target, which doesn't exist yet. The prices are a first guess against a
-round 1 that pays about $19.
+🚧 **This is a first pass and it's meant to grow.** Six items, four of them added mostly to have
+things to test. The prices are a first guess against a round 1 that pays about $19. Nothing
+lights up the row or column a bomb is about to hit while you're dragging it — you aim by the
+tile under your finger.
 
 ❓ **Whether a consumable should be discardable** — you're full, the shop has the one you want,
 and right now there's nothing you can do about it except spend one.
@@ -1258,7 +1312,7 @@ one. It comes out before release.
 | Bookmark prices | 10 / 12 / 13 / 13 / 14 / 16 | each asset in `GameData/Bookmarks/` |
 | Bookmarks you may hold | 5 (0 = no limit) | `Mode_RogueDemo.asset` |
 | Checkout prices | 20 / 20 / 25 / 30 / 35 / 40 | each asset in `GameData/Checkouts/` |
-| Consumable prices | 🚧 6 / 8 | each asset in `GameData/Consumables/` |
+| Consumable prices | 🚧 Shuffle 6 · Doubler 8 · Second Edition 7 · Strikethrough 6 · Bookworm 6 · Ink Blot 10 | each asset in `GameData/Consumables/` |
 | Consumables you may hold | 2 (0 = no limit) | `Mode_RogueDemo.asset` |
 | Doubler multiplier | ×2 Mult, after everything else | `Consumable_Doubler.asset` |
 | Multi-letter tiles | ER IN IE ED TH SH CH QU | `LetterSet_Scrabble.asset` |
@@ -1304,8 +1358,9 @@ description you read before you buy (§8) · **paying to reroll the shelf**, at 
 climbs within a visit and resets between them (§8) · **checkouts** — six permanent run-wide
 perks, including interest on savings and a cheaper reroll (§9) · runs that save and resume themselves (§6) ·
 **librarians** — rule-warping rounds every third round, eight of them, paying double (§6) ·
-🚧 **consumables** — two one-shot items, Shuffle and Doubler, bought in the shop and dragged
-onto the board to play (§10) ·
+🚧 **consumables** — six one-shot items (Shuffle, Doubler, Second Edition, Strikethrough,
+Bookworm, Ink Blot), bought in the shop and dragged onto the board — or onto one tile — to play
+(§10) ·
 🚧 **info boxes** — hold a tile, or tap a bookmark or an item, and a card says what it is (§2) ·
 🚧 **the tile bag view** — tap the bag to see everything still to be drawn, grouped and counted
 (§6) ·
@@ -1326,8 +1381,6 @@ real; every pixel of the art is placeholder.
   §6.)
 - **The bag view showing your WHOLE bag**, with the tiles already drawn greyed out rather than
   missing. It shows only what's left to draw today, which answers a different question.
-- **Consumables you aim** — drop this one on *that* tile. The two that exist both just happen
-  when you press USE; picking a target is the next piece of work (§10).
 
 ### ❓ Open questions
 

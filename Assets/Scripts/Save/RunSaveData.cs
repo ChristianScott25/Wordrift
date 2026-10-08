@@ -141,6 +141,14 @@ public class RoundSnapshot
     public List<int> boardCellY = new();
     public List<int> boardTile = new();
 
+    /// <summary>
+    /// Parallel to the three above: true where the tile has been turned into a
+    /// wild for the round (WildTileConsumable). boardTile still names the tile it was
+    /// dealt as, which is what it goes back to being. A file written before this
+    /// existed reads it back empty, which honestly means "no wilds".
+    /// </summary>
+    public List<bool> boardWild = new();
+
     // ---- Filled in by the mode, via GameMode.CaptureRound ----------------
 
     /// <summary>Words the mode will still allow. RogueDemoMode's move counter.</summary>

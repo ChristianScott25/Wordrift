@@ -33,7 +33,7 @@ public static class ConsumableSetup
 
         var consumables = new List<Consumable>();
 
-        // 🚧 Both prices are a first guess. A cleared round 1 pays about $19, so
+        // 🚧 These prices are a first guess. A cleared round 1 pays about $19, so
         // these are meant to be the cheap impulse buy next to a $30 checkout —
         // something you take when the shelf has nothing permanent worth saving
         // for. Nothing here has been balanced against a full run.
@@ -45,6 +45,26 @@ public static class ConsumableSetup
         doubler.multiplier = 2f;
         Name(doubler, "Doubler", price: 8);
         consumables.Add(doubler);
+
+        // 🚧 Added 2026-10-08 for testing, priced as first guesses in the same
+        // band. Ink Blot costs most: a wild is $35 to own for good.
+        var strikethrough = CreateOrLoad<LineClearConsumable>("Consumable_Strikethrough");
+        strikethrough.horizontal = true;
+        Name(strikethrough, "Strikethrough", price: 6);
+        consumables.Add(strikethrough);
+
+        var bookworm = CreateOrLoad<LineClearConsumable>("Consumable_Bookworm");
+        bookworm.horizontal = false;
+        Name(bookworm, "Bookworm", price: 6);
+        consumables.Add(bookworm);
+
+        var inkBlot = CreateOrLoad<WildTileConsumable>("Consumable_InkBlot");
+        Name(inkBlot, "Ink Blot", price: 10);
+        consumables.Add(inkBlot);
+
+        var secondEdition = CreateOrLoad<RedrawConsumable>("Consumable_SecondEdition");
+        Name(secondEdition, "Second Edition", price: 7);
+        consumables.Add(secondEdition);
 
         int added = AttachToModes(consumables);
 

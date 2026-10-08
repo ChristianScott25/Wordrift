@@ -185,6 +185,16 @@ public class GameSession : MonoBehaviour
         }
         board.Restore(layout);
 
+        // Item-made wilds, put back on top of the tiles they were dealt as. Guarded
+        // by count: an older file has no boardWild at all.
+        int wilds = Mathf.Min(cells, saved.boardWild.Count);
+        for (int i = 0; i < wilds; i++)
+        {
+            if (!saved.boardWild[i]) continue;
+            var cell = new Vector2Int(saved.boardCellX[i], saved.boardCellY[i]);
+            if (board.Tiles.TryGetValue(cell, out var tile)) board.MakeWild(tile);
+        }
+
         // Clamped on the way in as well as on the way up: an older save could
         // hold a score written before the overflow was fixed, and resuming a
         // negative one would keep it negative for the rest of the round.
@@ -467,7 +477,7 @@ public class GameSession : MonoBehaviour
             Board = board,
             Rng = mode.ConsumableRng,
             Tile = target,
-            Cell = target == null ? default : target.Cell,
+            Cell = target != null ? target.Cell : CellAtScreen(screenPoint),
         });
 
         if (!used) { RaiseSelection(); return false; }
@@ -504,6 +514,17 @@ public class GameSession : MonoBehaviour
 
         return Mathf.Abs(world.x - centre.x) <= size.x * 0.5f &&
                Mathf.Abs(world.y - centre.y) <= size.y * 0.5f;
+    }
+
+    /// <summary>
+    /// The board cell nearest a screen point — where an untargeted item landed.
+    /// </summary>
+    private Vector2Int CellAtScreen(Vector2 screenPoint)
+    {
+        if (board == null || sceneCamera == null) return default;
+        Vector3 world = sceneCamera.ScreenToWorldPoint(screenPoint);
+        world.z = 0f;
+        return board.CellNearest(world);
     }
 
     /// <summary>
@@ -730,13 +751,19 @@ public class GameSession : MonoBehaviour
         // The board as bag indices — a tile's identity is which entry of the
         // run's bag it is, so that's what has to be written down.
         var index = run.TileIndex();
+        //
+        // ⚠️ Origin, not Spec: a tile an item turned wild PLAYS as a
+        // throwaway spec that is in no bag, so looking that up would drop the
+        // tile from the save. Its wildness is written down beside it instead.
         foreach (var placed in board.Tiles)
         {
-            if (placed.Value == null || placed.Value.Spec == null) continue;
-            if (!index.TryGetValue(placed.Value.Spec, out int i)) continue;
+            var tile = placed.Value;
+            if (tile == null || tile.Origin == null) continue;
+            if (!index.TryGetValue(tile.Origin, out int i)) continue;
             snapshot.boardCellX.Add(placed.Key.x);
             snapshot.boardCellY.Add(placed.Key.y);
             snapshot.boardTile.Add(i);
+            snapshot.boardWild.Add(tile.Spec != tile.Origin);
         }
 
         // The mode adds whatever the RULES own — moves, discards, the bag.

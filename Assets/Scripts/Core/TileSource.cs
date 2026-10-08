@@ -30,6 +30,12 @@ public interface ITileSource
 
     /// <summary>How many tiles are left, or -1 when the source is endless.</summary>
     int Remaining { get; }
+
+    /// <summary>
+    /// Puts a tile that was on the board back where it can be drawn again —
+    /// RedrawConsumable. An endless source has nothing to put it in.
+    /// </summary>
+    void Return(TileSpec tile);
 }
 
 /// <summary>
@@ -56,6 +62,8 @@ public class EndlessTiles : ITileSource
     public int Remaining => -1;
 
     public void Reset() { }
+
+    public void Return(TileSpec tile) { }
 
     public bool TryDraw(out TileSpec tile)
     {
@@ -151,6 +159,19 @@ public class TileBag : ITileSource
         rng = stream;
         if (stream == null)
             Debug.LogError("TileBag was restored with no Rng — this round's draw is not reproducible.");
+    }
+
+    /// <summary>
+    /// Puts a dealt tile back in the bag. Appended, so the bag's order — which
+    /// the save records and TryDraw indexes into — stays a fixed function of
+    /// what happened, and a seed still deals the same after a redraw.
+    ///
+    /// ⚠️ Hand back the stock INSTANCE (Tile.Origin), never a copy and never a
+    /// blotted tile's throwaway wild: the bag is a list of the run's own tiles.
+    /// </summary>
+    public void Return(TileSpec tile)
+    {
+        if (tile != null) remaining.Add(tile);
     }
 
     /// <summary>
