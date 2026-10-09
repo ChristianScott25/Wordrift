@@ -2,8 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Decides WHEN each new tile starts falling into the board — never WHICH tile
-/// it is or where it goes.
+/// Decides WHEN each new tile spins in at its cell — never WHICH tile it is or
+/// where it goes. (New tiles used to fall in from above the board; since
+/// 2026-10-09 they appear in place, after the survivors have finished falling.)
 ///
 /// Separate from IRefillPolicy (which cells get filled) and IGravityRule (where
 /// survivors land) for the same reason those two are separate from each other:
@@ -19,7 +20,7 @@ public interface ITileFillAnimation
 {
     /// <summary>
     /// Fills `into[i]` with how many seconds cell `cells[i]` waits before its
-    /// tile starts to fall. `into` is at least as long as `cells`.
+    /// tile starts to spin in. `into` is at least as long as `cells`.
     /// </summary>
     void Delays(IReadOnlyList<Vector2Int> cells, float[] into);
 }
@@ -53,11 +54,11 @@ public class DealRowByRow : ITileFillAnimation
 }
 
 /// <summary>
-/// Column by column, left to right; a column's tiles drop together. Every
+/// Column by column, left to right; a column's tiles spin in together. Every
 /// everyday refill — after a word, a discard or a cleared line — because a
 /// full deal after every word would add about a second to every play.
 /// Only the columns actually getting tiles are ranked, so a refill in one
-/// column drops at once.
+/// column arrives at once.
 /// </summary>
 public class SweepColumns : ITileFillAnimation
 {

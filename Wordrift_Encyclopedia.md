@@ -37,8 +37,8 @@ is named in *(italics)*.
 
 ## 1. The game in one minute
 
-You drag across a 5×5 grid of letters to spell words. A valid word explodes off the board and
-new tiles fall in.
+You drag across a 5×5 grid of letters to spell words. A valid word explodes off the board, the
+tiles above it fall down, and new tiles spin in to fill the gaps.
 
 That's the arcade game. Wordrift wraps it in a **run**: a sequence of rounds, each one asking
 for a score you have to reach inside a fixed number of words. Clear a round and you're paid;
@@ -144,17 +144,21 @@ While you're spelling, the row's tiles are **faded** — the letters, scores and
 full, only the tile body is see-through. That means *spelled, not played yet*. Press PLAY and
 the real tiles **lift off the board** one after another, a beat apart, and land on their faded
 copies, which turn solid. Only once the last one has landed does the score start counting.
-Meanwhile the board **refills straight away** — the gaps close and new tiles fall in while the
+Meanwhile the board **refills straight away** — the gaps close and new tiles spin in while the
 numbers run, so you can be planning your next word. You can't touch the board until the count
 is over. When it is, the row's tiles pop away.
 
-**How tiles arrive** (2026-10-08 — nothing drops in all at once any more):
+**How tiles arrive** (2026-10-08; changed 2026-10-09):
 
+- **New tiles never fall in from above the board.** They **spin in where they land** — a
+  discard's spin-away played backwards. Tiles that were already on the board still **fall** to
+  close the gaps, and they finish falling FIRST; only then do the new tiles appear. That keeps
+  the word row and the score above the board clear of passing tiles.
 - **Everyday refills** — after a word, a discard or a cleared line — **sweep across** column by
-  column, left to right, a beat apart. A column's new tiles fall together.
+  column, left to right, a beat apart. A column's new tiles spin in together.
 - **A full board is dealt**, one tile at a time: the bottom row left to right, then the next row
-  up. That's the opening board of every round, a restart, and SECOND EDITION (§10). You can't
-  touch the board until the last tile lands.
+  up, each spinning in at its own space. That's the opening board of every round, a restart,
+  and SECOND EDITION (§10). You can't touch the board until the last tile has arrived.
 - **Tiles that leave spin as they shrink away** — a discard all at once, a cleared line or a
   redeal in a ripple spreading out from where the item was dropped (§10).
 
@@ -274,7 +278,7 @@ would cost and what you have left — `DISCARD 3   5 LEFT` — and is **disabled
 selected more tiles than you have discards remaining**.
 
 **When tiles leave the board** — played or discarded — they demolish, everything above them
-falls straight down, and new tiles drop from the top to fill the gaps, for as long as the bag
+falls straight down, and then new tiles spin in to fill the gaps at the top, for as long as the bag
 has tiles left to give.
 
 ### Discarding
@@ -672,7 +676,7 @@ Scrabble's proportions.
   move, leaving 79 tiles held back to refill with.
 - **The full bag comes back at the start of every round.** Playing tiles doesn't lose them;
   the bag belongs to the run, not the round.
-- When it runs dry, tiles stop falling and the board plays down toward empty.
+- When it runs dry, new tiles stop arriving and the board plays down toward empty.
 - **Upgrades change the bag itself.** That's why a tile you gild in round 1 keeps coming back.
 
 **You can look inside it.** Tap the bag in the round header and a panel opens over the game

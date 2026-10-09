@@ -1,6 +1,7 @@
 # Wordrift — architecture
 
-Drag across adjacent letter tiles to spell words. Valid words demolish; tiles fall in.
+Drag across adjacent letter tiles to spell words. Valid words demolish; the tiles above fall,
+then new tiles spin in to fill the gaps.
 
 ## The one rule
 

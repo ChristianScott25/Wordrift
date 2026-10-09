@@ -104,6 +104,13 @@ public class Tile : MonoBehaviour
              "a redraw). 0 = no spin, just the shrink.")]
     [SerializeField] private float demolishSpinDegrees = 360f;
 
+    [Tooltip("How long a NEW tile takes to spin in at its cell — a demolish played " +
+             "backwards. Every new tile arrives this way: refills, the opening deal, a redraw.")]
+    [Min(0f)][SerializeField] private float appearSeconds = 0.18f;
+
+    [Tooltip("How far a new tile turns while it grows in. 0 = no spin, just the grow.")]
+    [SerializeField] private float appearSpinDegrees = 360f;
+
     /// <summary>
     /// What this tile PLAYS AS — the spec everything that spells, scores, shows
     /// or describes it reads. The same object as Origin for every tile except one
@@ -166,7 +173,12 @@ public class Tile : MonoBehaviour
     public string Options { get; private set; }
 
     public Vector2Int Cell { get; set; }
-    public bool IsSettled => !moving && !flying;
+    public bool IsSettled => !moving && !flying && !appearing;
+
+    // Spawned at its cell but not yet shown (HideForArrival), or mid spin-in
+    // (SpinIn). Unsettled the whole time, so Board.TileAt refuses it and the
+    // board's settle wait covers the arrival for free.
+    private bool appearing;
 
     // Told to move, but its turn hasn't come yet (MoveTo with a delay). Hidden
     // and still until then; `moving` is already true, so it isn't settled.
@@ -608,14 +620,14 @@ public class Tile : MonoBehaviour
 
     /// <summary>
     /// Slides to a spot at fallSpeed. With a delay, the tile is HIDDEN where it
-    /// stands until its turn, then appears and moves — how the board deals tiles
-    /// in one at a time (see ITileFillAnimation). Hidden because a new tile
-    /// starts above the board, and a deal's worth of them hovering there in a
-    /// stack would look broken.
+    /// stands until its turn, then appears and moves. New tiles used to arrive
+    /// this way, falling in from above the board; they spin in at their own cell
+    /// now (SpinIn), so nothing passes the delay any more. Kept for a mode that
+    /// feeds the board from above; a candidate for removal if none ever does.
     ///
     /// ⚠️ IsSettled is false from the moment this is CALLED, delay included —
     /// same rule as FlyTo — so Board.TileAt can't hand out a tile that hasn't
-    /// arrived, and the board's settle wait covers the whole deal for free.
+    /// arrived, and a settle wait on it covers the delay for free.
     /// Hidden by SCALE, not by switching renderers off: the badges and the
     /// selection box keep their own on/off state, and blanket re-enabling would
     /// show ones the tile doesn't have.
@@ -777,10 +789,59 @@ public class Tile : MonoBehaviour
     private void OnDisable()
     {
         flying = false;
+        EndAppear();   // a tile mid spin-in lands too — its spin is a coroutine
         if (!waitingTurn) return;
         EndWait();
         transform.position = targetPosition;
         moving = false;
+    }
+
+    /// <summary>
+    /// Hides a freshly spawned tile at its cell until SpinIn shows it. Called the
+    /// moment the tile is spawned, so the board can draw it (same moment, same
+    /// order as ever) and wait for the survivors to land before anything new
+    /// is seen. Hidden by SCALE, for the same reason MoveTo's wait is.
+    /// </summary>
+    public void HideForArrival()
+    {
+        appearing = true;
+        transform.localScale = Vector3.zero;
+    }
+
+    /// <summary>
+    /// Grows in from nothing while turning, ending upright at full size — a
+    /// Demolish played backwards. Waits `delay` first, which is how a refill
+    /// sweeps and a deal deals (see ITileFillAnimation). Settled only once the
+    /// spin has finished.
+    /// </summary>
+    public void SpinIn(float delay = 0f)
+    {
+        appearing = true;
+        transform.localScale = Vector3.zero;
+        if (!gameObject.activeInHierarchy) { EndAppear(); return; }
+        StartCoroutine(SpinInRoutine(delay));
+    }
+
+    private IEnumerator SpinInRoutine(float delay)
+    {
+        if (delay > 0f) yield return new WaitForSeconds(delay);
+
+        for (float t = 0f; t < appearSeconds; t += Time.deltaTime)
+        {
+            float k = t / appearSeconds;
+            transform.localScale = Vector3.one * Mathf.Lerp(0f, baseScale, k);
+            transform.localRotation = Quaternion.Euler(0f, 0f, -appearSpinDegrees * (1f - k));
+            yield return null;
+        }
+        EndAppear();
+    }
+
+    private void EndAppear()
+    {
+        if (!appearing) return;
+        appearing = false;
+        transform.localScale = Vector3.one * baseScale;
+        transform.localRotation = Quaternion.identity;
     }
 
     // Far above anything a resting tile or badge uses (+4 per badge pair).
@@ -797,6 +858,7 @@ public class Tile : MonoBehaviour
         StopAllCoroutines();
         flying = false;
         waitingTurn = false;
+        appearing = false;
         StartCoroutine(DemolishRoutine(delay));
     }
 

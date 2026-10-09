@@ -34,11 +34,11 @@ public class Board : MonoBehaviour
     [Min(0f)][SerializeField] private float rippleStep = 0.07f;
 
     [Tooltip("A full deal (the opening board, a redraw): seconds between one tile " +
-             "dropping in and the next.")]
+             "spinning in and the next.")]
     [Min(0f)][SerializeField] private float dealStep = 0.05f;
 
     [Tooltip("An everyday refill (after a word, a discard, a cleared line): seconds " +
-             "between one column's new tiles dropping in and the next column's.")]
+             "between one column's new tiles spinning in and the next column's.")]
     [Min(0f)][SerializeField] private float sweepStep = 0.06f;
 
     public float CellSize => cellSize;
@@ -139,13 +139,13 @@ public class Board : MonoBehaviour
     public ITileSource TileSource { get; set; }
 
     /// <summary>
-    /// When each new tile of an everyday refill starts to fall (see
+    /// When each new tile of an everyday refill starts to spin in (see
     /// ITileFillAnimation). Null = SweepColumns at this board's sweepStep.
     /// </summary>
     public ITileFillAnimation RefillAnimation { get; set; }
 
     /// <summary>
-    /// When each tile of a full deal starts to fall — the opening board and a
+    /// When each tile of a full deal starts to spin in — the opening board and a
     /// Redraw. Null = DealRowByRow at this board's dealStep.
     /// </summary>
     public ITileFillAnimation DealAnimation { get; set; }
@@ -763,9 +763,17 @@ public class Board : MonoBehaviour
 
         // Wait only on the tiles this clear actually set in motion. Waiting on
         // every tile would never finish in a mode that drips new ones in.
-        var moved = ApplyGravityAndRefill(fill);
+        //
+        // Survivors FIRST, then the new tiles (his call, 2026-10-09: the cleaner
+        // look). The new ones are already spawned — drawn at the same moment and
+        // in the same order as ever, and the tile map is full, which is why
+        // `resolving` can drop here — but hidden until the fall is over.
+        var (fell, arriving) = ApplyGravityAndRefill();
         resolving--;
-        yield return new WaitUntil(() => moved.TrueForAll(t => t == null || t.IsSettled));
+        yield return new WaitUntil(() => fell.TrueForAll(t => t == null || t.IsSettled));
+
+        Arrive(arriving, fill);
+        yield return new WaitUntil(() => arriving.TrueForAll(t => t == null || t.IsSettled));
 
         if (GateInputWhileResolving) Busy = false;
     }
@@ -775,52 +783,63 @@ public class Board : MonoBehaviour
     /// a time, with input held until the last one lands.
     ///
     /// Tiles are spawned — and so drawn from the bag — in the same order as
-    /// ever; the deal only decides when each one starts to fall.
+    /// ever; the deal only decides when each one spins in.
     /// </summary>
     private void FillEmptyCells()
     {
         var empties = cells.Where(c => !tiles.ContainsKey(c)).ToList();
-        var dealt = new List<(Tile tile, Vector3 target)>();
+        var dealt = new List<Tile>();
         foreach (var cell in Refill.CellsToFill(empties))
         {
             if (tiles.ContainsKey(cell)) continue;
-            Vector3 target = CellToWorld(cell);
-            var start = new Vector3(target.x, ColumnTopY(cell.x) + cellSize * 1.5f, target.z);
-            var tile = SpawnTile(cell, start, start);
-            if (tile != null) dealt.Add((tile, target));
+            var tile = SpawnHidden(cell);
+            if (tile != null) dealt.Add(tile);
         }
 
-        var moved = Launch(dealt, Dealing);
-        if (moved.Count > 0) StartCoroutine(HoldInputUntilSettled(moved));
+        Arrive(dealt, Dealing);
+        if (dealt.Count > 0) StartCoroutine(HoldInputUntilSettled(dealt));
     }
 
     /// <summary>
-    /// Sends freshly spawned tiles to their cells on the animation's schedule.
-    /// They were spawned standing at their start points, so this is the only
-    /// place their fall begins.
+    /// Spawns a new tile already standing at its cell, hidden until Arrive spins
+    /// it in. New tiles no longer fall in from above the board: that path ran
+    /// through the word row and the score, right where a word is being counted.
     /// </summary>
-    private static List<Tile> Launch(List<(Tile tile, Vector3 target)> spawned,
-                                     ITileFillAnimation fill)
+    private Tile SpawnHidden(Vector2Int cell)
     {
-        var moved = new List<Tile>(spawned.Count);
-        if (spawned.Count == 0) return moved;
-
-        var cellsFilled = new List<Vector2Int>(spawned.Count);
-        foreach (var s in spawned) cellsFilled.Add(s.tile.Cell);
-
-        var delays = new float[spawned.Count];
-        fill?.Delays(cellsFilled, delays);
-
-        for (int i = 0; i < spawned.Count; i++)
-        {
-            spawned[i].tile.MoveTo(spawned[i].target, delays[i]);
-            moved.Add(spawned[i].tile);
-        }
-        return moved;
+        Vector3 at = CellToWorld(cell);
+        var tile = SpawnTile(cell, at, at);
+        if (tile != null) tile.HideForArrival();
+        return tile;
     }
 
-    /// <summary>Returns every tile this pass set moving, for the settle wait.</summary>
-    private List<Tile> ApplyGravityAndRefill(ITileFillAnimation fill)
+    /// <summary>
+    /// Spins freshly spawned (hidden) tiles in at their cells, on the
+    /// animation's schedule. The only place an arrival begins.
+    /// </summary>
+    private static void Arrive(List<Tile> spawned, ITileFillAnimation fill)
+    {
+        // Skip anything already gone, here once, so the cells handed to the
+        // pattern and the tiles given its delays always line up.
+        var live = spawned.FindAll(t => t != null);
+        if (live.Count == 0) return;
+
+        var cellsFilled = new List<Vector2Int>(live.Count);
+        foreach (var tile in live) cellsFilled.Add(tile.Cell);
+
+        var delays = new float[live.Count];
+        fill?.Delays(cellsFilled, delays);
+
+        for (int i = 0; i < live.Count; i++)
+            live[i].SpinIn(delays[i]);
+    }
+
+    /// <summary>
+    /// Collapses the survivors and spawns (hidden) the new tiles. Returns the
+    /// tiles that are FALLING and the ones that will ARRIVE, separately, so the
+    /// resolve can wait for the first before showing the second.
+    /// </summary>
+    private (List<Tile> fell, List<Tile> arriving) ApplyGravityAndRefill()
     {
         var moved = new List<Tile>();
         var occupied = new HashSet<Vector2Int>(tiles.Keys);
@@ -839,25 +858,19 @@ public class Board : MonoBehaviour
             moved.Add(tile);
         }
 
-        // New tiles enter stacked above their column so they visibly fall in.
-        // Spawned (and drawn) in the same order as ever; `fill` only decides
-        // when each one starts to fall.
-        var spawnedTiles = new List<(Tile tile, Vector3 target)>();
+        // New tiles stand at their own cells, hidden. Spawned (and drawn) in the
+        // same order as ever — column groups, bottom to top — so no seed moves.
+        var arriving = new List<Tile>();
         foreach (var column in Refill.CellsToFill(plan.Empties).GroupBy(c => c.x))
         {
-            var ordered = column.OrderBy(c => c.y).ToList();
-            float topY = ColumnTopY(column.Key);
-            for (int i = 0; i < ordered.Count; i++)
+            foreach (var cell in column.OrderBy(c => c.y))
             {
-                Vector3 target = CellToWorld(ordered[i]);
-                var start = new Vector3(target.x, topY + cellSize * (i + 1.5f), target.z);
-                var spawned = SpawnTile(ordered[i], start, start);
-                if (spawned != null) spawnedTiles.Add((spawned, target));
+                var spawned = SpawnHidden(cell);
+                if (spawned != null) arriving.Add(spawned);
             }
         }
 
-        moved.AddRange(Launch(spawnedTiles, fill));
-        return moved;
+        return (moved, arriving);
     }
 
     /// <summary>
