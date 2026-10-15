@@ -9,7 +9,8 @@ using UnityEngine;
 /// GameSession.UseConsumable resolves it and refuses a drop that found nothing,
 /// which costs the player nothing because the refusal comes before the spend.
 ///
-/// Strikethrough, Bookworm and Ink Blot target a tile (2026-10-08); Shuffle,
+/// Strikethrough, Bookworm, Ink Blot (2026-10-08) and Cheat Sheet (2026-10-09)
+/// target a tile; Shuffle,
 /// Doubler and Second Edition don't.
 /// </summary>
 public enum ConsumableTarget

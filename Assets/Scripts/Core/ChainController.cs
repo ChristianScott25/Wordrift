@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -42,6 +43,11 @@ public class ChainController : MonoBehaviour
              "holding still. Too tight and nobody can hold steady enough on a " +
              "phone; too loose and the start of a slow drag opens a box.")]
     [SerializeField] private float holdSlopPixels = 28f;
+
+    [Header("A word picked for you")]
+    [Tooltip("Seconds between one tile and the next when an item (the Cheat Sheet) " +
+             "selects a word for the player.")]
+    [Min(0f)][SerializeField] private float hintStepSeconds = 0.08f;
 
     public bool InputEnabled { get; set; } = true;
 
@@ -93,6 +99,19 @@ public class ChainController : MonoBehaviour
     private int chainEdits;
     private int chainEditsAtUndo;
 
+    // ---- A word picked for the player (PlayHint) ----------------------------
+    //
+    // hinted: the selection on screen is one an item chose, not one the player
+    // built. While it is, a press anywhere on the board that isn't one of its
+    // tiles clears it — "click away" (his call, 2026-10-09). It ends the moment
+    // the player touches the selection or anything clears it, so a selection
+    // the player made themselves never behaves this way.
+    //
+    // hintRoutine: the tiles going in one at a time. Any press stops it, and
+    // so does anything that clears the selection (ClearSelectionSilently).
+    private bool hinted;
+    private Coroutine hintRoutine;
+
     public void Init(Board board, Camera cam)
     {
         this.board = board;
@@ -136,6 +155,21 @@ public class ChainController : MonoBehaviour
             dragging = true;
             lastActedOn = null;
             var tile = board.TileAt(worldPos);
+
+            // A word an item picked: pressing anything but one of its tiles —
+            // or pressing at all while it is still going in — clears it. The
+            // press then carries on as usual, so a tile outside the word starts
+            // a fresh selection from there in the same tap.
+            if (hinted)
+            {
+                bool animating = hintRoutine != null;
+                if (animating || tile == null || !chain.Contains(tile))
+                {
+                    ClearSelectionSilently();
+                    ChainChanged?.Invoke(chain);
+                }
+                else StopHint();   // touched its own tile: it's the player's now
+            }
 
             BeginHold(tile, pointer.position.ReadValue());
 
@@ -385,12 +419,59 @@ public class ChainController : MonoBehaviour
 
     private void ClearSelectionSilently()
     {
+        StopHint();
         chainEdits++;
         foreach (var tile in chain)
             if (tile != null) tile.SetSelected(false);
         chain.Clear();
         if (line != null) line.positionCount = 0;
     }
+
+    /// <summary>
+    /// Selects this path for the player, one tile at a time, as if they had
+    /// tapped each one — the same AddTile, so the word row, the line and the
+    /// readout build up exactly as they would by hand. What the Cheat Sheet does
+    /// once it has found its word. The path must already be a legal chain.
+    /// </summary>
+    public void PlayHint(IReadOnlyList<Tile> path)
+    {
+        ClearSelectionSilently();
+        ChainChanged?.Invoke(chain);
+        if (path == null || path.Count == 0) return;
+
+        hinted = true;
+        hintRoutine = StartCoroutine(HintRoutine(new List<Tile>(path)));
+    }
+
+    private IEnumerator HintRoutine(List<Tile> path)
+    {
+        for (int i = 0; i < path.Count; i++)
+        {
+            if (i > 0 && hintStepSeconds > 0f) yield return new WaitForSeconds(hintStepSeconds);
+
+            // A tile gone or moved out from under the hint ends it where it is;
+            // nothing this short should be able to, but a chain that skipped one
+            // would be a chain the player could never have made.
+            var tile = path[i];
+            if (tile == null || !tile.IsSettled) break;
+            if (chain.Count > 0 && !IsConnectable(chain[chain.Count - 1], tile)) break;
+            AddTile(tile);
+        }
+        hintRoutine = null;
+    }
+
+    /// <summary>Stops a hint going in and stops treating the selection as one.</summary>
+    private void StopHint()
+    {
+        hinted = false;
+        if (hintRoutine == null) return;
+        StopCoroutine(hintRoutine);
+        hintRoutine = null;
+    }
+
+    // A disabled controller's coroutine is already dead; forget it, or the next
+    // press would think a hint was still going in.
+    private void OnDisable() => StopHint();
 
     private static bool IsPointerOverUI() =>
         EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();

@@ -66,6 +66,12 @@ public static class ConsumableSetup
         Name(secondEdition, "Second Edition", price: 7);
         consumables.Add(secondEdition);
 
+        // 🚧 Added 2026-10-09, priced as a first guess like the rest. Appended
+        // last so no existing item's place in the pool moves.
+        var cheatSheet = CreateOrLoad<BestWordConsumable>("Consumable_CheatSheet");
+        Name(cheatSheet, "Cheat Sheet", price: 5);
+        consumables.Add(cheatSheet);
+
         int added = AttachToModes(consumables);
 
         AssetDatabase.SaveAssets();

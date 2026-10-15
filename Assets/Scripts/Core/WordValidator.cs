@@ -44,6 +44,11 @@ public class WordValidator
     // Matches counts probes rather than wildcards.
     private Dictionary<int, List<string>> byLength;
 
+    // Every word, sorted ordinally, for HasPrefix. BUILT LAZILY, the same
+    // bargain byLength takes: only the Cheat Sheet's word search asks for it, and
+    // a run that never buys one shouldn't pay ~1.4MB per Game scene load for it.
+    private string[] sorted;
+
     // For the one summary line the constructor logs, so the two list passes
     // don't each announce a total that the next one then changes.
     private int addedFromExtra;
@@ -189,6 +194,39 @@ public class WordValidator
         // Sorted here, once, so Matches never has to: its callers break ties
         // alphabetically, and a HashSet has no order to inherit.
         foreach (var bucket in byLength.Values) bucket.Sort(System.StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Does ANY dictionary word start with this? (A whole word counts as its own
+    /// prefix.) What lets a board search give up on a path the moment nothing
+    /// can come of it — WordFinder's pruning, and the reason it's fast.
+    ///
+    /// A binary search over a sorted copy of the final list (after extras and
+    /// blocking), built the first time this is asked. Lower-case input only.
+    /// </summary>
+    public bool HasPrefix(string prefix)
+    {
+        if (string.IsNullOrEmpty(prefix)) return words.Count > 0;
+
+        if (sorted == null)
+        {
+            sorted = new string[words.Count];
+            words.CopyTo(sorted);
+            System.Array.Sort(sorted, System.StringComparer.Ordinal);
+        }
+
+        // The first word >= prefix is the only one that can start with it:
+        // every word that does sorts at or after the prefix itself, and before
+        // anything that doesn't.
+        int lo = 0, hi = sorted.Length;
+        while (lo < hi)
+        {
+            int mid = (lo + hi) >> 1;
+            if (string.CompareOrdinal(sorted[mid], prefix) < 0) lo = mid + 1;
+            else hi = mid;
+        }
+        return lo < sorted.Length &&
+               sorted[lo].StartsWith(prefix, System.StringComparison.Ordinal);
     }
 
     public bool Contains(string word) =>

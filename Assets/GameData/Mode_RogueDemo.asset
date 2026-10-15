@@ -76,6 +76,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 4835baad6a01f47a2b1c37c9610be261, type: 2}
   - {fileID: 11400000, guid: 661136247a248405a82069e9824dada7, type: 2}
   - {fileID: 11400000, guid: 9a014ff62f42b4c4a80a23cafc0f1a95, type: 2}
+  - {fileID: 11400000, guid: c1243d847e93040c69e387aafbb8ecb2, type: 2}
   maxConsumables: 2
   rerollBasePrice: 5
   rerollPriceGrowth: 1.5

@@ -492,6 +492,64 @@ public class GameSession : MonoBehaviour
     }
 
     /// <summary>
+    /// The Cheat Sheet: finds the best word starting on this tile and selects it
+    /// for the player, a tile at a time (ChainController.PlayHint). Returns false
+    /// — so the item is NOT spent — when no word starts there, and flashes the
+    /// tile so the refusal is visible.
+    /// </summary>
+    public bool HintBestWordFrom(Tile start)
+    {
+        if (start == null || !IsPlaying) return false;
+
+        var best = BestWordFrom(start);
+        if (best == null)
+        {
+            start.FlashInvalid();
+            return false;
+        }
+
+        chainController.PlayHint(best.Path);
+        return true;
+    }
+
+    /// <summary>
+    /// The highest-scoring word the board can spell starting on this tile — what
+    /// PLAY would pay for it right now, bookmarks, librarian and armed items
+    /// included. Words the round refuses are skipped. Ties go to the longer word,
+    /// then to whichever WordFinder found first (a fixed order), so the same
+    /// board always gives the same answer. Null when there is none.
+    ///
+    /// Each PATH is scored, not each word: a 2W/3W fires on its own tile's beat,
+    /// so the same word through a different route can score differently.
+    ///
+    /// ⚠️ Evaluate runs SPECULATIVELY here, once per found word, which is safe
+    /// for the same reason BestOf's is: every bookmark and librarian writes only
+    /// into the ScoringContext it's handed. recording: false for the same reason.
+    /// </summary>
+    private FoundWord BestWordFrom(Tile start)
+    {
+        FoundWord best = null;
+        int bestPoints = -1;
+
+        foreach (var found in WordFinder.From(board, start, validator, Config.minWordLength))
+        {
+            if (mode.Refuse(CheckFor(found.Path, found.Word)) != null) continue;
+
+            int points = scorer.Evaluate(found.Path, found.Word, wordsThisRound,
+                                         mode.Bookmarks, mode.ScoreRule,
+                                         recording: false).Points;
+
+            if (points > bestPoints ||
+                (points == bestPoints && found.Word.Length > best.Word.Length))
+            {
+                best = found;
+                bestPoints = points;
+            }
+        }
+        return best;
+    }
+
+    /// <summary>
     /// Is this screen point over the board?
     ///
     /// The drop zone for an item that targets nothing in particular. It lives

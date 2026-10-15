@@ -1134,7 +1134,7 @@ They're the opposite bargain from a checkout. A checkout is expensive, permanent
 the whole run; a consumable is cheap, single-use and changes one moment. 🎯 That's what they're
 for — the round where the board has gone stupid, or the word you can see is worth double.
 
-**There are six.** Three you drop anywhere on the board, three you drop on one particular tile.
+**There are seven.** Three you drop anywhere on the board, four you drop on one particular tile.
 
 | | Costs | Aim | What it does |
 |---|--:|---|---|
@@ -1144,8 +1144,10 @@ for — the round where the board has gone stupid, or the word you can see is wo
 | **STRIKETHROUGH** | 🚧 $6 | a tile | Clears that tile's whole **row**. Doesn't use your discards |
 | **BOOKWORM** | 🚧 $6 | a tile | Clears that tile's whole **column**. Doesn't use your discards |
 | **INK BLOT** | 🚧 $10 | a tile | That tile becomes a **wild** until it leaves the board. Your bag isn't changed |
+| **CHEAT SHEET** | 🚧 $5 | a tile | Selects the **highest-scoring word that starts on that tile**, ready to play |
 
-*(The last four were added on 2026-10-08, to have more to test with.)*
+*(Strikethrough, Bookworm, Ink Blot and Second Edition were added on 2026-10-08, and Cheat Sheet
+on 2026-10-09, to have more to test with.)*
 
 ### Using one
 
@@ -1241,6 +1243,29 @@ deliberate — a wild that keeps its 3W is the one thing the shop refuses to sel
 work on a tile that's already a wild (and isn't spent); it *will* work on a choice tile, which
 goes from three letters to all 26.
 
+### CHEAT SHEET
+
+Drop it on a tile and it finds the **best word on the board that starts on that tile**, then
+selects it for you **one tile at a time**, so you watch it build up in the word row. PLAY is
+ready; play it, trim it, or ignore it.
+
+- **"Best" means the most points** — what PLAY would pay right now, counting the tiles, their
+  badges, the word's length, your bookmarks, the librarian and an armed Doubler. A tie goes to
+  the longer word. Because a 2W/3W counts at its own place in the word, it checks every route,
+  not just every word.
+- **It never offers a word the round refuses.** A librarian's rule is respected.
+- **Wilds, choice tiles and two-letter tiles all count**: a wild can become any letter, a choice
+  tile any of its options, and a CH tile puts in both letters.
+- **Tap anywhere else on the board and the word lets go.** Tapping a tile outside it clears it
+  and starts a new word from that tile. Tapping one of its own tiles works as normal, and from
+  then on it's your selection. Tapping while it's still being selected stops it. The buttons
+  (PLAY, DISCARD, your items) don't count as tapping away.
+- **If no word starts on that tile, nothing happens and it isn't spent** — the tile flashes red.
+- It changes nothing on the board and nothing in your bag. Like every item, dropping it clears
+  whatever you'd selected.
+- ⚠️ A selection is never saved, so if you quit right after using one, the item is spent and the
+  word is gone when you come back.
+
 ### The rules of carrying them
 
 - **Two at a time.** The shop still offers a third when you're full, with the buy button reading
@@ -1251,7 +1276,7 @@ goes from three letters to all 26.
   back — including a Doubler you'd already armed, which comes back armed.
 - **Nothing gives you one for free.** The shop is the only source.
 
-🚧 **This is a first pass and it's meant to grow.** Six items, four of them added mostly to have
+🚧 **This is a first pass and it's meant to grow.** Seven items, five of them added mostly to have
 things to test. The prices are a first guess against a round 1 that pays about $19. Nothing
 lights up the row or column a bomb is about to hit while you're dragging it — you aim by the
 tile under your finger.
@@ -1316,7 +1341,7 @@ one. It comes out before release.
 | Bookmark prices | 10 / 12 / 13 / 13 / 14 / 16 | each asset in `GameData/Bookmarks/` |
 | Bookmarks you may hold | 5 (0 = no limit) | `Mode_RogueDemo.asset` |
 | Checkout prices | 20 / 20 / 25 / 30 / 35 / 40 | each asset in `GameData/Checkouts/` |
-| Consumable prices | 🚧 Shuffle 6 · Doubler 8 · Second Edition 7 · Strikethrough 6 · Bookworm 6 · Ink Blot 10 | each asset in `GameData/Consumables/` |
+| Consumable prices | 🚧 Shuffle 6 · Doubler 8 · Second Edition 7 · Strikethrough 6 · Bookworm 6 · Ink Blot 10 · Cheat Sheet 5 | each asset in `GameData/Consumables/` |
 | Consumables you may hold | 2 (0 = no limit) | `Mode_RogueDemo.asset` |
 | Doubler multiplier | ×2 Mult, after everything else | `Consumable_Doubler.asset` |
 | Multi-letter tiles | ER IN IE ED TH SH CH QU | `LetterSet_Scrabble.asset` |
