@@ -37,14 +37,14 @@ public static class ShopSceneSetup
 {
     internal const string ScenePath = "Assets/Scenes/Shop.unity";
 
-    private static readonly Color BackgroundColor = new Color(0.09f, 0.16f, 0.22f);
+    private static readonly Color BackgroundColor = WarmTheme.Background;
     private static readonly Color AccentColor = new Color(1f, 0.75f, 0.1f);
     private static readonly Color OfferColor = new Color(1f, 1f, 1f, 0.14f);
 
     // The description panel sits over the shelf, so it has to be opaque enough to
     // hide it. Darker than the camera's background rather than lighter, so it
     // reads as something in front rather than as the page changing.
-    private static readonly Color PanelColor = new Color(0.05f, 0.10f, 0.15f, 0.98f);
+    private static readonly Color PanelColor = WarmTheme.Panel;
     private static readonly Color BackColor = new Color(1f, 1f, 1f, 0.16f);
 
     /// <summary>

@@ -26,7 +26,7 @@ public static class WordCrushSetup
     private const string ScenePath = "Assets/Scenes/Game.unity";
     private const string MenuScenePath = "Assets/Scenes/Main Menu.unity";
 
-    private static readonly Color BackgroundColor = new Color(0.09f, 0.16f, 0.22f);
+    private static readonly Color BackgroundColor = WarmTheme.Background;
     private static readonly Color AccentColor = new Color(1f, 0.75f, 0.1f);
 
     [MenuItem("Word Crush/Rebuild Game Scene && Assets")]

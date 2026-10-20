@@ -131,8 +131,8 @@ The screen is a stack of bands, top to bottom:
 🚧 **The board is a book** (2026-10-19). The grid and the word row sit on one cream **page**
 with a dark **cover** edge round it, and the bookmarks stick up out of its top. Every band
 above and below lines up with the book's left and right edges. The page and cover are two flat
-rectangles standing in for a book sprite that doesn't exist yet. The tiles are cream, the
-background is a warm brown, and both are placeholders too.
+rectangles standing in for a book sprite that doesn't exist yet. The tiles are cream, and every
+screen (menu, game, shop) has the same warm brown background. Both are placeholders too.
 
 The buttons are one shared plate, coloured in code — **PLAY green, DISCARD red, both grey
 when they won't do anything.** So DISCARD still tells you what it will cost

@@ -642,7 +642,7 @@ public static class GameLayoutSetup
         }
     }
 
-    private static readonly Color WarmBackground = new Color(0.50f, 0.37f, 0.28f);
+    private static readonly Color WarmBackground = WarmTheme.Background;
     private static readonly Color GridInset = new Color(0.80f, 0.69f, 0.51f);
     private static readonly Color TileCream = new Color(0.99f, 0.95f, 0.86f);
 
