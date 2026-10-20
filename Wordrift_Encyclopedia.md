@@ -122,10 +122,17 @@ The screen is a stack of bands, top to bottom:
 |---|---|
 | **Round header** | Who you're up against — the librarian's name, portrait and rule — and your score over the round's target. On a round with no librarian the box stays exactly the same size and shows the round number instead. Beside it, the **tile bag** (how many tiles are left to draw, out of your whole bag) and your **items** (§10). |
 | **Resource strip** | Small readouts: money, moves, discards, round. |
-| **Score × mult** | What your word's LENGTH is worth, and only that, while you're selecting. After you hit PLAY it's where the whole score gets counted out in front of you, a beat at a time (§3). |
-| **Word row** | The word you're spelling, laid out left to right as tiles. When the selection won't score it says **WON'T SCORE** here instead, with the librarian's reason underneath when a librarian is the reason. |
+| **Score bar** | Three labelled columns on a dark bar — **POINTS × MULT = TOTAL**. What your word's LENGTH is worth, and only that, while you're selecting. After you hit PLAY it's where the whole score gets counted out in front of you, a beat at a time (§3). |
+| **Bookmarks** | The tops of your bookmark cards, standing up out of the top edge of the book (§8). |
+| **Word row** | The word you're spelling, laid out left to right as tiles, **on the board's page** just above the grid. When the selection won't score it says **WON'T SCORE** here instead, with the librarian's reason underneath when a librarian is the reason. |
 | **The board** | Where you drag. |
 | **Buttons** | Info, pause, DISCARD, PLAY. |
+
+🚧 **The board is a book** (2026-10-19). The grid and the word row sit on one cream **page**
+with a dark **cover** edge round it, and the bookmarks stick up out of its top. Every band
+above and below lines up with the book's left and right edges. The page and cover are two flat
+rectangles standing in for a book sprite that doesn't exist yet. The tiles are cream, the
+background is a warm brown, and both are placeholders too.
 
 The buttons are one shared plate, coloured in code — **PLAY green, DISCARD red, both grey
 when they won't do anything.** So DISCARD still tells you what it will cost
@@ -136,7 +143,7 @@ Two of those are worth explaining, because they're new:
 
 **The word row** exists because the board is hard to read while you're using it. A word
 snakes through a 5×5 grid in whatever order your finger went, and your thumb is over part of
-it. The row lays the same tiles out in a line, above the board and out of the way — with
+it. The row lays the same tiles out in a line, on the page above the grid and out of the way — with
 their score corners and their multiplier badges, so you can see what you're about to play.
 A long word shrinks its tiles to fit rather than running off the side.
 
@@ -164,8 +171,8 @@ is over. When it is, the row's tiles pop away.
 
 🚧 All the timings are first guesses, tunable on the Board and the Tile prefab.
 
-**The bookmarks** stand up out of the top edge of the board like bookmarks in a book — only
-their tops show. They're still dragged left and right to reorder, and that order is still the
+**The bookmarks** stand up out of the top edge of the book (the page the word row and the
+board share) like bookmarks — only their tops show. They're still dragged left and right to reorder, and that order is still the
 order they score in.
 
 **The items box** holds your consumables — up to two one-shot items bought in the shop and
@@ -1395,8 +1402,9 @@ Bookworm, Ink Blot), bought in the shop and dragged onto the board — or onto o
 (§6) ·
 **the score walk-through** — every word's score built in front of you, one beat per tile and
 per bookmark, with whatever is scoring shaking and its number floating off it (§3) ·
-🚧 **the banded screen layout** — round header, resource strip, score, word row, board,
-buttons, with the word you're spelling shown as tiles above the board (§2). The structure is
+🚧 **the banded screen layout** — round header, resource strip, score bar, bookmarks, then the
+book (word row and board on one page), then buttons, with the word you're spelling shown as
+tiles on the page above the grid (§2). The structure is
 real; every pixel of the art is placeholder.
 
 ### 📋 Decided, not built

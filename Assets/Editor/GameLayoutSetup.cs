@@ -159,6 +159,7 @@ public static class GameLayoutSetup
         var pauseView = PauseViewSetup.Build(canvas, session);
         var systemButtons = BuildSystemButtons(canvas);
         BuildWordRow(canvas, board);
+        WarmUp(board, Object.FindFirstObjectByType<CurrentWordWidget>(FindObjectsInactive.Include));
 
         // The button and the panel it opens are built separately, so joining
         // them up waits until both exist. Without this the button is wired to
@@ -524,14 +525,17 @@ public static class GameLayoutSetup
     }
 
     /// <summary>
-    /// Carries a scene still on the OLD band table across to the new one
-    /// (2026-10-07) — and leaves it alone otherwise.
+    /// Carries a scene still on the PREVIOUS shipped band table across to the
+    /// current one — and leaves it alone otherwise.
     ///
     /// ⚠️ Band weights are normally NOT written here, so tuning survives a re-run.
     /// That rule is intact: this only fires when every band still holds exactly
-    /// the value the old table shipped with, which is how "nobody has touched
-    /// this" is told apart from "somebody tuned it". Same trick as
+    /// the value the previous table shipped with, which is how "nobody has
+    /// touched this" is told apart from "somebody tuned it". Same trick as
     /// ScoreTallySetup.Restyle. A tuned table is left as it is, with a note.
+    ///
+    /// The 2026-10-19 table also REORDERS the bands (bookmarks above the word
+    /// row), so the band each slot holds is written too, not only its numbers.
     /// </summary>
     private static void MoveBandsOn(GameLayout layout)
     {
@@ -539,37 +543,118 @@ public static class GameLayoutSetup
         var bands = so.FindProperty("bands");
         if (bands == null || !bands.isArray) return;
 
-        float[] oldWeights = { 0.155f, 0.033f, 0.085f, 0.075f, 0.042f, 0.44f, 0.07f };
-        float[] oldMins = { 200f, 52f, 110f, 96f, 70f, 240f, 110f };
-        float[] newWeights = { 0.108f, 0.033f, 0.060f, 0.140f, 0.042f, 0.42f, 0.066f };
-        float[] newMins = { 200f, 52f, 100f, 120f, 70f, 240f, 110f };
+        // 2026-10-07: header, strip, score, word row, bookmarks, board, buttons.
+        LayoutBand[] oldOrder =
+        {
+            LayoutBand.RoundHeader, LayoutBand.ResourceStrip, LayoutBand.Score,
+            LayoutBand.WordRow, LayoutBand.Bookmarks, LayoutBand.Board, LayoutBand.Buttons,
+        };
+        float[] oldWeights = { 0.108f, 0.033f, 0.060f, 0.140f, 0.042f, 0.42f, 0.066f };
+        float[] oldMins = { 200f, 52f, 100f, 120f, 70f, 240f, 110f };
+
+        // 2026-10-19: the bookmarks move above the word row. Keep in step with
+        // GameLayout's C# defaults.
+        LayoutBand[] newOrder =
+        {
+            LayoutBand.RoundHeader, LayoutBand.ResourceStrip, LayoutBand.Score,
+            LayoutBand.Bookmarks, LayoutBand.WordRow, LayoutBand.Board, LayoutBand.Buttons,
+        };
+        float[] newWeights = { 0.100f, 0.028f, 0.072f, 0.068f, 0.105f, 0.42f, 0.056f };
+        float[] newMins = { 190f, 46f, 110f, 100f, 100f, 240f, 95f };
 
         if (bands.arraySize != oldWeights.Length) return;
 
-        for (int i = 0; i < oldWeights.Length; i++)
+        if (Matches(bands, newOrder, newWeights, newMins)) return;   // already there
+
+        if (!Matches(bands, oldOrder, oldWeights, oldMins))
         {
-            var band = bands.GetArrayElementAtIndex(i);
-            if (LayoutBandOf(band) != i ||
-                !Mathf.Approximately(band.FindPropertyRelative("weight").floatValue, oldWeights[i]) ||
-                !Mathf.Approximately(band.FindPropertyRelative("minHeight").floatValue, oldMins[i]))
-            {
-                Debug.Log("GameLayout's band table has been tuned by hand, so it was left alone. " +
-                          "The 2026-10-07 table is in GameLayout's C# defaults if you want it.");
-                return;
-            }
+            Debug.Log("GameLayout's band table has been tuned by hand, so it was left alone. " +
+                      "The 2026-10-19 table (bookmarks above the word row) is in GameLayout's " +
+                      "C# defaults if you want it.");
+            return;
         }
 
         for (int i = 0; i < newWeights.Length; i++)
         {
             var band = bands.GetArrayElementAtIndex(i);
+            band.FindPropertyRelative("band").enumValueIndex = (int)newOrder[i];
             band.FindPropertyRelative("weight").floatValue = newWeights[i];
             band.FindPropertyRelative("minHeight").floatValue = newMins[i];
         }
 
+        // The gap shrank in the same change — moved only off its old value.
+        var gap = so.FindProperty("bandGap");
+        if (gap != null && Mathf.Approximately(gap.floatValue, 18f)) gap.floatValue = 14f;
+
         so.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(layout);
-        Debug.Log("GameLayout's bands moved to the 2026-10-07 table.");
+        Debug.Log("GameLayout's bands moved to the 2026-10-19 table.");
     }
+
+    private static bool Matches(SerializedProperty bands, LayoutBand[] order,
+                                float[] weights, float[] mins)
+    {
+        for (int i = 0; i < weights.Length; i++)
+        {
+            var band = bands.GetArrayElementAtIndex(i);
+            if (LayoutBandOf(band) != (int)order[i] ||
+                !Mathf.Approximately(band.FindPropertyRelative("weight").floatValue, weights[i]) ||
+                !Mathf.Approximately(band.FindPropertyRelative("minHeight").floatValue, mins[i]))
+                return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// 🚧 Warms the colours up (2026-10-19): the camera's cool blue-grey becomes a
+    /// warm brown, the board's navy backing becomes a darker parchment inset on
+    /// the new page, and the tiles go cream. Placeholders until there is a
+    /// background sprite and real tile art.
+    ///
+    /// ⚠️ Each one moves ONLY off the exact value it shipped with, so a colour
+    /// already picked by hand in the Inspector is left alone. The same rule
+    /// MoveBandsOn follows.
+    /// </summary>
+    private static void WarmUp(Board board, CurrentWordWidget wordRow)
+    {
+        var camera = Camera.main;
+        if (camera != null && Near(camera.backgroundColor, new Color(0.5568628f, 0.654902f, 0.8039216f)))
+        {
+            Undo.RecordObject(camera, "Warm background");
+            camera.backgroundColor = WarmBackground;
+            EditorUtility.SetDirty(camera);
+        }
+
+        var backing = board.GetComponent<BoardBackground>();
+        if (backing != null)
+            MoveColour(backing, "color", new Color(0.09f, 0.15f, 0.29f), GridInset);
+
+        // On the cream page now, where the old pale red washed out.
+        if (wordRow != null)
+            MoveColour(wordRow, "messageColor", new Color(1f, 0.45f, 0.45f), UrgentInk);
+
+        var skin = AssetDatabase.LoadAssetAtPath<TileSkin>("Assets/GameData/Skins/TileSkin_White.asset");
+        if (skin != null && Near(skin.bodyColor, Color.white))
+        {
+            skin.bodyColor = TileCream;
+            EditorUtility.SetDirty(skin);
+            AssetDatabase.SaveAssetIfDirty(skin);
+        }
+    }
+
+    private static readonly Color WarmBackground = new Color(0.50f, 0.37f, 0.28f);
+    private static readonly Color GridInset = new Color(0.80f, 0.69f, 0.51f);
+    private static readonly Color TileCream = new Color(0.99f, 0.95f, 0.86f);
+
+    private static void MoveColour(Object target, string field, Color from, Color to)
+    {
+        var property = new SerializedObject(target).FindProperty(field);
+        if (property == null || !Near(property.colorValue, from)) return;
+        WordCrushSetup.SetColor(target, field, to);
+    }
+
+    private static bool Near(Color a, Color b) =>
+        Mathf.Abs(a.r - b.r) < 0.01f && Mathf.Abs(a.g - b.g) < 0.01f && Mathf.Abs(a.b - b.b) < 0.01f;
 
     private static int LayoutBandOf(SerializedProperty band) =>
         band.FindPropertyRelative("band").enumValueIndex;
@@ -686,6 +771,16 @@ public static class GameLayoutSetup
     private static void Plate(GameObject root)
     {
         var image = root.GetComponent<Image>() ?? root.AddComponent<Image>();
+        StylePlate(image);
+    }
+
+    /// <summary>
+    /// The plate look on an existing Image — internal so the score bar
+    /// (ScoreTallySetup, a prefab) gets the same corners as the boxes here.
+    /// White; a caller that wants it tinted sets the colour afterwards.
+    /// </summary>
+    internal static void StylePlate(Image image)
+    {
         image.sprite = PlateSprite();
         image.type = UnityEngine.UI.Image.Type.Sliced;
         image.fillCenter = true;

@@ -378,8 +378,9 @@ public class BookmarkRowWidget : MonoBehaviour
     }
 
     /// <summary>
-    /// Sits the row so its BOTTOM edge meets the board's TOP edge — the cards
-    /// stand up out of the board like bookmarks out of a book.
+    /// Sits the row so its BOTTOM edge meets the top edge of the board's page
+    /// (the board itself when there's no page) — the cards stand up out of the
+    /// book like bookmarks.
     ///
     /// ⚠️ THE CARDS ARE NOT ACTUALLY BEHIND THE BOARD, AND CAN'T BE. The HUD is
     /// a Screen Space - Overlay canvas, so it draws over every world sprite there
@@ -432,12 +433,25 @@ public class BookmarkRowWidget : MonoBehaviour
         if (reserved.height > 0f)
             self.sizeDelta = new Vector2(self.sizeDelta.x, reserved.height);
 
-        float boardTop = board.BoardCenter.y + board.BoardSize.y * 0.5f;
+        FitRowToBand(layout);
+
+        // The PAGE's top when there is one (2026-10-19) — the word row sits on
+        // the page now, so the cards stand up out of the top of the whole book
+        // rather than out of the grid, where they'd cover the word.
+        //
+        // ⚠️ boardGap is NOT used against a page. The cards end exactly on the
+        // page's top edge, so they cover the cover strip above it whatever its
+        // thickness — a fixed canvas gap against a cover that scales with the
+        // board left a sliver of background under the cards on squarer screens.
+        bool onPage = !float.IsNaN(layout.PageTopWorld);
+        float boardTop = onPage
+            ? layout.PageTopWorld
+            : board.BoardCenter.y + board.BoardSize.y * 0.5f;
         float topEdge = layout.CanvasYOf(boardTop);
 
         self.anchoredPosition = new Vector2(
             self.anchoredPosition.x,
-            Mathf.Min(maxY, topEdge + boardGap));
+            Mathf.Min(maxY, topEdge + (onPage ? 0f : boardGap)));
 
         // The cards take their height from the row, so they have to be re-laid
         // out after it changes — LayOut ran before this, on the old height.
@@ -445,6 +459,30 @@ public class BookmarkRowWidget : MonoBehaviour
         // snapping the held card back to its slot would be worse than a card
         // that is briefly the wrong height.
         if (!Dragging) LayOut(-1);
+    }
+
+    /// <summary>
+    /// Stretches the card strip to the row's full HEIGHT and the grid's WIDTH.
+    ///
+    /// ⚠️ The strip is authored as a fixed 1000x100 box centred in the row (the
+    /// Shop still uses it that way), so before 2026-10-19 the cards were 100
+    /// tall whatever the band said — the band could grow and the cards never
+    /// would. Game scene only: this runs from PinAboveBoard, which needs a board.
+    /// The width is the word row's, which GameLayout sets to the grid's drawn
+    /// width, so the outer cards line up with the grid rather than the cover.
+    /// </summary>
+    private void FitRowToBand(GameLayout layout)
+    {
+        if (row == null) return;
+
+        float width = layout.CanvasRectOf(LayoutBand.WordRow).width;
+        if (width <= 0f) width = row.rect.width;
+
+        row.anchorMin = new Vector2(0.5f, 0f);
+        row.anchorMax = new Vector2(0.5f, 1f);
+        row.pivot = new Vector2(0.5f, 0.5f);
+        row.sizeDelta = new Vector2(width, 0f);
+        row.anchoredPosition = Vector2.zero;
     }
 
     // ------------------------------------------------------------------------

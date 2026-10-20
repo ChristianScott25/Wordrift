@@ -2,7 +2,12 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>The bands the gameplay screen is divided into, top to bottom.</summary>
+/// <summary>
+/// The bands the gameplay screen is divided into. The ENUM order is only a name;
+/// what decides top-to-bottom is the order of GameLayout.bands, which since
+/// 2026-10-19 puts the bookmarks ABOVE the word row so the word row sits on the
+/// board's page.
+/// </summary>
 public enum LayoutBand
 {
     RoundHeader,
@@ -12,14 +17,12 @@ public enum LayoutBand
 
     /// <summary>
     /// Reserved for the tips of the bookmark cards, which stand up out of the
-    /// board's top edge.
+    /// top edge of the PAGE (the board plus the word row on it).
     ///
     /// ⚠️ NOTHING ATTACHES TO IT — BookmarkRowWidget pins itself against the
-    /// board's real top edge instead, because the board can sit slightly inside
-    /// its band. This band exists purely to stop the word row from being where
-    /// those card tips are. Without it the cards punch straight into the row
-    /// above, and since the HUD canvas draws over every world sprite, the cards
-    /// would cover the word's tiles.
+    /// page's real top edge instead (GameLayout.PageTopWorld). This band exists
+    /// to keep the score bar out of where those card tips are, and to give the
+    /// row its height.
     /// </summary>
     Bookmarks,
 
@@ -90,23 +93,24 @@ public class GameLayout : MonoBehaviour
     [SerializeField]
     private BandSetting[] bands =
     {
-        // Retuned 2026-10-07: a shorter header (so the librarian box, the bag
-        // and the items box share one top and bottom edge), a one-line score,
-        // and a word row tall enough that its tiles come out about the size of
-        // the board's. GameLayoutSetup.MoveBandsOn carries a scene still on
-        // the OLD table across to this one.
-        new BandSetting { band = LayoutBand.RoundHeader,   weight = 0.108f, minHeight = 200f },
-        new BandSetting { band = LayoutBand.ResourceStrip, weight = 0.033f, minHeight = 52f },
-        new BandSetting { band = LayoutBand.Score,         weight = 0.060f, minHeight = 100f },
-        new BandSetting { band = LayoutBand.WordRow,       weight = 0.140f, minHeight = 120f },
-        new BandSetting { band = LayoutBand.Bookmarks,     weight = 0.042f, minHeight = 70f },
+        // Retuned 2026-10-19 off the mock-up: bookmarks moved ABOVE the word
+        // row so the word sits on the board's page, the bookmark tips got
+        // taller, the score became a labelled bar, and the header, strip and
+        // buttons gave up some height to pay for it.
+        // GameLayoutSetup.MoveBandsOn carries a scene still on the 2026-10-07
+        // table across to this one.
+        new BandSetting { band = LayoutBand.RoundHeader,   weight = 0.100f, minHeight = 190f },
+        new BandSetting { band = LayoutBand.ResourceStrip, weight = 0.028f, minHeight = 46f },
+        new BandSetting { band = LayoutBand.Score,         weight = 0.072f, minHeight = 110f },
+        new BandSetting { band = LayoutBand.Bookmarks,     weight = 0.068f, minHeight = 100f },
+        new BandSetting { band = LayoutBand.WordRow,       weight = 0.105f, minHeight = 100f },
         new BandSetting { band = LayoutBand.Board,         weight = 0.420f, minHeight = 240f },
-        new BandSetting { band = LayoutBand.Buttons,       weight = 0.066f, minHeight = 110f },
+        new BandSetting { band = LayoutBand.Buttons,       weight = 0.056f, minHeight = 95f },
     };
 
     [Header("Spacing, in canvas units")]
     [Tooltip("Gap between one band and the next.")]
-    [SerializeField] private float bandGap = 18f;
+    [SerializeField] private float bandGap = 14f;
 
     [Tooltip("Margin inside the safe area, left and right.")]
     [SerializeField] private float sideMargin = 32f;
@@ -135,6 +139,13 @@ public class GameLayout : MonoBehaviour
 
     /// <summary>Has the stack been resolved at least once?</summary>
     public bool IsResolved { get; private set; }
+
+    /// <summary>
+    /// The top edge of the board's 🚧 page in WORLD units — the board plus the
+    /// word row sitting on it — or NaN when there is no page to pin to. The
+    /// bookmark row stands its cards on this.
+    /// </summary>
+    public float PageTopWorld { get; private set; } = float.NaN;
 
     private readonly System.Collections.Generic.Dictionary<LayoutBand, RectTransform> containers = new();
     private readonly System.Collections.Generic.Dictionary<LayoutBand, Rect> rects = new();
@@ -339,7 +350,8 @@ public class GameLayout : MonoBehaviour
         Rect usable = UsableRect();
         LayOutBands(usable);
         FrameBoard();
-        FitButtonsToBoard(usable);
+        LayPage();
+        FitBandsToBoard(usable);
 
         IsResolved = true;
         Changed?.Invoke();
@@ -479,34 +491,75 @@ public class GameLayout : MonoBehaviour
     }
 
     /// <summary>
-    /// Narrows (or widens) the button band to the board's DRAWN width, so the
-    /// row's two ends line up with the board's edges.
+    /// Narrows (or widens) every band to the board's DRAWN width, so the whole
+    /// screen shares one left and one right edge — the book's.
     ///
-    /// The bands all share the usable width, but the board usually doesn't fill
-    /// it: when its band is the tight axis it's narrower, and its border always
-    /// pokes a little past the tiles. A button row sized to the band therefore
-    /// overhung the board on one phone and sat inside it on another. Measured
-    /// off BackingSize, after FrameBoard, because the camera decides where the
-    /// board lands. Never past the safe area.
+    /// It used to be the button band alone. The bands all share the usable
+    /// width, but the board usually doesn't fill it exactly: when its band is
+    /// the tight axis it's narrower, and its border and page always poke a
+    /// little past the tiles. Measured off OuterSize, after FrameBoard, because
+    /// the camera decides where the board lands. Never past the safe area.
+    ///
+    /// ⚠️ The WORD ROW takes the page's INSIDE width instead (the grid's
+    /// backing), so its tiles can never sit on the cover or hang off the page.
     /// </summary>
-    private void FitButtonsToBoard(Rect usable)
+    private void FitBandsToBoard(Rect usable)
     {
         if (board == null || sceneCamera == null) return;
-        if (!rects.TryGetValue(LayoutBand.Buttons, out var row)) return;
 
-        float half = board.BackingSize.x * 0.5f;
-        if (half <= 0f) return;
+        float outer = board.OuterSize.x * 0.5f;
+        float inner = board.BackingSize.x * 0.5f;
+        if (outer <= 0f) return;
 
-        float left = CanvasXOf(board.BoardCenter.x - half);
-        float right = CanvasXOf(board.BoardCenter.x + half);
+        foreach (var setting in bands)
+        {
+            if (setting.band == LayoutBand.Board) continue;
+            if (!rects.TryGetValue(setting.band, out var rect)) continue;
 
-        left = Mathf.Max(left, usable.xMin - sideMargin);
-        right = Mathf.Min(right, usable.xMax + sideMargin);
-        if (right - left <= 0f) return;
+            float half = setting.band == LayoutBand.WordRow ? inner : outer;
+            float left = CanvasXOf(board.BoardCenter.x - half);
+            float right = CanvasXOf(board.BoardCenter.x + half);
 
-        var fitted = new Rect(left, row.y, right - left, row.height);
-        rects[LayoutBand.Buttons] = fitted;
-        Place(Container(LayoutBand.Buttons), fitted);
+            left = Mathf.Max(left, usable.xMin - sideMargin);
+            right = Mathf.Min(right, usable.xMax + sideMargin);
+            if (right - left <= 0f) continue;
+
+            var fitted = new Rect(left, rect.y, right - left, rect.height);
+            rects[setting.band] = fitted;
+            Place(Container(setting.band), fitted);
+        }
+    }
+
+    /// <summary>
+    /// Lays the 🚧 page behind the board, stretched UP to take in the word row,
+    /// so the word you're spelling sits on the same page as the grid.
+    ///
+    /// The sides and bottom are the board's backing plus the page margin; the
+    /// top is the word row band's top edge. Called after FrameBoard, because the
+    /// word row's position in WORLD units only exists once the camera is framed.
+    /// </summary>
+    private void LayPage()
+    {
+        PageTopWorld = float.NaN;
+
+        var background = board == null ? null : board.Background;
+        if (background == null || !background.DrawsPage) return;
+
+        float cell = board.CellSize;
+        float margin = background.PageMargin(cell);
+        Vector2 backing = board.BackingSize;
+        Vector2 centre = board.BoardCenter;
+
+        float left = centre.x - backing.x * 0.5f - margin;
+        float right = centre.x + backing.x * 0.5f + margin;
+        float bottom = centre.y - backing.y * 0.5f - margin;
+        float top = centre.y + backing.y * 0.5f + margin;
+
+        Rect wordRow = WorldRectOf(LayoutBand.WordRow);
+        if (wordRow.height > 0f) top = Mathf.Max(top, wordRow.yMax);
+
+        background.SetPage(new Rect(left, bottom, right - left, top - bottom), cell);
+        PageTopWorld = top;
     }
 
     /// <summary>
@@ -524,7 +577,9 @@ public class GameLayout : MonoBehaviour
         if (!rects.TryGetValue(LayoutBand.Board, out var band)) return;
         if (band.width <= 0f || band.height <= 0f) return;
 
-        Vector2 size = board.BoardSize;
+        // The book, not the tiles: framing the tiles alone let the border and
+        // the page hang off the sides of the band.
+        Vector2 size = board.OuterSize;
         if (size.x <= 0f || size.y <= 0f) return;
 
         float scale = canvas == null || canvas.scaleFactor <= 0f ? 1f : canvas.scaleFactor;

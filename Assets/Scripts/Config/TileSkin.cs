@@ -22,6 +22,10 @@ public class TileSkin : ScriptableObject
              "a white or light sprite has the most range.")]
     public Sprite baseSprite;
 
+    [Tooltip("Tints the body sprite when the tile is at rest. White = the sprite " +
+             "as drawn. Selection and the invalid flash don't use it.")]
+    public Color bodyColor = Color.white;
+
     [Tooltip("Color of the letter drawn on this tile.")]
     public Color letterColor = new Color(0.16f, 0.17f, 0.23f, 1f);
 

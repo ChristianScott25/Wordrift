@@ -154,7 +154,7 @@ public class BagTileView : MonoBehaviour, IPointerClickHandler
         gameObject.SetActive(true);
 
         body.sprite = skin == null ? null : skin.baseSprite;
-        body.color = Color.white;
+        body.color = skin == null ? Color.white : skin.bodyColor;
 
         // Face, never Spelling: a choice tile SPELLS "*" and would hide the very
         // thing a bag view exists to show. Same trap BuildLetterPool avoids.

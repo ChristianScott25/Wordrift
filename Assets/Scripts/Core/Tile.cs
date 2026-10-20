@@ -310,6 +310,7 @@ public class Tile : MonoBehaviour
         if (look.Skin != null)
         {
             if (look.Skin.baseSprite != null) tileRenderer.sprite = look.Skin.baseSprite;
+            skinBody = look.Skin.bodyColor;
             if (letterLabel != null) letterLabel.color = look.Skin.letterColor;
             if (scoreLabel != null) scoreLabel.color = look.Skin.scoreColor;
             if (badgeRenderer != null && look.Skin.badgeSprite != null)
@@ -612,11 +613,16 @@ public class Tile : MonoBehaviour
     }
 
     /// <summary>
-    /// The tile body's colour when nothing is happening to it. Modifiers no
-    /// longer tint the body, but this is where a skin-supplied body colour would
-    /// slot in if one is ever added.
+    /// The tile body's colour when nothing is happening to it: the prefab's
+    /// normalColor times the skin's bodyColor. Modifiers don't tint the body.
+    /// Selection and the invalid flash deliberately ignore the skin — they are
+    /// signals, and must look the same whatever the tiles are dressed in.
     /// </summary>
-    private Color RestingColor => normalColor;
+    private Color RestingColor => normalColor * skinBody;
+
+    // The skin's body tint, captured in ApplyLook. White until a skin says
+    // otherwise, so a mode with no skin draws exactly as it always did.
+    private Color skinBody = Color.white;
 
     /// <summary>
     /// Slides to a spot at fallSpeed. With a delay, the tile is HIDDEN where it

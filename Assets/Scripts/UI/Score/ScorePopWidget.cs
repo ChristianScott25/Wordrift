@@ -46,10 +46,10 @@ public class ScorePopWidget : MonoBehaviour
     [Range(0.1f, 1f)][SerializeField] private float fadeFraction = 0.45f;
 
     [Tooltip("A number that moved POINTS. Matches the left-hand readout.")]
-    [SerializeField] private Color pointsColor = new Color(0.13f, 0.26f, 0.55f, 1f);
+    [SerializeField] private Color pointsColor = new Color(0.30f, 0.58f, 1f, 1f);
 
     [Tooltip("A number that moved MULT. Matches the right-hand readout.")]
-    [SerializeField] private Color multColor = new Color(0.60f, 0.13f, 0.16f, 1f);
+    [SerializeField] private Color multColor = new Color(1f, 0.33f, 0.30f, 1f);
 
     private readonly List<Pop> pops = new();
     private Canvas canvas;

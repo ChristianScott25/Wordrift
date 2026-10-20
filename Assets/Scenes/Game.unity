@@ -1479,27 +1479,27 @@ MonoBehaviour:
   sceneCamera: {fileID: 934115278}
   bands:
   - band: 0
-    weight: 0.108
-    minHeight: 200
+    weight: 0.1
+    minHeight: 190
   - band: 1
-    weight: 0.033
-    minHeight: 52
+    weight: 0.028
+    minHeight: 46
   - band: 2
-    weight: 0.06
+    weight: 0.072
+    minHeight: 110
+  - band: 4
+    weight: 0.068
     minHeight: 100
   - band: 3
-    weight: 0.14
-    minHeight: 120
-  - band: 4
-    weight: 0.042
-    minHeight: 70
+    weight: 0.105
+    minHeight: 100
   - band: 5
     weight: 0.42
     minHeight: 240
   - band: 6
-    weight: 0.066
-    minHeight: 110
-  bandGap: 18
+    weight: 0.056
+    minHeight: 95
+  bandGap: 14
   sideMargin: 32
   edgeMargin: 12
 --- !u!1 &514287224
@@ -1959,6 +1959,7 @@ MonoBehaviour:
   allowDiagonals: 1
   holdSeconds: 0.45
   holdSlopPixels: 28
+  hintStepSeconds: 0.08
 --- !u!120 &673790879
 LineRenderer:
   serializedVersion: 3
@@ -2476,8 +2477,8 @@ MonoBehaviour:
   gap: 10
   seconds: 0.6
   fadeFraction: 0.45
-  pointsColor: {r: 0.13, g: 0.26, b: 0.55, a: 1}
-  multColor: {r: 0.6, g: 0.13, b: 0.16, a: 1}
+  pointsColor: {r: 0.3, g: 0.58, b: 1, a: 1}
+  multColor: {r: 1, g: 0.33, b: 0.3, a: 1}
 --- !u!1 &818265041
 GameObject:
   m_ObjectHideFlags: 0
@@ -2651,7 +2652,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.5568628, g: 0.654902, b: 0.8039216, a: 1}
+  m_BackGroundColor: {r: 0.5, g: 0.37, b: 0.28, a: 1}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -3394,7 +3395,7 @@ MonoBehaviour:
   ghostAlpha: 0.4
   messageLabel: {fileID: 2005091085}
   wontScoreText: WON'T SCORE
-  messageColor: {r: 1, g: 0.45, b: 0.45, a: 1}
+  messageColor: {r: 0.78, g: 0.16, b: 0.16, a: 1}
   reasonPercent: 55
 --- !u!1 &1258647765
 GameObject:
@@ -4946,6 +4947,9 @@ MonoBehaviour:
   cellSize: 0.72
   grabRadiusFraction: 0.42
   settleDelay: 0.18
+  rippleStep: 0.07
+  dealStep: 0.05
+  sweepStep: 0.06
 --- !u!4 &1713453990
 Transform:
   m_ObjectHideFlags: 0
@@ -4974,10 +4978,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BoardBackground
   cellSprite: {fileID: 21300000, guid: ab2b8e15d4b674304ad92fb4f1a02eea, type: 3}
-  color: {r: 0.09, g: 0.15, b: 0.29, a: 1}
+  color: {r: 0.8, g: 0.69, b: 0.51, a: 1}
   cellScale: 1.12
   sortingOrder: -10
   depthOffset: 0.1
+  drawPage: 1
+  pageColor: {r: 0.93, g: 0.86, b: 0.7, a: 1}
+  coverColor: {r: 0.4, g: 0.23, b: 0.14, a: 1}
+  pageMargin: 0.14
+  coverWidth: 0.08
 --- !u!1 &1715260356
 GameObject:
   m_ObjectHideFlags: 0

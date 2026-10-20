@@ -83,6 +83,33 @@ public class Board : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// The board with its 🚧 page and cover round it — BackingSize plus
+    /// BoardBackground.PageExtent on every side. What the camera frames and
+    /// what the HUD lines its edges up with. Equals BackingSize when the page is
+    /// off. (The page also reaches UP past the board to take in the word row;
+    /// that part is GameLayout's, and isn't counted here.)
+    /// </summary>
+    public Vector2 OuterSize
+    {
+        get
+        {
+            if (background == null) background = GetComponent<BoardBackground>();
+            float extra = background != null ? background.PageExtent(cellSize) * 2f : 0f;
+            return BackingSize + new Vector2(extra, extra);
+        }
+    }
+
+    /// <summary>The backing component, or null — for GameLayout, which lays the page.</summary>
+    public BoardBackground Background
+    {
+        get
+        {
+            if (background == null) background = GetComponent<BoardBackground>();
+            return background;
+        }
+    }
+
     /// <summary>Tiles on the board right now, counting ones still falling in.</summary>
     public int TileCount => tiles.Count;
 

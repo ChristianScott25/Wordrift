@@ -387,7 +387,7 @@ MonoBehaviour:
   letterLabel: {fileID: 7687541026424092246}
   scoreLabel: {fileID: 8175610654179084057}
   badgeLabel: {fileID: 2423730248434633233}
-  fillFraction: 0.92
+  fillFraction: 0.88
   cornerInset: 0.06
   badgeInset: 0.01
   badgeSize: 0.38

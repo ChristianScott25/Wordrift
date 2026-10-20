@@ -2,14 +2,18 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// The scoring readout: ONE line, "POINTS x MULT = TOTAL", live while you select
-/// and then walked through a beat at a time once you commit. The total is worked
-/// out on every draw, so it climbs with the two numbers during the walk.
+/// The scoring readout: a bar of three labelled columns, POINTS x MULT = TOTAL,
+/// live while you select and then walked through a beat at a time once you
+/// commit. The total is worked out on every draw, so it climbs with the two
+/// numbers during the walk.
 ///
-/// One rich-text label rather than five laid side by side (2026-10-07, his call):
-/// the numbers change width as they grow, and labels at fixed offsets left gaps
-/// that opened and closed as a 3 became a 30. The colours are inline tags, built
-/// from the same pointsColor/multColor fields the floating numbers use.
+/// Three labels in fixed COLUMNS, each number centred under its caption
+/// (2026-10-19, off the mock-up). That replaced one rich-text line, which had
+/// replaced five labels at fixed offsets because the gaps between them opened
+/// and closed as a 3 became a 30. Columns don't have that problem the way
+/// offsets did: each number is centred in a slot sized for the biggest it gets,
+/// and auto-sizes down inside it. The colours are the same pointsColor /
+/// multColor fields the floating numbers use.
 ///
 /// Before PLAY it shows what the word's LENGTH is worth and nothing else — not
 /// the tiles, not the bookmarks. Watching those arrive is what PLAY is for, and
@@ -40,8 +44,14 @@ public class ScoreTallyWidget : MonoBehaviour
              "ourselves would stop us hearing events.")]
     [SerializeField] private GameObject root;
 
-    [Tooltip("The whole line — POINTS x MULT = TOTAL — as one rich-text label.")]
-    [SerializeField] private TMP_Text lineLabel;
+    [Tooltip("The POINTS number.")]
+    [SerializeField] private TMP_Text pointsLabel;
+
+    [Tooltip("The MULT number.")]
+    [SerializeField] private TMP_Text multLabel;
+
+    [Tooltip("The TOTAL number.")]
+    [SerializeField] private TMP_Text totalLabel;
 
     [Header("Place in band")]
     [Range(0f, 1f)][SerializeField] private float bandXMin = 0f;
@@ -50,16 +60,16 @@ public class ScoreTallyWidget : MonoBehaviour
 
     [Header("Look")]
     [Tooltip("The left-hand number, and every floating number that moved it.")]
-    [SerializeField] private Color pointsColor = new Color(0.13f, 0.26f, 0.55f, 1f);
+    [SerializeField] private Color pointsColor = new Color(0.30f, 0.58f, 1f, 1f);
 
     [Tooltip("The right-hand number, and every floating number that moved it.")]
-    [SerializeField] private Color multColor = new Color(0.60f, 0.13f, 0.16f, 1f);
+    [SerializeField] private Color multColor = new Color(1f, 0.33f, 0.30f, 1f);
 
     [Tooltip("Flashed on whichever number a beat just changed.")]
     [SerializeField] private Color hitColor = new Color(1f, 0.85f, 0.3f);
 
-    [Tooltip("The x, the = and the total.")]
-    [SerializeField] private Color quietColor = new Color(0.12f, 0.13f, 0.17f, 0.75f);
+    [Tooltip("The total.")]
+    [SerializeField] private Color totalColor = Color.white;
 
     // What's on the line now. Draw is called on every frame of a drag, so the
     // string is only rebuilt when one of these actually changed.
@@ -70,8 +80,6 @@ public class ScoreTallyWidget : MonoBehaviour
     private float mult;
     private int hit;   // 0 none, 1 points, 2 mult — which number a beat just moved
 
-    // The colours as hex, for the inline tags. Rebuilt with the colours.
-    private string pointsHex, multHex, hitHex, quietHex;
 
     /// <summary>
     /// A walk is in progress and owns the display.
@@ -93,24 +101,18 @@ public class ScoreTallyWidget : MonoBehaviour
         // The box is permanent now, so this runs once and only guards against a
         // prefab whose root was saved switched off.
         if (root != null && !root.activeSelf) root.SetActive(true);
-        CacheColours();
+
+        // Loud, because the failure is silent otherwise: Render returns early
+        // and the bar just sits there blank. Happens on a prefab built before
+        // the three-column bar (2026-10-19) until the setup is re-run.
+        if (pointsLabel == null || multLabel == null || totalLabel == null)
+            Debug.LogError("ScoreTallyWidget is missing a number label, so the score bar " +
+                           "will stay blank. Run Word Crush > Set Up Game Layout.", this);
         DrawResting();
     }
 
     // So retuning a colour in the Inspector shows on the next draw.
-    private void OnValidate()
-    {
-        CacheColours();
-        shownHit = -1;
-    }
-
-    private void CacheColours()
-    {
-        pointsHex = ColorUtility.ToHtmlStringRGBA(pointsColor);
-        multHex = ColorUtility.ToHtmlStringRGBA(multColor);
-        hitHex = ColorUtility.ToHtmlStringRGBA(hitColor);
-        quietHex = ColorUtility.ToHtmlStringRGBA(quietColor);
-    }
+    private void OnValidate() => shownHit = -1;
 
     private void OnEnable()
     {
@@ -225,24 +227,28 @@ public class ScoreTallyWidget : MonoBehaviour
 
     private void Render()
     {
-        if (lineLabel == null) return;
+        if (pointsLabel == null || multLabel == null || totalLabel == null) return;
         if (points == shownPoints && Mathf.Approximately(mult, shownMult) && hit == shownHit) return;
 
+        bool numbersMoved = points != shownPoints || !Mathf.Approximately(mult, shownMult);
         shownPoints = points;
         shownMult = mult;
         shownHit = hit;
 
-        if (pointsHex == null) CacheColours();
+        // Colours on every change (the flash moves without the numbers moving);
+        // text only when a number did, because setting TMP text re-lays it out.
+        pointsLabel.color = hit == 1 ? hitColor : pointsColor;
+        multLabel.color = hit == 2 ? hitColor : multColor;
+        totalLabel.color = totalColor;
+        if (!numbersMoved) return;
 
         // Saturated the same way ScoreCalculator.Evaluate is, and for the same
         // reason: this is the number the player WATCHES, so a wrapped one here
         // would show the negative score even when the awarded one was fine.
         long total = ScoreLimits.Clamp((double)points * mult);
 
-        lineLabel.text =
-            $"<color=#{(hit == 1 ? hitHex : pointsHex)}>{points}</color>" +
-            $"<color=#{quietHex}> x </color>" +
-            $"<color=#{(hit == 2 ? hitHex : multHex)}>{ScoringContext.Trim(mult)}</color>" +
-            $"<color=#{quietHex}> = {total}</color>";
+        pointsLabel.text = points.ToString();
+        multLabel.text = "x" + ScoringContext.Trim(mult);
+        totalLabel.text = total.ToString();
     }
 }
