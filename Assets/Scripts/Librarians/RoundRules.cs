@@ -91,4 +91,25 @@ public class RoundRules
     /// seam for "this one is harder, so it pays more" later.
     /// </summary>
     public float PayoutMultiplier = 1f;
+
+    /// <summary>
+    /// The run's round number, for a librarian that gets harder (or easier) as
+    /// the run goes on — fewer marked tiles, more infected ones.
+    /// </summary>
+    public int Round;
+
+    /// <summary>
+    /// Whether items may be used this round. A librarian that forbids them sets
+    /// it false; the session's CanUseConsumable then refuses every pick-up.
+    /// </summary>
+    public bool ConsumablesAllowed = true;
+
+    /// <summary>
+    /// How many board tiles the round keeps MARKED, and as what. 0 / None on
+    /// every ordinary round. The mode's TileMarker does the picking — after the
+    /// board exists, and again whenever marked tiles leave it — because a
+    /// librarian is a recipe and can't hold the round's tiles itself.
+    /// </summary>
+    public int MarkCount;
+    public TileMark MarkKind = TileMark.None;
 }

@@ -180,6 +180,18 @@ public class RoundSnapshot
     /// draws have happened depends on how many items the player chose to spend.
     /// </summary>
     public int consumableDraws;
+
+    /// <summary>
+    /// The cells a librarian had marked (start-on / end-on / infected), as
+    /// parallel x/y lists like the board's. Saved rather than re-derived because
+    /// which tiles are marked depends on which ones the player has played.
+    /// Empty on an ordinary round, and on any file older than the feature.
+    /// </summary>
+    public List<int> markCellX = new();
+    public List<int> markCellY = new();
+
+    /// <summary>How far the marking stream had drawn — see consumableDraws.</summary>
+    public int markDraws;
 }
 
 /// <summary>

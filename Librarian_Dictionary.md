@@ -7,7 +7,7 @@
 > **Keeping this current is a standing job.** A librarian added, retuned or cut is a change to
 > this file in the same turn as the code — same rule as the Encyclopedia.
 
-**Last updated:** 2026-09-16 · eight librarians · the Librarian Lab
+**Last updated:** 2026-10-22 · twelve librarians · the Librarian Lab
 **Status:** the roster is a first pass. Every one of them is a *restriction* (see [Open](#open))
 
 ### How to read this
@@ -61,8 +61,8 @@ is being forced, and **Stop forcing** puts rounds back to normal.
 
 - **Every third round is a librarian round** *(`librarianEveryRounds`)*, and clearing one
   **pays double** *(`librarianPayoutMultiplier`)*.
-- **Which one turns up is part of the run's seed**, and **none repeats until all eight have been
-  seen.** So rounds 3, 6, 9 … 24 are all different, and the cycle restarts at 27.
+- **Which one turns up is part of the run's seed**, and **none repeats until all twelve have been
+  seen.** So rounds 3, 6, 9 … 36 are all different, and the cycle restarts at 39.
 - **A word a librarian won't take can't be played at all.** It doesn't score zero and it doesn't
   cost a move — PLAY simply won't light up, and the librarian's reason is written in the
   selected word. Nothing is spent finding out.
@@ -82,6 +82,10 @@ is being forced, and **Stop forcing** puts rounds back to normal.
 | 6 | [The Insatiable](#6-the-insatiable) | Score target ×3 | `Apply` |
 | 7 | [The Critic](#7-the-critic) | −25% Points and Mult | `Score` |
 | 8 | [The Dilapidated](#8-the-dilapidated) | 3 board spaces are closed | `Apply` |
+| 9 | [🚧 The Shusher](#9-the-shusher) | No items this round | `Apply` |
+| 10 | [🚧 The Prefacer](#10-the-prefacer) | Words must start on a marked tile | `Apply` + `Refuse` |
+| 11 | [🚧 The Epilogist](#11-the-epilogist) | Words must end on a marked tile | `Apply` + `Refuse` |
+| 12 | [🚧 The Mildewed](#12-the-mildewed) | Infected tiles count against you | `Apply` + `Refuse` (+ Core scoring) |
 
 ---
 
@@ -325,6 +329,100 @@ fewer paths between them.
 
 ---
 
+## 9. The Shusher
+
+🚧 *Placeholder name.* **No items this round.** *(`NoConsumablesLibrarian` —
+`Librarian_Shusher.asset`)*
+
+Whatever the run is carrying stays in the box: dragging an item does nothing. **Tapping one still
+opens its info box** — reading what you can't use is how you plan for the round after.
+
+🎯 The one librarian aimed at the shop's consumable row. A run that leans on Doublers and Cheat
+Sheets has to clear this round on its own words.
+
+How it works: `Apply` sets `RoundRules.ConsumablesAllowed = false`, the mode reports it as
+`GameMode.AllowsConsumables`, and `GameSession.CanUseConsumable` — the one place "may an item be
+used now?" is answered — folds it in. The items area already obeys that, so it needed no change.
+Leaving to the menu asks `IsAtRest`, not this, so pausing is unaffected.
+
+---
+
+## 10. The Prefacer
+
+🚧 *Placeholder name.* **Every word must start on a marked tile.** *(`MarkedTileLibrarian`,
+`atEnd` off — `count` 5, `minCount` 3, `stepEveryRounds` 6 — `Librarian_Prefacer.asset`)*
+
+- **The count shrinks with the run**: 5 marked tiles, one fewer every 6 rounds, never below 3.
+  On the librarian rounds that's 5, 5, 4, 4, 3, 3 …
+- **Only the FIRST tile is checked.** A marked tile in the middle of a word is fine, as long as
+  the word starts on another marked one.
+- **It tries for different letters.** Each pick first looks for a tile whose letter isn't
+  already marked, then for any tile that isn't a wild, then for anything.
+- **Marks are topped up.** When a marked tile leaves the board — played, discarded, bombed,
+  redrawn — a new one is marked as soon as the board settles, again preferring a fresh letter.
+- **Marked tiles can be discarded** (his call, 2026-10-22 — first asked for "can't", then changed
+  to match the infected tiles). It costs discards and the replacement is random. ⚠️ A mark you
+  could never get rid of is how a round freezes with moves left: if no word starts on any marked
+  tile, discarding one is the only way to change what's marked.
+- **Items work as normal** on marked tiles; new marks follow.
+- **The Cheat Sheet obeys it for free** — it asks the same `Refuse` — so dropping it on an
+  unmarked tile finds nothing and isn't spent.
+
+How it works: the librarian is still a stateless recipe. `Apply` only says **how many** and
+**what kind** (`RoundRules.MarkCount` / `MarkKind`); the mode's **`TileMarker`** owns which tiles
+are marked, because that's round state that changes as you play. A mark lives on the `Tile`
+object (`Tile.Mark`), so it rides along through falls, shuffles and an Ink Blot. Picks walk the
+board in a fixed order and draw from their own stream (`marks`), whose position is saved with the
+marked cells — so a resumed round has the same marks and the next new one is the one that would
+have come.
+
+⚠️ 🚧 **The mark is a body tint** (green, `requiredTint` on the Tile prefab), and a SELECTED tile
+shows the selection colour instead. If that makes the start tile hard to read mid-word, the next
+step is a ring or a corner dot.
+
+---
+
+## 11. The Epilogist
+
+🚧 *Placeholder name.* **Every word must END on a marked tile.** The Prefacer with `atEnd` on —
+same class, same numbers, same everything else. *(`Librarian_Epilogist.asset`)*
+
+🎯 It plays differently from its twin despite the shared code: you build *toward* a tile rather
+than away from one, and the word row shows you whether you got there only at the last letter.
+
+---
+
+## 12. The Mildewed
+
+🚧 *Placeholder name.* **Infected tiles take away what they would have added.**
+*(`InfectedTileLibrarian` — `count` 3, `maxCount` 6, `stepEveryRounds` 6 —
+`Librarian_Mildewed.asset`)*
+
+- **Length:** an infected tile's letters come OFF the word's length. CRATE through an infected R
+  counts as 3 (4 clean − 1) for length points and the length multiplier. The live preview shows it.
+- **Points:** its letter value comes off the score, on its own beat.
+- **Badges:** none of them fire — not 2L/3L, not 2W/3W.
+- **The shorter length counts EVERYWHERE** (his call, 2026-10-22): a word whose shortened length
+  is under the minimum is refused ("Infected letters make this too short"), and Marginalia and
+  Shorthand read the shortened length (`ScoringContext.Length`).
+- **The count grows with the run**: 3, one more every 6 rounds, capped at 6 — about a quarter of
+  a 5×5 board. More than that and the board is just unplayable.
+- **Infected tiles can be discarded** and new ones are infected to keep the count up — so
+  discarding them costs discards and buys a different infected tile, not a clean board.
+
+How it works: the marking is the same `TileMarker` as The Prefacer's, with `TileMark.Infected`.
+The SCORING lives in Core, keyed off `Tile.Mark`, not in the librarian's `Score` hook — the length
+has to be shortened before the walk opens, and a tile's badges have to be skipped on its own beat,
+both of which happen inside `ScoreCalculator` before any librarian gets a turn.
+`ChainController.ScoringLength` is the one place the shortened length is worked out; with no
+infected tile it equals the plain letter count, which is why every other round scores exactly as
+before.
+
+⚠️ **The score is floored at 0 on every step**, so a word that is mostly infected bottoms out at 0
+rather than going negative — and the order of tiles can matter a little right at that floor.
+
+---
+
 ## Open
 
 Questions that belong to the roster as a whole rather than to any one librarian.
@@ -344,7 +442,7 @@ Questions that belong to the roster as a whole rather than to any one librarian.
   stop claiming to know.
 - ❓ **Nothing scales a librarian to the round it lands on.** The Insatiable's ×3 is the same
   demand on round 3 as on round 30, and The Critic's 25% is flat.
-- ❓ **Every one of them is a restriction.** All eight take something away; none gives anything
+- ❓ **Every one of them is a restriction.** All twelve take something away; none gives anything
   back beyond the doubled payout. The Dilapidated is the first that changes the game rather than
   forbidding something — but a board with three holes in it is still a board with less on it. One
   that hands something over, or plays off a different bag, is still missing. `RoundRules` has room

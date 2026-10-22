@@ -60,6 +60,14 @@ public class ScoringContext
     public int MinWordLength;
 
     /// <summary>
+    /// How long the word COUNTS as — its letters, minus the letters on any
+    /// infected tile (ChainController.ScoringLength). A bookmark that talks
+    /// about length reads THIS, not Word.Length: on a round with no infected
+    /// tiles the two are the same number.
+    /// </summary>
+    public int Length;
+
+    /// <summary>
     /// Words already accepted this round, NOT counting this one — so a bookmark
     /// can ask "have they spelled this before?" and get the honest answer.
     /// Read it, never add to it; it's ICollection only because that's the

@@ -464,7 +464,13 @@ public class CurrentWordWidget : MonoBehaviour
     {
         for (int i = 0; i < tiles.Count && i < chain.Count; i++)
             if (tiles[i] != null && chain[i] != null)
+            {
                 tiles[i].ShowLetters(chain[i].Shown);
+
+                // A librarian's mark too, so an infected or marked tile looks
+                // the same in the row as on the board. Copied, like Shown.
+                tiles[i].SetMark(chain[i].Mark);
+            }
     }
 
     /// <summary>

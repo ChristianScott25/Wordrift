@@ -60,6 +60,11 @@ public class RogueDemoMode : GameMode
     // so it CANNOT be re-derived the way a librarian's choice can.
     private Rng consumableRng;
 
+    // The librarian's marked tiles (start-on, end-on, infected), or null on a
+    // round that marks nothing. Round state, so it lives here and not on the
+    // librarian — see TileMarker.
+    private TileMarker marker;
+
     // Items armed to score the next accepted word, in the order they were armed.
     // ⚠️ A LIST, NOT A SLOT. A run may carry two Doublers and arm both; a single
     // field would have let the second one silently replace the first, which is a
@@ -131,6 +136,12 @@ public class RogueDemoMode : GameMode
         // buys. Taken ONCE and kept: asking StreamFor again restarts it.
         consumableRng = run.StreamFor(RunState.ConsumableStream);
 
+        // Only a round whose librarian marks tiles gets a marker, and only then
+        // takes the stream — an ordinary round draws nothing from it.
+        marker = rules.MarkKind != TileMark.None && rules.MarkCount > 0
+            ? new TileMarker(rules.MarkKind, rules.MarkCount, run.StreamFor(RunState.MarkStream))
+            : null;
+
         // Seeds activeRule from the librarian. Nothing is armed yet, so this is
         // the pre-consumables behaviour exactly: the librarian, or null.
         RebuildArmed();
@@ -168,6 +179,7 @@ public class RogueDemoMode : GameMode
         // round, so re-entering the round after a save re-derives the same
         // choice — which is why a librarian's pick needs no save support.
         Rng = run?.StreamFor(RunState.LibrarianRoundStream),
+        Round = run == null ? 1 : run.Round,
         LetterPool = BuildLetterPool(),
         BoardCells = BuildBoardCells(),
     };
@@ -254,6 +266,16 @@ public class RogueDemoMode : GameMode
     }
 
     public override Rng ConsumableRng => consumableRng;
+
+    public override bool AllowsConsumables => rules.ConsumablesAllowed;
+
+    /// <summary>
+    /// Keeps the librarian's marked tiles topped up. Every frame, but the
+    /// marker only picks when the board is at rest and short of marks.
+    /// </summary>
+    public override void Tick(float deltaTime) => marker?.Tick(board);
+
+    public override void OnBoardRestored() => marker?.ApplyRestored(board);
 
     /// <summary>
     /// Re-derives everything that depends on what's armed — the rule the scorer
@@ -398,6 +420,12 @@ public class RogueDemoMode : GameMode
         into.bagDraws = bagRng == null ? 0 : bagRng.Draws;
         into.consumableDraws = consumableRng == null ? 0 : consumableRng.Draws;
 
+        if (marker != null)
+        {
+            into.markDraws = marker.Rng == null ? 0 : marker.Rng.Draws;
+            marker.Capture(into.markCellX, into.markCellY);
+        }
+
         foreach (var consumable in armed)
             if (consumable != null) into.armedConsumables.Add(consumable.name);
 
@@ -420,6 +448,15 @@ public class RogueDemoMode : GameMode
         // would make quitting and continuing a way to re-roll a shuffle.
         consumableRng = run == null ? null : run.StreamFor(RunState.ConsumableStream);
         consumableRng?.Skip(from.consumableDraws);
+
+        // Same wind-forward for the marks, whose cells wait for the board —
+        // which isn't restored until after this returns (OnBoardRestored).
+        if (marker != null && run != null)
+        {
+            var markRng = run.StreamFor(RunState.MarkStream);
+            markRng.Skip(from.markDraws);
+            marker.Restore(from.markCellX, from.markCellY, markRng);
+        }
 
         // Cleared before restoring rather than appended to. Nothing should be
         // armed here — Begin doesn't touch the list and a Restart builds a whole

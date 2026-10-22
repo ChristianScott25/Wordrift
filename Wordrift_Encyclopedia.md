@@ -780,14 +780,18 @@ what they've decided. Clear it and it **pays double** *(`librarianPayoutMultipli
 | **The Censor** | **One letter is banned**, rolled when the round starts and named on screen | Weighted by what's actually in your bag, so it usually takes a letter you were counting on. |
 | **The Critic** | Every word loses **25% of its Points and Mult** | Changes nothing about which words are legal — you play the round exactly as you would have, and come up short. |
 | **The Dilapidated** | **Three spaces on the board are closed**, drawn when the round starts | The first librarian that changes the board rather than the rules. You route words around the holes, and tiles fall straight through them. |
+| 🚧 **The Shusher** | **No items** this round | Whatever you're carrying stays in the box. You can still tap one to read it. |
+| 🚧 **The Prefacer** | Every word must **start on a marked tile** (5 marked, fewer later in the run) | The board tells you where to begin. A marked tile can still sit later in a word, as long as the word starts on another one. |
+| 🚧 **The Epilogist** | Every word must **end on a marked tile** (same numbers) | The same, backwards — you build toward a tile instead of away from one. |
+| 🚧 **The Mildewed** | **Infected tiles** take away what they'd have added (3 infected, more later in the run) | Play through one and its points come off the score and its letters come off the word's length. Its badges do nothing. |
 
 **A word they won't take can't be played at all.** It doesn't score zero and it doesn't cost a
 word — PLAY simply won't light up, and the reason is written in the word row
 ("Too short — 5 letters or longer"). Nothing is spent finding out.
 
 **Which librarian turns up is part of your seed**, and **none repeats until you've met them
-all.** With eight of them that means rounds 3 through 24 are all different, and the cycle starts
-over at round 27 — where the same one *can* immediately reappear, since by then everyone has
+all.** With twelve of them that means rounds 3 through 36 are all different, and the cycle starts
+over at round 39 — where the same one *can* immediately reappear, since by then everyone has
 been seen.
 
 **The Censor's letter is part of the seed too**, and it's drawn from your bag one entry per
@@ -805,11 +809,42 @@ chained through one — two tiles either side of a hole are not neighbours, so y
 the tiles below a hole are used up, the tiles above it **fall straight through** to fill the
 space below and stop above it once that space is full. The hole never fills.
 
+🚧 **Marked tiles** (The Prefacer, The Epilogist) and **infected tiles** (The Mildewed) are tinted
+on the board — green for marked, purple for infected, placeholder colours until they get art. A
+tile being selected shows the selection colour instead.
+
+- **The game tries to mark tiles with different letters**, and only falls back to a repeat when
+  the board leaves no choice. It avoids marking a wild where it can, since a wild fits any word.
+- **Marks are topped back up.** When a marked tile leaves the board — played, discarded, or
+  cleared by an item — a new one is marked once the board settles, again trying for a letter that
+  isn't already marked. The count always comes back to X.
+- **Marked and infected tiles CAN be discarded.** It costs discards like any other, and the
+  replacement is picked at random, so it's a gamble rather than a way out. (A tile you could never
+  get rid of is how a round freezes with moves still left.)
+- **Items can clear them too** — Strikethrough, Bookworm and Second Edition all work as normal.
+- **The counts move with the run** *(on each librarian's asset)*: The Prefacer and The Epilogist
+  mark **5**, one fewer every **6 rounds**, never below **3**. The Mildewed infects **3**, one more
+  every 6 rounds, never more than **6** (about a quarter of the board).
+- **Which tiles get marked is part of your seed**, and quitting and resuming brings back the same
+  marked tiles.
+
+**How infection scores.** An infected tile counts *against* the word:
+
+- **Length:** its letters come off instead of going on. CRATE through an infected R counts as
+  **3** letters (4 clean, minus 1) for length points and the length multiplier — and the live
+  POINTS × MULT preview shows that shorter length.
+- **Points:** its letter value comes **off** the score, on its own beat in the walk-through.
+- **Badges:** a 2L, 3L, 2W or 3W on an infected tile does **nothing**.
+- **The shorter length counts everywhere**: a word must still reach the minimum length *after*
+  the infected letters come off ("Infected letters make this too short"), and Marginalia and
+  Shorthand read the shorter length too.
+- The score can't go below 0 at any point in the count.
+
 **The Critic is taken after your bookmarks**, not before — it taxes what you built. It also
 doesn't show in the live POINTS × MULT preview; you see the cut land as its own beat in the
 score walk-through after PLAY, the same way bookmarks do.
 
-📕 **`Librarian_Dictionary.md` has all eight in full** — each one's numbers, how it plays, and
+📕 **`Librarian_Dictionary.md` has all twelve in full** — each one's numbers, how it plays, and
 the details that don't fit a table. The rest of this section is what's true of them all.
 
 ❓ Nothing warns you before the round begins — you find out when you get there. ⚠️ The shop's
@@ -833,7 +868,9 @@ round. Whether five is enough to unstick a genuinely dead board is untested.
 word on a board that can only manage threes and fours, The Conformist can lock you to a length
 the board stops offering, The Censor can strike out the letter the board is full of, The
 Dilapidated cuts the board down to 22 spaces and breaks up the paths between them, and The
-Redactor takes away the discards that were the way out. On a librarian round with an empty bag
+Redactor takes away the discards that were the way out. The Prefacer and The Epilogist can leave
+no word that starts (or ends) on any marked tile — discarding a marked tile re-rolls it, but only
+while you have discards. On a librarian round with an empty bag
 and no legal word left, there is currently no way to end the round — see §13.
 
 **PLAY AGAIN starts a completely new run**: round 1, a stock bag, $0.
@@ -1335,6 +1372,8 @@ one. It comes out before release.
 | The Critic's cut | 25% off Points and Mult, floor 1 | `Librarian_Critic.asset` |
 | The Dilapidated's closed spaces | 3 | `Librarian_Dilapidated.asset` |
 | Neighbours every space keeps | 2 | `Librarian_Dilapidated.asset` |
+| 🚧 The Prefacer's / Epilogist's marked tiles | 5, −1 every 6 rounds, min 3 | `Librarian_Prefacer.asset` / `Librarian_Epilogist.asset` |
+| 🚧 The Mildewed's infected tiles | 3, +1 every 6 rounds, max 6 | `Librarian_Mildewed.asset` |
 | Tile bag size | 104 tiles (~one Scrabble set) | `Mode_RogueDemo.asset` |
 | Modifiers per tile | 3 (0 = no limit) | `Mode_RogueDemo.asset` |
 | Letter values & mix | Scrabble proportions, floor of 1 each | `LetterSet_Scrabble.asset` |

@@ -88,6 +88,16 @@ public class Tile : MonoBehaviour
 
     [SerializeField] private Color selectionBoxColor = new Color(1f, 0.75f, 0.1f);
 
+    [Header("Marks")]
+    [Tooltip("🚧 Body tint for a tile a librarian has MARKED — a word must start " +
+             "(or end) on one. Multiplied over the skin, at rest only: selection " +
+             "still wins. Placeholder until marks get real art.")]
+    [SerializeField] private Color requiredTint = new Color(0.62f, 0.95f, 0.62f);
+
+    [Tooltip("🚧 Body tint for an INFECTED tile, which takes away what it would " +
+             "have added. Placeholder until marks get real art.")]
+    [SerializeField] private Color infectedTint = new Color(0.78f, 0.55f, 0.95f);
+
     [Tooltip("Letter font size as a fraction of the size the prefab was authored " +
              "with, indexed by how many characters the tile DRAWS. A two-letter " +
              "tile has to shrink or it runs off the edge of the art; index 0 is a " +
@@ -618,7 +628,30 @@ public class Tile : MonoBehaviour
     /// Selection and the invalid flash deliberately ignore the skin — they are
     /// signals, and must look the same whatever the tiles are dressed in.
     /// </summary>
-    private Color RestingColor => normalColor * skinBody;
+    private Color RestingColor => normalColor * skinBody * MarkTint;
+
+    private Color MarkTint => Mark switch
+    {
+        TileMark.Required => requiredTint,
+        TileMark.Infected => infectedTint,
+        _ => Color.white,
+    };
+
+    /// <summary>
+    /// What a librarian has marked this tile as, if anything. It belongs to the
+    /// Tile OBJECT — not the spec, not the cell — so it rides along through a
+    /// fall, a shuffle and an Ink Blot, and dies with the tile. The round's
+    /// TileMarker decides which tiles carry one; the scorer reads Infected.
+    /// </summary>
+    public TileMark Mark { get; private set; }
+
+    /// <summary>Sets the mark and redraws the body (unless selected — selection wins).</summary>
+    public void SetMark(TileMark mark)
+    {
+        if (Mark == mark) return;
+        Mark = mark;
+        if (!selected) SetColor(RestingColor);
+    }
 
     // The skin's body tint, captured in ApplyLook. White until a skin says
     // otherwise, so a mode with no skin draws exactly as it always did.

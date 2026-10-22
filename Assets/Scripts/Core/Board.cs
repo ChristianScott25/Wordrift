@@ -578,7 +578,7 @@ public class Board : MonoBehaviour
     /// top. See the warning on Shuffle: this exists so that no shuffle ever
     /// takes its order from a HashSet or a Dictionary.
     /// </summary>
-    private List<Vector2Int> OccupiedInOrder()
+    public List<Vector2Int> OccupiedInOrder()
     {
         var occupied = new List<Vector2Int>(tiles.Count);
         foreach (int column in Columns)

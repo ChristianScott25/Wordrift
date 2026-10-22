@@ -506,4 +506,26 @@ public class ChainController : MonoBehaviour
             if (tiles[i] != null) letters += tiles[i].Letters.Length;
         return letters;
     }
+
+    /// <summary>
+    /// How long the chain counts as for SCORING and length rules — LetterCount,
+    /// except that an INFECTED tile takes away the letters it would have added
+    /// (so CRATE through an infected R is 4 − 1 = 3). Floored at 0.
+    ///
+    /// ⚠️ THE ONE PLACE THE SHORTENED LENGTH IS WORKED OUT. With no infected tile
+    /// it is exactly LetterCount, which is why ordinary rounds score as before.
+    /// The DICTIONARY still asks WordOf — an infected word is spelled with all
+    /// its letters; it just isn't worth them.
+    /// </summary>
+    public static int ScoringLength(IReadOnlyList<Tile> tiles)
+    {
+        int letters = 0;
+        for (int i = 0; i < tiles.Count; i++)
+        {
+            var tile = tiles[i];
+            if (tile == null) continue;
+            letters += tile.Mark == TileMark.Infected ? -tile.Letters.Length : tile.Letters.Length;
+        }
+        return Mathf.Max(0, letters);
+    }
 }

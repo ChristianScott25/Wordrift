@@ -219,6 +219,13 @@ public struct SelectionState
 /// it can't see here gets a new field, and every existing one keeps compiling.
 /// Same bargain as ScoringContext, for the same reason.
 /// </summary>
+/// <summary>
+/// A librarian's mark on one board tile. Required: a word must start (or end)
+/// on one. Infected: the tile takes away what it would have added — its letter
+/// points AND its letters off the word's length, with its badges ignored.
+/// </summary>
+public enum TileMark { None, Required, Infected }
+
 public struct WordCheck
 {
     /// <summary>The word the selection spells, lowercase. Never null in practice.</summary>
@@ -240,6 +247,13 @@ public struct WordCheck
     /// never learns that librarians exist.
     /// </summary>
     public string Note;
+
+    /// <summary>
+    /// The mode's minimum word length, for a rule that shortens words — an
+    /// infected tile counts against length, so a long-enough word can still
+    /// fall short of it. Stamped by the session.
+    /// </summary>
+    public int MinWordLength;
 
     /// <summary>
     /// Letters in the word — NOT the tile count, which is a different number

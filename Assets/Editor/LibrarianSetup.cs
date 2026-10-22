@@ -62,6 +62,25 @@ public static class LibrarianSetup
         Name(dilapidated, "The Dilapidated");
         librarians.Add(dilapidated);
 
+        // 🚧 Placeholder names (2026-10-22) — one field each to rename.
+        var shusher = CreateOrLoad<NoConsumablesLibrarian>("Librarian_Shusher");
+        Name(shusher, "The Shusher");
+        librarians.Add(shusher);
+
+        var prefacer = CreateOrLoad<MarkedTileLibrarian>("Librarian_Prefacer");
+        Name(prefacer, "The Prefacer");
+        prefacer.atEnd = false;   // what it IS, so written every run like the name
+        librarians.Add(prefacer);
+
+        var epilogist = CreateOrLoad<MarkedTileLibrarian>("Librarian_Epilogist");
+        Name(epilogist, "The Epilogist");
+        epilogist.atEnd = true;
+        librarians.Add(epilogist);
+
+        var mildewed = CreateOrLoad<InfectedTileLibrarian>("Librarian_Mildewed");
+        Name(mildewed, "The Mildewed");
+        librarians.Add(mildewed);
+
         int added = AttachToModes(librarians);
 
         AssetDatabase.SaveAssets();

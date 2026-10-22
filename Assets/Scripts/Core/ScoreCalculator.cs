@@ -72,7 +72,9 @@ public class ScoreCalculator
         // and length is what the player is told both numbers come from.
         // Null-checked here rather than inside LetterCount so WalkTiles' own
         // null guard is reachable instead of being thrown past.
-        int letters = chain == null ? 0 : ChainController.LetterCount(chain);
+        // ScoringLength rather than LetterCount: an infected tile counts AGAINST
+        // the length. Identical to LetterCount on a chain with no infected tile.
+        int letters = chain == null ? 0 : ChainController.ScoringLength(chain);
 
         return new ScorePair
         {
@@ -118,6 +120,16 @@ public class ScoreCalculator
             // speculative candidates cost no strings. Shown before Face so a
             // resolved wild's beat reads "E" rather than "*".
             string who = string.IsNullOrEmpty(tile.Shown) ? tile.Face : tile.Shown;
+
+            // INFECTED: takes away what it would have added — its base worth
+            // comes OFF, and none of its badges fire (a 2W on an infected tile
+            // does nothing). Its letters already came off the length in Opening.
+            if (tile.Mark == TileMark.Infected)
+            {
+                if (tile.LetterPoints != 0) ctx.AddPoints(-tile.LetterPoints, who);
+                else ctx.Beat(who);
+                continue;
+            }
 
             // The tile's corner shows the BASE letter value; the badge is what
             // tells the player it gets multiplied. This is where that happens,
@@ -178,6 +190,8 @@ public class ScoreCalculator
             Word = word,
             Tiles = chain,
             MinWordLength = config.minWordLength,
+            Length = chain != null ? ChainController.ScoringLength(chain)
+                                   : (word == null ? 0 : word.Length),
             WordsThisRound = wordsThisRound,
             Recording = recording,
         };

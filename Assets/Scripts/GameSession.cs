@@ -195,6 +195,10 @@ public class GameSession : MonoBehaviour
             if (board.Tiles.TryGetValue(cell, out var tile)) board.MakeWild(tile);
         }
 
+        // Anything the round attaches to tiles — a librarian's marks — now
+        // that there are tiles to attach it to.
+        mode.OnBoardRestored();
+
         // Clamped on the way in as well as on the way up: an older save could
         // hold a score written before the overflow was fixed, and resuming a
         // negative one would keep it negative for the rest of the round.
@@ -386,9 +390,10 @@ public class GameSession : MonoBehaviour
     ///
     /// The three refusals are the same three that stop a save being written: a
     /// board mid-fall or mid-tally is one whose tile map is about to change under
-    /// whatever the item does to it.
+    /// whatever the item does to it. The fourth is the round's own rule: a
+    /// librarian can forbid items outright (GameMode.AllowsConsumables).
     /// </summary>
-    public bool CanUseConsumable => IsAtRest;
+    public bool CanUseConsumable => IsAtRest && mode.AllowsConsumables;
 
     /// <summary>
     /// The round is live and nothing is moving: no score walk, no fall, no
@@ -1186,5 +1191,6 @@ public class GameSession : MonoBehaviour
         Word = word,
         Tiles = chain,
         WordsThisRound = wordsThisRound,
+        MinWordLength = Config.minWordLength,
     };
 }

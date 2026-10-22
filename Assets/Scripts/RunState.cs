@@ -81,6 +81,15 @@ public class RunState
     public const string ConsumableStream = "consumable";
 
     /// <summary>
+    /// The stream a librarian's MARKED tiles are picked from (start-on, end-on,
+    /// infected). Its own name so marking can never shift the bag, the shop or
+    /// which librarian is picked. Like ConsumableStream it's drawn from as the
+    /// round goes — every time marked tiles leave the board — so its position is
+    /// saved (RoundSnapshot.markDraws) and wound forward on resume.
+    /// </summary>
+    public const string MarkStream = "marks";
+
+    /// <summary>
     /// The run's tiles. The full bag comes back at the start of every round —
     /// playing tiles never shrinks it (TileBag drains a copy of this list).
     /// Changing THIS list is how shops and bookmarks alter what the player

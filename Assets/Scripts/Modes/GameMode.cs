@@ -164,6 +164,20 @@ public abstract class GameMode
     /// <summary>See CaptureRound.</summary>
     public virtual void RestoreRound(RoundSnapshot from) { }
 
+    /// <summary>
+    /// The saved board has just been put back. RestoreRound runs BEFORE the
+    /// board is restored (the bag has to be refilled first), so anything the
+    /// round attaches to TILES — a librarian's marks — is re-applied here.
+    /// </summary>
+    public virtual void OnBoardRestored() { }
+
+    /// <summary>
+    /// May items be used this round at all? True for every round but one whose
+    /// rule forbids them. GameSession.CanUseConsumable folds this in, so the
+    /// items area obeys it without knowing why.
+    /// </summary>
+    public virtual bool AllowsConsumables => true;
+
     /// <summary>What the HUD should display for this mode's resource.</summary>
     public abstract ModeStatus Status { get; }
 
