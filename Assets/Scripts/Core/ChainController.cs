@@ -318,7 +318,10 @@ public class ChainController : MonoBehaviour
         // undo it queued is called off.
         CancelPendingUndo();
 
-        Inspector.Show(pressedTile.Spec, Inspector.ScreenRectOf(pressedTile.WorldBounds, cam));
+        // The tile's mark, if a librarian gave it one, as small print — the spec
+        // can't say it, because the mark is on this tile and not on what it is.
+        Inspector.Show(pressedTile.Spec, Inspector.ScreenRectOf(pressedTile.WorldBounds, cam),
+                       pressedTile.MarkNote);
         return true;
     }
 

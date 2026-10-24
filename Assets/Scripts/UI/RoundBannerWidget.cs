@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -17,7 +18,7 @@ using UnityEngine.UI;
 /// shrink. A header that changed height would move every band under it, so the
 /// board would jump between rounds.
 /// </summary>
-public class RoundBannerWidget : MonoBehaviour
+public class RoundBannerWidget : MonoBehaviour, IPointerClickHandler
 {
     [Header("Slots")]
     [Tooltip("The title bar — the librarian's name, or the round when there isn't one.")]
@@ -79,6 +80,24 @@ public class RoundBannerWidget : MonoBehaviour
     // Start, not OnEnable — the layout resolves between the two. See GameLayout.
     private void Start() => PlaceSelf();
 
+    // The librarian's name and rule as last drawn, for the info box on a tap.
+    private string shownName = "";
+    private string shownPower = "";
+    private System.Collections.Generic.IReadOnlyList<string> shownNotes;
+
+    /// <summary>
+    /// Tap the header to read the librarian's rule full size — it's printed
+    /// small here and there's no room to grow it. Inspector.ShowText rather than
+    /// asking the asset, because only the header's text knows what THIS round
+    /// rolled. A round with no librarian has nothing to explain, so no box.
+    /// The plate is the raycast target; it sits above the board, never over it.
+    /// </summary>
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (string.IsNullOrEmpty(shownName) || self == null) return;
+        Inspector.ShowText(shownName, shownPower, Inspector.ScreenRectOf(self), shownNotes);
+    }
+
     /// <summary>
     /// Shakes the header when the librarian takes its cut, and floats its number
     /// off the top of the box.
@@ -124,6 +143,12 @@ public class RoundBannerWidget : MonoBehaviour
     private void OnStatusChanged(ModeStatus status)
     {
         bool hasLibrarian = status.HasLibrarian;
+
+        // Kept for a tap — the same strings the header draws, including whatever
+        // this round rolled (the Censor's letter). References, no allocation.
+        shownName = hasLibrarian ? status.LibrarianName : "";
+        shownPower = hasLibrarian ? status.LibrarianPower : "";
+        shownNotes = hasLibrarian ? status.LibrarianNotes : null;
 
         if (titleLabel != null)
             titleLabel.text = hasLibrarian

@@ -201,9 +201,16 @@ putting a box on the screen every time you tap a letter would be worse than a sp
 this round (§6). The game behind it stops responding while it's up — there's no clock in this
 game, so that's all pausing means.
 
-🚧 The **info** button still doesn't open anything. The **pause** button does — see §6, *Pausing*. The **librarian's** rule is
-already printed in the round header, so it needs no box, and **checkouts** you've bought
-aren't re-readable anywhere yet.
+🚧 The **info** button still doesn't open anything. The **pause** button does — see §6, *Pausing*. **Tap the round header**
+on a librarian round to read the librarian's rule full size — it's printed small in the
+header, and the box names whatever this round rolled (the Censor's letter). On a round with no
+librarian a tap does nothing. **Checkouts** you've bought aren't re-readable anywhere yet.
+
+**Info boxes can carry small print** under the description, in smaller, quieter text: the
+librarian's box adds details like how many tiles are marked, that marked tiles can be discarded,
+and what clearing the round pays. Holding a marked or infected tile says what its mark means.
+And when something **can't be used right now**, the box ends with a red warning — an item's box
+on a Shusher round says the librarian won't allow items.
 
 ### Where the fun is supposed to come from
 

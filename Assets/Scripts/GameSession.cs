@@ -396,6 +396,12 @@ public class GameSession : MonoBehaviour
     public bool CanUseConsumable => IsAtRest && mode.AllowsConsumables;
 
     /// <summary>
+    /// The warning an item's info box shows when the ROUND forbids items, or
+    /// null. Only the round's reason — see GameMode.ConsumablesBlockedReason.
+    /// </summary>
+    public string ConsumableWarning => mode?.ConsumablesBlockedReason;
+
+    /// <summary>
     /// The round is live and nothing is moving: no score walk, no fall, no
     /// clear waiting to compact. The same three conditions that gate a save,
     /// which is why both spending an item and leaving mid-round ask it.

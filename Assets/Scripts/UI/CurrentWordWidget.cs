@@ -469,7 +469,7 @@ public class CurrentWordWidget : MonoBehaviour
 
                 // A librarian's mark too, so an infected or marked tile looks
                 // the same in the row as on the board. Copied, like Shown.
-                tiles[i].SetMark(chain[i].Mark);
+                tiles[i].SetMark(chain[i].Mark, chain[i].MarkNote);
             }
     }
 

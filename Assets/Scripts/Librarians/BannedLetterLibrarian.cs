@@ -32,6 +32,12 @@ public class BannedLetterLibrarian : Librarian
             ? PowerText
             : $"The letter {note.ToUpperInvariant()} may not be used.";
 
+    public override void AddNotes(int round, System.Collections.Generic.List<string> into)
+    {
+        into.Add("A two-letter tile that contains it can't be used either.");
+        into.Add("A choice tile can still become one of its other letters.");
+    }
+
     public override void Apply(RoundRules rules)
     {
         var pool = rules.LetterPool;

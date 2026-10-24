@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -37,12 +38,19 @@ public static class Inspector
     /// Opens the box on something that can describe itself. A null thing closes
     /// the box instead of opening an empty one.
     /// </summary>
-    public static void Show(IInspectable thing, Rect screenRect)
+    /// <param name="note">Optional small print about THIS one in THIS moment —
+    /// what the round has done to a tile, say — which the thing itself can't
+    /// know. Goes under whatever notes it gave itself.</param>
+    /// <param name="warning">Optional line saying why it can't be used right now.</param>
+    public static void Show(IInspectable thing, Rect screenRect,
+                            string note = null, string warning = null)
     {
         if (thing == null) { Hide(); return; }
 
         info.Clear();
         thing.Describe(info);
+        info.Note(note);
+        if (!string.IsNullOrWhiteSpace(warning)) info.Warning = warning;
         Opened?.Invoke(info, screenRect);
     }
 
@@ -55,7 +63,8 @@ public static class Inspector
     /// say that — Librarian.PowerFor needs the round's note. Asking the asset
     /// would print the generic rule next to a banner showing the specific one.
     /// </summary>
-    public static void ShowText(string title, string body, Rect screenRect)
+    public static void ShowText(string title, string body, Rect screenRect,
+                                IReadOnlyList<string> notes = null)
     {
         if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(body))
         {
@@ -66,6 +75,8 @@ public static class Inspector
         info.Clear();
         info.Title = title;
         info.Body = body;
+        if (notes != null)
+            for (int i = 0; i < notes.Count; i++) info.Note(notes[i]);
         Opened?.Invoke(info, screenRect);
     }
 

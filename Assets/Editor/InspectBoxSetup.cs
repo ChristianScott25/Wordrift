@@ -106,6 +106,9 @@ public static class InspectBoxSetup
     private static readonly Color BodyColor = new Color(0.27f, 0.25f, 0.29f, 1f);
     private static readonly Color ChipColor = new Color(0.47f, 0.60f, 0.82f, 1f);
     private static readonly Color ChipTextColor = Color.white;
+    private static readonly Color NoteColor = new Color(0.42f, 0.39f, 0.44f, 1f);
+    private static readonly Color WarningColor = new Color(0.72f, 0.16f, 0.12f, 1f);
+    private const float NoteSizePercent = 85f;
 
     /// <summary>
     /// Makes or refreshes the box on a canvas. Returns the widget, or null if
@@ -195,6 +198,9 @@ public static class InspectBoxSetup
         WordCrushSetup.SetColor(widget, "chipColor", ChipColor);
         WordCrushSetup.SetColor(widget, "chipTextColor", ChipTextColor);
         WordCrushSetup.SetFloat(widget, "chipFontSize", ChipSize);
+        WordCrushSetup.SetColor(widget, "noteColor", NoteColor);
+        WordCrushSetup.SetColor(widget, "warningColor", WarningColor);
+        WordCrushSetup.SetFloat(widget, "noteSizePercent", NoteSizePercent);
         WordCrushSetup.SetFloat(widget, "borderScale", BorderScale);
 
         // The card and the chips are the same sprite at the same corner size, and

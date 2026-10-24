@@ -45,6 +45,9 @@ public class ClosedCellsLibrarian : Librarian
             ? "One space on the board is closed."
             : $"{closedCells} spaces on the board are closed.";
 
+    public override void AddNotes(int round, List<string> into) =>
+        into.Add("Tiles fall straight past closed spaces.");
+
     public override void Apply(RoundRules rules)
     {
         var board = rules.BoardCells;

@@ -55,6 +55,15 @@ public class InspectBoxWidget : MonoBehaviour
     [SerializeField] private Color chipTextColor = Color.white;
     [SerializeField] private float chipFontSize = 26f;
 
+    [Tooltip("The small-print lines under the description.")]
+    [SerializeField] private Color noteColor = new Color(0.42f, 0.39f, 0.44f, 1f);
+
+    [Tooltip("The 'can't use this right now' line, drawn last.")]
+    [SerializeField] private Color warningColor = new Color(0.72f, 0.16f, 0.12f, 1f);
+
+    [Tooltip("Notes and the warning, as a percentage of the description's size.")]
+    [Range(50f, 100f)][SerializeField] private float noteSizePercent = 85f;
+
     [Tooltip("How big the drawn border and corners come out. HIGHER IS CHUNKIER: " +
              "1 draws the art's 8-pixel corner as 8 canvas units, 2.5 draws it as " +
              "20. Drives the card and the chips together.")]
@@ -204,7 +213,7 @@ public class InspectBoxWidget : MonoBehaviour
         if (root == null || info == null) return;
 
         if (titleLabel != null) titleLabel.text = info.Title;
-        if (bodyLabel != null) bodyLabel.text = info.Body;
+        if (bodyLabel != null) bodyLabel.text = ComposeBody(info);
         BuildChips(info.Tags);
 
         root.SetActive(true);
@@ -219,6 +228,42 @@ public class InspectBoxWidget : MonoBehaviour
         // a one-line one tuck under the same tile at different heights.
         LayoutRebuilder.ForceRebuildLayoutImmediate(self);
         Place(screenRect);
+    }
+
+    // Reused across opens; a box is opened by a deliberate tap, never per frame.
+    private readonly System.Text.StringBuilder composed = new();
+
+    /// <summary>
+    /// The description, then any notes in smaller, quieter text, then the
+    /// warning in its own colour. One label rather than two more slots, so the
+    /// box needs no rebuild in either scene and grows exactly as tall as the
+    /// text does — the layout already sizes the card to the body.
+    /// </summary>
+    private string ComposeBody(InspectInfo info)
+    {
+        bool hasNotes = info.Notes.Count > 0;
+        bool hasWarning = !string.IsNullOrWhiteSpace(info.Warning);
+        if (!hasNotes && !hasWarning) return info.Body;
+
+        composed.Clear();
+        composed.Append(info.Body);
+
+        string size = $"<size={noteSizePercent:0}%>";
+        if (hasNotes)
+        {
+            composed.Append("\n").Append(size)
+                    .Append("<color=#").Append(ColorUtility.ToHtmlStringRGB(noteColor)).Append('>');
+            for (int i = 0; i < info.Notes.Count; i++)
+                composed.Append("\n").Append(info.Notes[i]);
+            composed.Append("</color></size>");
+        }
+        if (hasWarning)
+        {
+            composed.Append("\n\n").Append(size)
+                    .Append("<color=#").Append(ColorUtility.ToHtmlStringRGB(warningColor)).Append('>')
+                    .Append(info.Warning).Append("</color></size>");
+        }
+        return composed.ToString();
     }
 
     private void Hide()

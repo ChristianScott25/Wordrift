@@ -645,9 +645,17 @@ public class Tile : MonoBehaviour
     /// </summary>
     public TileMark Mark { get; private set; }
 
+    /// <summary>
+    /// What a held tile's info box says about its mark ("Marked: words must start
+    /// on a marked tile."). Written by whoever marked it, because the tile can't
+    /// know which librarian that was. Empty when unmarked.
+    /// </summary>
+    public string MarkNote { get; private set; } = "";
+
     /// <summary>Sets the mark and redraws the body (unless selected — selection wins).</summary>
-    public void SetMark(TileMark mark)
+    public void SetMark(TileMark mark, string note = "")
     {
+        MarkNote = mark == TileMark.None ? "" : (note ?? "");
         if (Mark == mark) return;
         Mark = mark;
         if (!selected) SetColor(RestingColor);

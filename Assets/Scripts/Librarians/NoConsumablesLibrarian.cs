@@ -15,4 +15,7 @@ public class NoConsumablesLibrarian : Librarian
     public override string PowerText => "Items can't be used this round.";
 
     public override void Apply(RoundRules rules) => rules.ConsumablesAllowed = false;
+
+    public override void AddNotes(int round, System.Collections.Generic.List<string> into) =>
+        into.Add("You can still tap an item to read it.");
 }

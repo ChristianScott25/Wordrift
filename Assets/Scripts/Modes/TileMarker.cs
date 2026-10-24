@@ -24,6 +24,7 @@ public class TileMarker
 {
     private readonly TileMark kind;
     private readonly int count;
+    private readonly string note;
     private readonly List<Tile> marked = new();
 
     // Reused between picks so a top-up allocates as little as it can.
@@ -40,10 +41,11 @@ public class TileMarker
     // -1 = not stalled.
     private int stalledTileCount = -1;
 
-    public TileMarker(TileMark kind, int count, Rng rng)
+    public TileMarker(TileMark kind, int count, string note, Rng rng)
     {
         this.kind = kind;
         this.count = Mathf.Max(0, count);
+        this.note = note ?? "";
         Rng = rng;
     }
 
@@ -129,7 +131,7 @@ public class TileMarker
 
     private void Mark(Tile tile)
     {
-        tile.SetMark(kind);
+        tile.SetMark(kind, note);
         marked.Add(tile);
         markedFaces.Add(tile.Face);
     }

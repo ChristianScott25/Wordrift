@@ -405,6 +405,15 @@ public class RunState
     /// </summary>
     public static System.Func<RogueDemoModeConfig, Librarian> LibrarianOverride;
 
+    /// <summary>
+    /// 🚧 TEMPORARY. The Librarian Lab's other hook: called once on every FRESH
+    /// run (StartNew — a resumed run is built by the other constructor and never
+    /// passes through here), so the lab can hand out starting items. Null in a
+    /// build, for the same reason LibrarianOverride is. Deleting the lab means
+    /// deleting this field and its one call in StartNew too.
+    /// </summary>
+    public static System.Action<RunState> RunStartedOverride;
+
     private void RefillLibrarians()
     {
         librariansUnseen.Clear();
@@ -483,6 +492,11 @@ public class RunState
     public static RunState StartNew(RogueDemoModeConfig template)
     {
         Current = new RunState(template);
+
+        // 🚧 TEMPORARY — the Librarian Lab's turn at a brand-new run (it hands
+        // out starting items so an item-blocking librarian can be tested). Null
+        // in a build; see RunStartedOverride.
+        RunStartedOverride?.Invoke(Current);
         return Current;
     }
 

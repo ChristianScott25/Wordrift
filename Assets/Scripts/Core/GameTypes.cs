@@ -134,6 +134,14 @@ public struct ModeStatus
     public string LibrarianName;
     public string LibrarianPower;
 
+    /// <summary>
+    /// The small print the header's info box shows under the rule — the
+    /// librarian's own notes plus what the round pays. Owned by the mode and
+    /// filled once per round, so handing it out every frame allocates nothing.
+    /// Never null on a librarian round; may be null otherwise.
+    /// </summary>
+    public IReadOnlyList<string> LibrarianNotes;
+
     public bool HasLibrarian => !string.IsNullOrEmpty(LibrarianName);
 
     /// <summary>

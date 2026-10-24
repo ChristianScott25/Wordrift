@@ -46,6 +46,9 @@ public class RogueDemoMode : GameMode
     private string librarianName = "";
     private string librarianPower = "";
 
+    // The info box's small print for the librarian, filled once in CacheLibrarian.
+    private readonly List<string> librarianNotes = new();
+
     // The resource strip, owned here and refilled in place every frame. See Status.
     private readonly List<StatusChip> chips = new();
 
@@ -139,7 +142,8 @@ public class RogueDemoMode : GameMode
         // Only a round whose librarian marks tiles gets a marker, and only then
         // takes the stream — an ordinary round draws nothing from it.
         marker = rules.MarkKind != TileMark.None && rules.MarkCount > 0
-            ? new TileMarker(rules.MarkKind, rules.MarkCount, run.StreamFor(RunState.MarkStream))
+            ? new TileMarker(rules.MarkKind, rules.MarkCount, rules.MarkNote,
+                             run.StreamFor(RunState.MarkStream))
             : null;
 
         // Seeds activeRule from the librarian. Nothing is armed yet, so this is
@@ -269,6 +273,10 @@ public class RogueDemoMode : GameMode
 
     public override bool AllowsConsumables => rules.ConsumablesAllowed;
 
+    public override string ConsumablesBlockedReason =>
+        rules.ConsumablesAllowed ? null
+            : $"{(librarian != null ? librarian.Title : "This round")} won't allow items this round.";
+
     /// <summary>
     /// Keeps the librarian's marked tiles topped up. Every frame, but the
     /// marker only picks when the board is at rest and short of marks.
@@ -359,6 +367,7 @@ public class RogueDemoMode : GameMode
     /// </summary>
     private void CacheLibrarian()
     {
+        librarianNotes.Clear();
         if (librarian == null)
         {
             librarianName = "";
@@ -371,6 +380,12 @@ public class RogueDemoMode : GameMode
             : $"{config.librarianLabel.ToUpperInvariant()} \u2014 {librarian.Title.ToUpperInvariant()}";
 
         librarianPower = librarian.Power(librarianNote) ?? "";
+
+        // The librarian's own small print, then what clearing the round pays —
+        // the mode's fact, so the mode says it.
+        librarian.AddNotes(run == null ? 1 : run.Round, librarianNotes);
+        if (rules.PayoutMultiplier > 1f)
+            librarianNotes.Add($"Clear this round for x{rules.PayoutMultiplier:0.##} pay.");
     }
 
     /// <summary>
@@ -603,6 +618,7 @@ public class RogueDemoMode : GameMode
                 ArmedText = armedText,
                 LibrarianName = librarianName,
                 LibrarianPower = librarianPower,
+                LibrarianNotes = librarianNotes,
             };
         }
     }

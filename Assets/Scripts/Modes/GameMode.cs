@@ -178,6 +178,13 @@ public abstract class GameMode
     /// </summary>
     public virtual bool AllowsConsumables => true;
 
+    /// <summary>
+    /// Why items can't be used this round, for the info box's warning line —
+    /// or null when they can. Only the ROUND's reason: a board that's merely
+    /// busy is a moment, not something worth warning about.
+    /// </summary>
+    public virtual string ConsumablesBlockedReason => null;
+
     /// <summary>What the HUD should display for this mode's resource.</summary>
     public abstract ModeStatus Status { get; }
 

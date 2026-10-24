@@ -72,6 +72,18 @@ public abstract class Librarian : ScriptableObject, IScoreRule
     public string Title => string.IsNullOrWhiteSpace(displayName) ? name : displayName;
 
     /// <summary>
+    /// Small print for the info box, under the rule: the details a player wants
+    /// once they've read it ("Marked tiles can be discarded"). Derived from the
+    /// asset's own numbers like PowerText, and told the round so a count that
+    /// changes over the run says THIS round's number. Short sentences, a few at
+    /// most — the rule itself stays in PowerText.
+    ///
+    /// Not a gameplay hook: it describes, it never changes the round. The three
+    /// moments a round has are still Apply, Refuse and Score.
+    /// </summary>
+    public virtual void AddNotes(int round, System.Collections.Generic.List<string> into) { }
+
+    /// <summary>
     /// A turn at the round's allowances, before the round starts. The mode fills
     /// RoundRules in from its config first, so a librarian is always editing the
     /// round that WOULD have been played.

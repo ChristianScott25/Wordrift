@@ -112,4 +112,11 @@ public class RoundRules
     /// </summary>
     public int MarkCount;
     public TileMark MarkKind = TileMark.None;
+
+    /// <summary>
+    /// The small print a MARKED tile shows when it's held ("Marked: words must
+    /// start on a marked tile."). The tile can't know which librarian marked it,
+    /// so the librarian says it here and the marker stamps it on.
+    /// </summary>
+    public string MarkNote = "";
 }

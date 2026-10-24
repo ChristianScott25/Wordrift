@@ -321,7 +321,10 @@ public class ConsumablesAreaWidget : MonoBehaviour
         if (run == null || slot < 0 || slot >= run.Consumables.Count) return;
         if (slot >= slots.Count) return;
 
-        Inspector.Show(run.Consumables[slot], Inspector.ScreenRectOf(slots[slot].Rect));
+        // A warning line when the round forbids items (The Shusher), so a drag
+        // that does nothing has an explanation one tap away.
+        Inspector.Show(run.Consumables[slot], Inspector.ScreenRectOf(slots[slot].Rect),
+                       warning: session != null ? session.ConsumableWarning : null);
     }
 
     /// <summary>

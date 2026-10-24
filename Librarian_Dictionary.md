@@ -33,13 +33,19 @@ whichever one the seed felt like.
 
 **🚧 It is a test tool and it must never ship.** All of it lives in `Assets/Editor/LibrarianLab.cs`,
 which Unity does not compile into a player, so it *cannot* reach a build. The only trace in game
-code is `RunState.LibrarianOverride` — a static delegate that is null in a build, because that
-editor file is the only thing anywhere that assigns it. **Deleting the lab is that one file, that
-field, and the five-line block in `RunState.PickLibrarian` that reads it.** Nothing else knows it
+code is `RunState.LibrarianOverride` and `RunState.RunStartedOverride` — static delegates that
+are null in a build, because that editor file is the only thing anywhere that assigns them.
+**Deleting the lab is that one file, those two fields, the five-line block in
+`RunState.PickLibrarian`, and the one call in `RunState.StartNew`.** Nothing else knows it
 exists, and normal play with nothing forced is byte-for-byte the game without it.
 
-Four things it does that a real round doesn't:
+Five things it does that a real round doesn't:
 
+- **A lab run starts with 2 random items** (different ones where the pool allows, capped by
+  `maxConsumables`), so a librarian about items — The Shusher — has something to block. Only a
+  FRESH run gets them (lab PLAY, or PLAY AGAIN after a loss); later rounds don't top them up,
+  and nothing is given unless a librarian is being forced. Drawn from their own stream
+  (`lab-items`), so they can't move anything a seed decides.
 - ⚠️ **Playing from it overwrites the saved run.** It opens the Game scene directly, which starts
   a fresh run at round 1 and saves over `run.json`. There's a *Delete the saved run* button for
   when you'd rather clear it deliberately.

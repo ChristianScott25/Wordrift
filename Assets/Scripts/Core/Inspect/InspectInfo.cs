@@ -31,12 +31,34 @@ public sealed class InspectInfo
     /// </summary>
     public readonly List<string> Tags = new();
 
-    /// <summary>Empties it, ready to be filled again. Keeps the list's capacity.</summary>
+    /// <summary>
+    /// Extra lines under the description, drawn smaller and quieter — the small
+    /// print a player wants only once they've read the rule ("Marked tiles can be
+    /// discarded"). Keep each one a short sentence.
+    /// </summary>
+    public readonly List<string> Notes = new();
+
+    /// <summary>
+    /// One line about why this can't be used RIGHT NOW ("The Shusher won't allow
+    /// items this round"), drawn last in a warning colour. Empty when there's
+    /// nothing wrong — which is nearly always.
+    /// </summary>
+    public string Warning;
+
+    /// <summary>Empties it, ready to be filled again. Keeps the lists' capacity.</summary>
     public void Clear()
     {
         Title = "";
         Body = "";
+        Warning = "";
         Tags.Clear();
+        Notes.Clear();
+    }
+
+    /// <summary>Adds a small-print line. Blank ones are dropped.</summary>
+    public void Note(string note)
+    {
+        if (!string.IsNullOrWhiteSpace(note)) Notes.Add(note);
     }
 
     /// <summary>

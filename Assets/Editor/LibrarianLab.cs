@@ -40,7 +40,51 @@ public class LibrarianLab : EditorWindow
     /// GameSession.Awake asks the run for its librarian.
     /// </summary>
     [InitializeOnLoadMethod]
-    private static void Install() => RunState.LibrarianOverride = Resolve;
+    private static void Install()
+    {
+        RunState.LibrarianOverride = Resolve;
+        RunState.RunStartedOverride = GiveStartingItems;
+    }
+
+    // How many items a lab run starts with, capped by the mode's own limit.
+    private const int StartingItems = 2;
+
+    // Its own stream, so handing out lab items can never move the bag, the
+    // shop or anything else a seed decides.
+    private const string ItemStream = "lab-items";
+
+    /// <summary>
+    /// A fresh run started while a librarian is forced gets a couple of random
+    /// items, so a librarian that's ABOUT items (The Shusher) has something to
+    /// block. Nothing is forced = nothing given, so ordinary play is untouched.
+    /// Different items where the pool allows.
+    /// </summary>
+    private static void GiveStartingItems(RunState run)
+    {
+        if (run == null || string.IsNullOrEmpty(SessionState.GetString(ForcedKey, ""))) return;
+
+        var config = run.Template;
+        if (config == null || config.consumables == null) return;
+
+        var pool = new List<Consumable>();
+        foreach (var item in config.consumables)
+            if (item != null) pool.Add(item);
+        if (pool.Count == 0) return;
+
+        int wanted = config.maxConsumables > 0
+            ? Mathf.Min(StartingItems, config.maxConsumables)
+            : StartingItems;
+
+        var rng = run.StreamFor(ItemStream);
+        var left = new List<Consumable>(pool);
+        for (int i = 0; i < wanted; i++)
+        {
+            if (left.Count == 0) left.AddRange(pool);   // tiny pool: repeats allowed
+            int pick = rng.Range(0, left.Count);
+            run.AddConsumable(left[pick]);
+            left.RemoveAt(pick);
+        }
+    }
 
     /// <summary>
     /// The librarian to force, or null for "play normally". Looked up in the
@@ -99,7 +143,8 @@ public class LibrarianLab : EditorWindow
         EditorGUILayout.Space();
         EditorGUILayout.HelpBox(
             "PLAY opens the Game scene and presses play, which starts a FRESH run " +
-            "at round 1 — so it overwrites whatever run was saved.",
+            "at round 1 — so it overwrites whatever run was saved. A lab run starts " +
+            "with 2 random items.",
             MessageType.Warning);
 
         scroll = EditorGUILayout.BeginScrollView(scroll);

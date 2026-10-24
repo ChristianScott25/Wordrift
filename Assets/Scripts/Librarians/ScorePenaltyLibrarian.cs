@@ -34,6 +34,9 @@ public class ScorePenaltyLibrarian : Librarian
     public override string PowerText =>
         $"Every word loses {Mathf.RoundToInt(penalty * 100f)}% of its Points and Mult.";
 
+    public override void AddNotes(int round, System.Collections.Generic.List<string> into) =>
+        into.Add("It's taken after your bookmarks.");
+
     public override void Score(ScoringContext ctx)
     {
         string who = Title;

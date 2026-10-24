@@ -45,6 +45,16 @@ public class MarkedTileLibrarian : Librarian
     {
         rules.MarkKind = TileMark.Required;
         rules.MarkCount = CountFor(rules.Round);
+        rules.MarkNote = atEnd ? "Marked: words must end on a marked tile."
+                               : "Marked: words must start on a marked tile.";
+    }
+
+    public override void AddNotes(int round, System.Collections.Generic.List<string> into)
+    {
+        into.Add($"{CountFor(round)} tiles are marked.");
+        into.Add(atEnd ? "A marked tile can also be used earlier in the word."
+                       : "A marked tile can also be used later in the word.");
+        into.Add("Marked tiles can be discarded. New ones are marked when they're gone.");
     }
 
     public override string Refuse(WordCheck check)

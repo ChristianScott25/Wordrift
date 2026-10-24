@@ -43,6 +43,14 @@ public class InfectedTileLibrarian : Librarian
     {
         rules.MarkKind = TileMark.Infected;
         rules.MarkCount = CountFor(rules.Round);
+        rules.MarkNote = "Infected: takes away its points and letters.";
+    }
+
+    public override void AddNotes(int round, System.Collections.Generic.List<string> into)
+    {
+        into.Add($"{CountFor(round)} tiles are infected.");
+        into.Add("A word must still be long enough once infected letters come off.");
+        into.Add("Infected tiles can be discarded. New ones are infected when they're gone.");
     }
 
     public override string Refuse(WordCheck check)
