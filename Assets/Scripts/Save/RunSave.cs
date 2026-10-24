@@ -34,7 +34,7 @@ public static class RunSave
     private static string TempPath => Path + ".tmp";
 
     /// <summary>Is there a file at all? Says nothing about whether it will load.</summary>
-    private static bool Exists => File.Exists(Path);
+    private static bool Exists => File.Exists(Path) || File.Exists(TempPath);
 
     /// <summary>
     /// Writes the run out, replacing whatever was there.
@@ -56,13 +56,30 @@ public static class RunSave
         {
             File.WriteAllText(TempPath, JsonUtility.ToJson(data));
 
-            // Move, not copy: File.Replace needs the destination to exist, and
-            // Delete-then-Move is the portable form Unity's players all support.
-            if (File.Exists(Path)) File.Delete(Path);
-            File.Move(TempPath, Path);
+            // ONE step when there's a file to replace, so there is never a moment
+            // with no run.json on disk — Delete-then-Move had one, and an app
+            // killed inside it lost the run. Move is only for the very first save
+            // (Replace needs a destination). If Replace isn't supported, fall back
+            // to Delete-then-Move; Read() then recovers from the .tmp, which is
+            // already complete by the time anything is deleted.
+            if (!File.Exists(Path))
+            {
+                File.Move(TempPath, Path);
+            }
+            else
+            {
+                try { File.Replace(TempPath, Path, null); }
+                catch (System.PlatformNotSupportedException)
+                {
+                    File.Delete(Path);
+                    File.Move(TempPath, Path);
+                }
+            }
         }
-        catch (IOException error)
+        catch (System.Exception error)
         {
+            // Broad on purpose: nothing here may throw into gameplay, and an
+            // access-denied error is not an IOException.
             Debug.LogWarning($"Couldn't save the run: {error.Message}");
         }
     }
@@ -78,7 +95,10 @@ public static class RunSave
 
         try
         {
-            var data = JsonUtility.FromJson<RunSaveData>(File.ReadAllText(Path));
+            // The .tmp only when run.json is missing — a write that was killed
+            // between delete and move (the fallback path) left a complete copy.
+            string from = File.Exists(Path) ? Path : TempPath;
+            var data = JsonUtility.FromJson<RunSaveData>(File.ReadAllText(from));
             if (data == null)
             {
                 Debug.LogWarning("The saved run couldn't be read, so it's been ignored.");
@@ -110,7 +130,7 @@ public static class RunSave
             if (File.Exists(Path)) File.Delete(Path);
             if (File.Exists(TempPath)) File.Delete(TempPath);
         }
-        catch (IOException error)
+        catch (System.Exception error)
         {
             Debug.LogWarning($"Couldn't delete the saved run: {error.Message}");
         }

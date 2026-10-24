@@ -780,7 +780,14 @@ public class GameSession : MonoBehaviour
     /// never have left. A snapshot taken there restores a board with permanent
     /// gaps in it — a bug whose symptom points nowhere near its cause.
     /// </summary>
-    private void RequestSave() => saveDirty = true;
+    private void RequestSave()
+    {
+        // Never once the round is over: the file then belongs to whatever comes
+        // next (EndRound's comment). A bookmark dragged during the cleared
+        // round's one-second wait for the shop used to re-queue one here.
+        if (!IsPlaying || leavingScene) return;
+        saveDirty = true;
+    }
 
     /// <summary>
     /// Writes an owed save once nothing is moving. Being killed during the fall
@@ -789,7 +796,11 @@ public class GameSession : MonoBehaviour
     /// </summary>
     private void FlushSaveWhenSettled()
     {
-        if (!saveDirty || tallying || board.Busy || board.Resolving) return;
+        // !IsPlaying too: a save owed from before the round ended must not land
+        // after it — that snapshot is a finished round with its payout already
+        // banked, and CONTINUE would end it and pay it again.
+        if (!saveDirty || !IsPlaying || leavingScene ||
+            tallying || board.Busy || board.Resolving) return;
         saveDirty = false;
         SaveRun();
     }

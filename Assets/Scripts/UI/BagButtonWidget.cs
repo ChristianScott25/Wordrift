@@ -77,13 +77,24 @@ public class BagButtonWidget : MonoBehaviour
     private void PlaceSelf() =>
         GameLayout.Attach(self, LayoutBand.RoundHeader, bandXMin, bandXMax);
 
+    private int remainingShown = int.MinValue;
+    private int totalShown = int.MinValue;
+    private string valueText = "";
+
     private void OnStatusChanged(ModeStatus status)
     {
         if (valueLabel == null) return;
 
-        valueLabel.text = status.BagTotal > 0
-            ? $"{status.BagRemaining}/{status.BagTotal}"
-            : status.BagRemaining.ToString();
+        // Status arrives EVERY FRAME; only format when a number moves.
+        if (status.BagRemaining != remainingShown || status.BagTotal != totalShown)
+        {
+            remainingShown = status.BagRemaining;
+            totalShown = status.BagTotal;
+            valueText = status.BagTotal > 0
+                ? $"{status.BagRemaining}/{status.BagTotal}"
+                : status.BagRemaining.ToString();
+        }
+        valueLabel.text = valueText;
 
         bool low = status.BagTotal > 0 &&
                    status.BagRemaining <= status.BagTotal * lowFraction;

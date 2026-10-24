@@ -83,6 +83,13 @@ public class RoundBannerWidget : MonoBehaviour, IPointerClickHandler
     // The librarian's name and rule as last drawn, for the info box on a tap.
     private string shownName = "";
     private string shownPower = "";
+
+    // Memoised label text — see OnStatusChanged.
+    private int roundShown = int.MinValue;
+    private string roundTitle = "";
+    private int scoreShown = int.MinValue;
+    private int targetShown = int.MinValue;
+    private string scoreText = "";
     private System.Collections.Generic.IReadOnlyList<string> shownNotes;
 
     /// <summary>
@@ -151,9 +158,16 @@ public class RoundBannerWidget : MonoBehaviour, IPointerClickHandler
         shownNotes = hasLibrarian ? status.LibrarianNotes : null;
 
         if (titleLabel != null)
-            titleLabel.text = hasLibrarian
-                ? status.LibrarianName
-                : $"{plainRoundTitle} {status.Round}";
+        {
+            // Status arrives EVERY FRAME, so the plain-round title is only
+            // formatted when the round number changes — not once a frame.
+            if (!hasLibrarian && status.Round != roundShown)
+            {
+                roundShown = status.Round;
+                roundTitle = $"{plainRoundTitle} {status.Round}";
+            }
+            titleLabel.text = hasLibrarian ? status.LibrarianName : roundTitle;
+        }
 
         if (powerLabel != null)
             powerLabel.text = hasLibrarian ? status.LibrarianPower : "";
@@ -165,7 +179,14 @@ public class RoundBannerWidget : MonoBehaviour, IPointerClickHandler
 
         if (scoreLabel != null)
         {
-            scoreLabel.text = $"{status.Score} / {status.Target}";
+            // Same again: re-formatted only when either number moves.
+            if (status.Score != scoreShown || status.Target != targetShown)
+            {
+                scoreShown = status.Score;
+                targetShown = status.Target;
+                scoreText = $"{status.Score} / {status.Target}";
+            }
+            scoreLabel.text = scoreText;
 
             // Reached is worth calling out: it's the moment the round stops being
             // about survival and starts being about banking more.
