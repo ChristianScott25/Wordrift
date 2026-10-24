@@ -15,3 +15,4 @@ MonoBehaviour:
   displayName: The Dilapidated
   powerOverride: 
   closedCells: 3
+  minNeighbours: 2

@@ -59,6 +59,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 0453411ee0fc942978d05403049d1830, type: 2}
   - {fileID: 11400000, guid: 39d15647ba86d4e9982c8c7a05637f7a, type: 2}
   - {fileID: 11400000, guid: e2c9aede4eeec49adb420207b0d902ab, type: 2}
+  - {fileID: 11400000, guid: d7bf6ea80e6724acc8891e6087123d65, type: 2}
+  - {fileID: 11400000, guid: e4aefe111a17b4051955dc34eff129b0, type: 2}
+  - {fileID: 11400000, guid: 084324952dd6945dd9cdd891ddd59f73, type: 2}
+  - {fileID: 11400000, guid: 626c045074970415b81f8153d876f61c, type: 2}
   librarianEveryRounds: 3
   librarianPayoutMultiplier: 2
   librarianLabel: LIBRARIAN
