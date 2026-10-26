@@ -2635,6 +2635,7 @@ GameObject:
   - component: {fileID: 934115278}
   - component: {fileID: 934115279}
   - component: {fileID: 934115281}
+  - component: {fileID: 934115282}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -2760,6 +2761,21 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!114 &934115282
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 934115277}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c241b504ee3644cee8fc9ccefe98170b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneBackdrop
+  sprite: {fileID: 21300000, guid: 5754ff5c81d77404e970995dbe269cbb, type: 3}
+  tint: {r: 1, g: 1, b: 1, a: 1}
+  sortingOrder: -1000
 --- !u!1 &1017274284
 GameObject:
   m_ObjectHideFlags: 0
@@ -4102,6 +4118,9 @@ MonoBehaviour:
   chipColor: {r: 0.47, g: 0.6, b: 0.82, a: 1}
   chipTextColor: {r: 1, g: 1, b: 1, a: 1}
   chipFontSize: 26
+  noteColor: {r: 0.42, g: 0.39, b: 0.44, a: 1}
+  warningColor: {r: 0.72, g: 0.16, b: 0.12, a: 1}
+  noteSizePercent: 85
   borderScale: 2.5
   gap: 14
   screenMargin: 16
@@ -4987,6 +5006,13 @@ MonoBehaviour:
   coverColor: {r: 0.4, g: 0.23, b: 0.14, a: 1}
   pageMargin: 0.14
   coverWidth: 0.08
+  pageSprite: {fileID: 21300000, guid: a0f98ad8439aa4a4dbfaeda3957d48ad, type: 3}
+  pageInsetLeft: 185
+  pageInsetRight: 156
+  pageInsetTop: 116
+  pageInsetBottom: 177
+  pageReach: 106
+  pagePaperTop: 37
 --- !u!1 &1715260356
 GameObject:
   m_ObjectHideFlags: 0

@@ -2317,6 +2317,9 @@ MonoBehaviour:
   chipColor: {r: 0.47, g: 0.6, b: 0.82, a: 1}
   chipTextColor: {r: 1, g: 1, b: 1, a: 1}
   chipFontSize: 26
+  noteColor: {r: 0.42, g: 0.39, b: 0.44, a: 1}
+  warningColor: {r: 0.72, g: 0.16, b: 0.12, a: 1}
+  noteSizePercent: 85
   borderScale: 2.5
   gap: 14
   screenMargin: 16
@@ -4377,6 +4380,7 @@ GameObject:
   - component: {fileID: 1747057972}
   - component: {fileID: 1747057971}
   - component: {fileID: 1747057970}
+  - component: {fileID: 1747057973}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -4458,6 +4462,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1747057973
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1747057969}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c241b504ee3644cee8fc9ccefe98170b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneBackdrop
+  sprite: {fileID: 21300000, guid: 5754ff5c81d77404e970995dbe269cbb, type: 3}
+  tint: {r: 1, g: 1, b: 1, a: 1}
+  sortingOrder: -1000
 --- !u!1 &1759386920
 GameObject:
   m_ObjectHideFlags: 0

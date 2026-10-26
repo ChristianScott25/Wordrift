@@ -130,9 +130,13 @@ The screen is a stack of bands, top to bottom:
 
 🚧 **The board is a book** (2026-10-19). The grid and the word row sit on one cream **page**
 with a dark **cover** edge round it, and the bookmarks stick up out of its top. Every band
-above and below lines up with the book's left and right edges. The page and cover are two flat
-rectangles standing in for a book sprite that doesn't exist yet. The tiles are cream, and every
-screen (menu, game, shop) has the same warm brown background. Both are placeholders too.
+above and below lines up with the book's left and right edges. Since 2026-10-26 the book is a
+drawn open journal — the right-hand page, with the facing page running off the left of the
+screen and a ribbon hanging off the bottom. 🚧 **That sprite is TEMPORARY AI-generated art**
+(everything in `Assets/Sprites/Temporary AI sprites/` is), and none of it may ship: it all gets
+redrawn by hand before release. Without it the book falls back to two flat rectangles. The tiles are cream, and every
+screen (menu, game, shop) has the same backdrop: a cosy pixel library at twilight, with the book
+lying on its desk — 🚧 also TEMPORARY AI art, from the same folder. Without it, the screens fall back to plain warm brown.
 
 The buttons are one shared plate, coloured in code — **PLAY green, DISCARD red, both grey
 when they won't do anything.** So DISCARD still tells you what it will cost

@@ -18,6 +18,16 @@ public static class BoardBackgroundSetup
     private const string ScenePath = "Assets/Scenes/Game.unity";
     private const string SquareSpritePath = "Assets/Sprites/White Square.png";
 
+    // 🚧 TEMPORARY AI ART — must be replaced before any release, along with
+    // everything else in that folder.
+    private const string BookSpritePath = "Assets/Sprites/Temporary AI sprites/Pixel Art Open Journal Interface.png";
+
+    // 9-slice border in sprite pixels (left, bottom, right, top — Unity's order).
+    // Top and bottom are what matter: they keep the corner ornaments and the
+    // ribbon out of the stretched middle, which is plain paper and straight
+    // lines from y=175 down to y=1052. Sideways the art is never stretched.
+    private static readonly Vector4 BookBorder = new Vector4(190, 232, 159, 175);
+
     [MenuItem("Word Crush/Set Up Board Background")]
     public static void SetUpFromMenu()
     {
@@ -69,6 +79,8 @@ public static class BoardBackgroundSetup
             }
         }
 
+        AssignBookSprite(background);
+
         EditorUtility.SetDirty(background);
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
@@ -76,5 +88,65 @@ public static class BoardBackgroundSetup
         Debug.Log(isNew
             ? $"Added BoardBackground to the Board in {ScenePath}. Colour, border width and draw order are on the component."
             : $"BoardBackground already on the Board in {ScenePath} — left its settings alone.");
+    }
+
+    /// <summary>
+    /// 🚧 Fills the book-sprite slot, if it's empty, with the temporary AI book —
+    /// after stamping the import settings sliced drawing needs. A sprite swapped
+    /// by hand sticks, same rule as the cell sprite.
+    /// </summary>
+    private static void AssignBookSprite(BoardBackground background)
+    {
+        StampBookImport(BookSpritePath);
+
+        var serialized = new SerializedObject(background);
+        var slot = serialized.FindProperty("pageSprite");
+        if (slot == null || slot.objectReferenceValue != null) return;
+
+        var book = AssetDatabase.LoadAssetAtPath<Sprite>(BookSpritePath);
+        if (book == null)
+        {
+            Debug.LogWarning($"No sprite at {BookSpritePath} — the board keeps the flat page.");
+            return;
+        }
+
+        slot.objectReferenceValue = book;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    /// <summary>
+    /// One Single sprite, centre pivot, Full Rect mesh (a SpriteRenderer can't
+    /// 9-slice a Tight mesh), the border above, bilinear and uncompressed.
+    /// Bilinear, unlike the info box's point filter: this "pixel art" isn't on a
+    /// real pixel grid and lands on screen at a non-whole scale, so point
+    /// filtering would make some of its chunky pixels a screen pixel wider than
+    /// others. Re-imports only when something had to change.
+    /// </summary>
+    private static void StampBookImport(string path)
+    {
+        if (AssetImporter.GetAtPath(path) is not TextureImporter importer) return;
+
+        var settings = new TextureImporterSettings();
+        importer.ReadTextureSettings(settings);
+        bool changed = false;
+
+        if (settings.textureType != TextureImporterType.Sprite) { settings.textureType = TextureImporterType.Sprite; changed = true; }
+        if (settings.spriteMode != (int)SpriteImportMode.Single) { settings.spriteMode = (int)SpriteImportMode.Single; changed = true; }
+        if (settings.spriteMeshType != SpriteMeshType.FullRect) { settings.spriteMeshType = SpriteMeshType.FullRect; changed = true; }
+        if (settings.spriteAlignment != (int)SpriteAlignment.Center) { settings.spriteAlignment = (int)SpriteAlignment.Center; changed = true; }
+        if (settings.spriteBorder != BookBorder) { settings.spriteBorder = BookBorder; changed = true; }
+        if (settings.filterMode != FilterMode.Bilinear) { settings.filterMode = FilterMode.Bilinear; changed = true; }
+        if (settings.mipmapEnabled) { settings.mipmapEnabled = false; changed = true; }
+        if (changed) importer.SetTextureSettings(settings);
+
+        var platform = importer.GetDefaultPlatformTextureSettings();
+        if (platform.textureCompression != TextureImporterCompression.Uncompressed)
+        {
+            platform.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SetPlatformTextureSettings(platform);
+            changed = true;
+        }
+
+        if (changed) importer.SaveAndReimport();
     }
 }

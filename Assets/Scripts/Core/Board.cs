@@ -95,8 +95,9 @@ public class Board : MonoBehaviour
         get
         {
             if (background == null) background = GetComponent<BoardBackground>();
-            float extra = background != null ? background.PageExtent(cellSize) * 2f : 0f;
-            return BackingSize + new Vector2(extra, extra);
+            Vector2 backing = BackingSize;
+            float extra = background != null ? background.PageExtent(cellSize, backing.x) * 2f : 0f;
+            return backing + new Vector2(extra, extra);
         }
     }
 

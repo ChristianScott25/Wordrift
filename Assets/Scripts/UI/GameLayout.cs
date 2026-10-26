@@ -559,7 +559,7 @@ public class GameLayout : MonoBehaviour
         if (wordRow.height > 0f) top = Mathf.Max(top, wordRow.yMax);
 
         background.SetPage(new Rect(left, bottom, right - left, top - bottom), cell);
-        PageTopWorld = top;
+        PageTopWorld = background.PaperTop;   // above `top` for the book sprite's drawn border
     }
 
     /// <summary>
@@ -570,6 +570,15 @@ public class GameLayout : MonoBehaviour
     /// and the board is full width; on 16:9 the height binds and the board is
     /// narrower with a margin either side. Taking the smaller would overflow the
     /// band on one axis.
+    ///
+    /// ⚠️ THE FRAME IS LOPSIDED WHEN THERE'S A PAGE (2026-10-26). Below the grid
+    /// the book needs its full cover; ABOVE it the page just carries on up into
+    /// the word row, so only the page margin is needed there. Framing the cover's
+    /// width above as well left most of a cell of empty paper between the word
+    /// and the grid once the book became a sprite with a thick cover. And the
+    /// frame is pinned to the band's TOP, not centred, so when the width binds
+    /// the board sits right under the word row and the spare height goes below
+    /// the book (where the ribbon hangs), not between the word and the grid.
     /// </summary>
     private void FrameBoard()
     {
@@ -587,20 +596,33 @@ public class GameLayout : MonoBehaviour
         float bandHeightPx = band.height * scale;
         if (bandWidthPx <= 0f || bandHeightPx <= 0f) return;
 
-        float worldPerPixel = Mathf.Max(size.y / bandHeightPx, size.x / bandWidthPx);
+        // Below the grid: the whole extent (cover, and the sprite's ribbon).
+        // Above it: just the page margin when a page carries on up to the word
+        // row — the cover's up there, above the word, not above the grid.
+        float backing = board.BackingSize.y;
+        float below = (size.y - backing) * 0.5f;
+        var background = board.Background;
+        float above = background != null && background.DrawsPage
+            ? background.PageMargin(board.CellSize)
+            : below;
+        float height = backing + below + above;
+
+        float worldPerPixel = Mathf.Max(height / bandHeightPx, size.x / bandWidthPx);
 
         sceneCamera.orthographic = true;
         sceneCamera.orthographicSize = worldPerPixel * Screen.height * 0.5f;
 
-        // The band's centre in screen pixels, against the screen's own centre:
-        // that offset is how far the camera has to sit from the board's centre
-        // for the board to land in the band rather than in the middle.
-        float bandCentrePx = band.center.y * scale;
-        float offsetWorld = (bandCentrePx - Screen.height * 0.5f) * worldPerPixel;
+        // Pin the frame's top to the band's top: the band's top in screen
+        // pixels, against the screen's own centre, is how far the camera has to
+        // sit below the frame's top edge. When the height binds the frame fills
+        // the band and this is the same as centring it.
+        float frameTop = board.BoardCenter.y + backing * 0.5f + above;
+        float bandTopPx = band.yMax * scale;
+        float offsetWorld = (bandTopPx - Screen.height * 0.5f) * worldPerPixel;
 
         sceneCamera.transform.position = new Vector3(
             board.BoardCenter.x,
-            board.BoardCenter.y - offsetWorld,
+            frameTop - offsetWorld,
             sceneCamera.transform.position.z);
     }
 }

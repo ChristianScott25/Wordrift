@@ -22,6 +22,17 @@ using UnityEngine;
 /// class's business and nobody else's. The cells still draw on top, as the
 /// grid's inset, which is what keeps a closed cell (The Dilapidated) visible as
 /// a hole — it shows the page through it.
+///
+/// 🚧 THE BOOK SPRITE (2026-10-26). With `pageSprite` set, the page is that art
+/// instead of the two flat rects — and it is a TEMPORARY AI-GENERATED sprite
+/// (Assets/Sprites/Temporary AI sprites/) that must be replaced before any
+/// release. The page rect lands on the art's WRITING AREA (inside its drawn
+/// border line, `pageInset*`), and the sprite is scaled so that area is exactly
+/// as wide as the page — one uniform scale, so nothing in the art is squashed
+/// sideways (the ribbon hanging off the bottom would be). The height is taken up
+/// by 9-slicing: only the band between the corner ornaments stretches, and that
+/// band is plain paper and straight lines. The facing page on the left bleeds
+/// off the screen on purpose; only the cover (`pageReach`) is kept on it.
 /// </summary>
 public class BoardBackground : MonoBehaviour
 {
@@ -61,16 +72,63 @@ public class BoardBackground : MonoBehaviour
     [Tooltip("Cover showing round the page, in cells.")]
     [Range(0f, 0.5f)][SerializeField] private float coverWidth = 0.08f;
 
+    // The defaults below are measured off "Pixel Art Open Journal Interface.png"
+    // (1225x1284). New art means new numbers — they belong to the picture.
+    [Header("🚧 Book sprite (TEMPORARY AI art — must be replaced)")]
+    [Tooltip("Drawn instead of the flat page and cover when set. Needs a sprite " +
+             "border (9-slice) and Full Rect mesh — 'Word Crush/Set Up Board " +
+             "Background' stamps both.")]
+    [SerializeField] private Sprite pageSprite;
+
+    [Tooltip("The writing area — inside the art's drawn border line — in sprite " +
+             "pixels in from each edge. The page lands exactly here.")]
+    [SerializeField] private int pageInsetLeft = 185;
+    [SerializeField] private int pageInsetRight = 156;
+    [SerializeField] private int pageInsetTop = 116;
+    [SerializeField] private int pageInsetBottom = 177;
+
+    [Tooltip("How far past the writing area the art has to stay ON SCREEN, in " +
+             "sprite pixels — out to the cover's edge. Anything further (the facing " +
+             "page on the left) is allowed to run off the side.")]
+    [SerializeField] private int pageReach = 106;
+
+    [Tooltip("Sprite pixels from the writing area's top up to the paper's real top " +
+             "edge, which is where the bookmarks stand.")]
+    [SerializeField] private int pagePaperTop = 37;
+
     /// <summary>Square size as a multiple of one cell — everything above 1 is the border.</summary>
     public float CellScale => cellScale;
+
+    private bool DrawsArt => pageSprite != null;
 
     /// <summary>
     /// How far the page AND its cover stick out past the cells' backing on each
     /// side, in world units. Zero when the page is off, so a caller can add it
-    /// without asking.
+    /// without asking. Needs the backing's width because the book sprite is
+    /// scaled to the page's width, so its cover gets thicker as the board widens.
     /// </summary>
-    public float PageExtent(float cellSize) =>
-        DrawsPage ? (pageMargin + coverWidth) * cellSize : 0f;
+    public float PageExtent(float cellSize, float backingWidth)
+    {
+        if (!DrawsPage) return 0f;
+        float margin = pageMargin * cellSize;
+        if (!DrawsArt) return margin + coverWidth * cellSize;
+        return margin + pageReach * ArtScale(backingWidth + margin * 2f);
+    }
+
+    /// <summary>
+    /// The paper's top edge in world units, from the last SetPage — what the
+    /// bookmark cards stand on. The page rect's own top for the flat page; a
+    /// little above it for the book sprite, whose writing area starts below a
+    /// drawn line.
+    /// </summary>
+    public float PaperTop { get; private set; } = float.NaN;
+
+    /// <summary>World units per sprite pixel that make the writing area `width` wide.</summary>
+    private float ArtScale(float width)
+    {
+        float inner = pageSprite.rect.width - pageInsetLeft - pageInsetRight;
+        return inner > 0f ? width / inner : 0f;
+    }
 
     /// <summary>How far the page alone (no cover) sticks out past the backing.</summary>
     public float PageMargin(float cellSize) => DrawsPage ? pageMargin * cellSize : 0f;
@@ -142,6 +200,8 @@ public class BoardBackground : MonoBehaviour
     /// </summary>
     public void SetPage(Rect area, float cellSize)
     {
+        PaperTop = area.yMax;
+
         if (!drawPage || cellSprite == null || area.width <= 0f || area.height <= 0f)
         {
             if (page != null) page.gameObject.SetActive(false);
@@ -153,6 +213,14 @@ public class BoardBackground : MonoBehaviour
         if (page == null) page = CreateCell("Page");
         if (cover == null) cover = CreateCell("Cover");
 
+        if (DrawsArt)
+        {
+            cover.gameObject.SetActive(false);
+            PlaceArt(area);
+            return;
+        }
+
+        page.drawMode = SpriteDrawMode.Simple;   // it may have been the book a moment ago
         float edge = coverWidth * cellSize;
         Place(page, area, pageColor, sortingOrder - 1);
         Place(cover, new Rect(area.x - edge, area.y - edge,
@@ -175,6 +243,46 @@ public class BoardBackground : MonoBehaviour
         float z = transform.position.z + depthOffset * (sortingOrder - order + 1);
         renderer.transform.position = new Vector3(area.center.x, area.center.y, z);
         renderer.transform.localScale = new Vector3(area.width / size.x, area.height / size.y, 1f);
+    }
+
+    /// <summary>
+    /// Draws the book sprite with its writing area exactly over `area`.
+    ///
+    /// The transform's scale fixes how big one art pixel is (so the borders keep
+    /// their drawn thickness), and the sliced size says how big the whole thing
+    /// is — Unity stretches only the 9-slice middle to make up the difference.
+    /// Horizontally that difference is zero by construction.
+    /// </summary>
+    private void PlaceArt(Rect area)
+    {
+        float pixel = ArtScale(area.width);
+        if (pixel <= 0f) return;
+
+        float left = area.xMin - pageInsetLeft * pixel;
+        float right = area.xMax + pageInsetRight * pixel;
+        float bottom = area.yMin - pageInsetBottom * pixel;
+        float top = area.yMax + pageInsetTop * pixel;
+
+        page.gameObject.SetActive(true);
+        page.sprite = pageSprite;
+        page.color = Color.white;
+        page.drawMode = SpriteDrawMode.Sliced;
+        page.sortingOrder = sortingOrder - 1;
+
+        // One art pixel = `pixel` world units; the sprite's own pixelsPerUnit
+        // is what Unity measures `size` and the borders in.
+        float scale = pixel * pageSprite.pixelsPerUnit;
+        page.transform.localScale = new Vector3(scale, scale, 1f);
+        page.size = new Vector2((right - left) / scale, (top - bottom) / scale);
+
+        // A sliced sprite draws round its pivot, at the same fraction of the
+        // sliced size as of the sprite — so this holds whatever the pivot is.
+        Vector2 pivot = pageSprite.pivot / pageSprite.rect.size;
+        float z = transform.position.z + depthOffset * 2f;
+        page.transform.position = new Vector3(Mathf.Lerp(left, right, pivot.x),
+                                              Mathf.Lerp(bottom, top, pivot.y), z);
+
+        PaperTop = area.yMax + pagePaperTop * pixel;
     }
 
     private void EnsureRoot()
