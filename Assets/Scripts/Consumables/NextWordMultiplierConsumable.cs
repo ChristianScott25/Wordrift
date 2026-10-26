@@ -34,6 +34,9 @@ public class NextWordMultiplierConsumable : Consumable, IScoreRule
              "it multiplies the whole word — Points x Mult — not one half of it.")]
     [Min(1f)] public float multiplier = 2f;
 
+    /// <summary>It only arms itself, so the word you've built stays selected.</summary>
+    public override bool ChangesBoard => false;
+
     public override string PowerText =>
         $"x{ScoringContext.Trim(multiplier)} on the next word you play, " +
         "after everything else has been counted.";

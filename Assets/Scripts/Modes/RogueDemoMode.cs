@@ -554,7 +554,10 @@ public class RogueDemoMode : GameMode
         // LETTERS on the board, not tiles: two "ch" tiles are four letters and
         // can still make a word, so counting tiles here would call a winnable
         // round over.
-        board.LetterCount < config.minWordLength;
+        // and not counting infected letters (The Mildewed): a word must reach
+        // the minimum AFTER they come off, so a board of mostly infected tiles
+        // with an empty bag is a lost round, not one that never ends.
+        board.ScoringLetterCount < config.minWordLength;
 
     public override bool IsRoundOver =>
         movesLeft <= 0 || OutOfTiles || (config.endOnTargetReached && TargetReached);

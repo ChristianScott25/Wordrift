@@ -146,6 +146,14 @@ public abstract class Consumable : ScriptableObject, IInspectable
     /// </summary>
     public virtual ConsumableTarget Targets => ConsumableTarget.None;
 
+    /// <summary>
+    /// Does using this move, remove or replace board tiles? Most items do, and
+    /// the session clears the player's selection first so it can't point at
+    /// tiles that moved. One that only arms itself for the next word (the
+    /// Doubler) says false, and the word you've built stays selected.
+    /// </summary>
+    public virtual bool ChangesBoard => true;
+
     /// <summary>What this item is, for the info box.</summary>
     public virtual void Describe(InspectInfo info)
     {

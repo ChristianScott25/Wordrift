@@ -119,6 +119,23 @@ public class Board : MonoBehaviour
     /// moment a "ch" tile is on the board, and it's this number that decides
     /// whether a word is still possible at all.
     /// </summary>
+    /// <summary>
+    /// Letters on the board that can still COUNT toward a word's length — every
+    /// letter except those on infected tiles, which count against it. The most
+    /// a word on this board could ever reach, so it's what "out of tiles" asks.
+    /// Equals LetterCount on any round without infected tiles.
+    /// </summary>
+    public int ScoringLetterCount
+    {
+        get
+        {
+            int letters = 0;
+            foreach (var tile in tiles.Values)
+                if (tile != null && tile.Mark != TileMark.Infected) letters += tile.Letters.Length;
+            return letters;
+        }
+    }
+
     public int LetterCount
     {
         get
@@ -578,6 +595,21 @@ public class Board : MonoBehaviour
     /// top. See the warning on Shuffle: this exists so that no shuffle ever
     /// takes its order from a HashSet or a Dictionary.
     /// </summary>
+    /// <summary>
+    /// EVERY cell of the board in a fixed order — by column left to right, then
+    /// bottom to top — whether or not it holds a tile. What the opening deal and
+    /// every refill walk, because which bag tile lands in which cell is part of
+    /// the seed. `cells` is a HashSet, whose order isn't guaranteed (2026-10-26:
+    /// the deal used to walk it, and only happened to come out in shape order).
+    /// </summary>
+    private List<Vector2Int> CellsInOrder()
+    {
+        var ordered = new List<Vector2Int>(cells.Count);
+        foreach (int column in Columns)
+            if (columnCells.TryGetValue(column, out var list)) ordered.AddRange(list);
+        return ordered;
+    }
+
     public List<Vector2Int> OccupiedInOrder()
     {
         var occupied = new List<Vector2Int>(tiles.Count);
@@ -814,7 +846,8 @@ public class Board : MonoBehaviour
     /// </summary>
     private void FillEmptyCells()
     {
-        var empties = cells.Where(c => !tiles.ContainsKey(c)).ToList();
+        // CellsInOrder, never `cells`: the deal order is part of the seed.
+        var empties = CellsInOrder().Where(c => !tiles.ContainsKey(c)).ToList();
         var dealt = new List<Tile>();
         foreach (var cell in Refill.CellsToFill(empties))
         {
@@ -870,7 +903,7 @@ public class Board : MonoBehaviour
     {
         var moved = new List<Tile>();
         var occupied = new HashSet<Vector2Int>(tiles.Keys);
-        var plan = Gravity.Plan(cells, occupied);
+        var plan = Gravity.Plan(CellsInOrder(), occupied);
 
         // Rebuild the map from the plan so overlapping moves can't clobber each other.
         var previous = new Dictionary<Vector2Int, Tile>(tiles);

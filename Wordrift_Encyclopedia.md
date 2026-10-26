@@ -400,6 +400,10 @@ a round that taxes you taxes what you built, not what you started with.
 mode-wide `scoreMultiplier`, currently ×1, takes its turn as one more beat, so what the readout
 multiplies out is exactly what you're paid.)*
 
+**A half rounds UP** (his call, 2026-10-26): 11 × 1.5 = 16.5 scores **17**, and a $7.50 payout
+pays **$8**. It used to round halves to the nearest even number, so 13.5 went up and 16.5 went
+down.
+
 **A word can't score more than a billion, and can't score less than nothing.** Multipliers
 stack without limit — nothing stops you buying a fourth 3W onto the same tile — so the numbers
 are held to a ceiling rather than allowed to run off the end of the counter and come back
@@ -840,12 +844,17 @@ tile being selected shows the selection colour instead.
 - **Length:** its letters come off instead of going on. CRATE through an infected R counts as
   **3** letters (4 clean, minus 1) for length points and the length multiplier — and the live
   POINTS × MULT preview shows that shorter length.
-- **Points:** its letter value comes **off** the score, on its own beat in the walk-through.
+- **Points:** its letter value comes **off** the score, on its own beat **after all the clean
+  tiles** — so where the infected tile sits in the word changes nothing (his call, 2026-10-26).
 - **Badges:** a 2L, 3L, 2W or 3W on an infected tile does **nothing**.
 - **The shorter length counts everywhere**: a word must still reach the minimum length *after*
   the infected letters come off ("Infected letters make this too short"), and Marginalia and
   Shorthand read the shorter length too.
-- The score can't go below 0 at any point in the count.
+- The score can't go below 0, but because the penalties land last, an early infected tile is no
+  longer partly forgiven by that floor.
+- **An empty bag with too few clean letters left is a loss.** Infected letters don't count toward
+  "out of tiles", so a board that can no longer make a long-enough word ends the round instead of
+  sitting there forever.
 
 **The Critic is taken after your bookmarks**, not before — it taxes what you built. It also
 doesn't show in the live POINTS × MULT preview; you see the cut land as its own beat in the
@@ -864,7 +873,7 @@ asking for three times what the shop just promised.
 |---|---|---|
 | ✅ **Cleared** | Target reached | Paid, then the shop. Run continues. |
 | ❌ **Out of moves** | 20 words used, target missed | **Run over.** |
-| ❌ **Out of tiles** | Bag empty *and* too few tiles left on the board to make any word | **Run over.** |
+| ❌ **Out of tiles** | Bag empty *and* too few letters left on the board to make any word (infected letters don't count) | **Run over.** |
 
 That last one exists so a round can't stall forever with moves left and nothing to spend them
 on. ❓ The softer version — tiles remain but no word can be made from them — still isn't
@@ -1239,7 +1248,9 @@ is a discard.
 
 ### DOUBLER
 
-**Drop it on the board and nothing visible happens yet.** The item leaves your box and the caption above
+**Drop it on the board and nothing visible happens yet** — and the word you've selected **stays
+selected**, so you can build a word first and then arm the Doubler for it. Items that move or
+replace tiles still clear your selection; this one doesn't touch the board. The item leaves your box and the caption above
 it changes to say **DOUBLER** — that's the round holding onto it. The next word you play scores
 double, and then it's gone.
 

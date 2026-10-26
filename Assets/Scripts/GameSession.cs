@@ -479,7 +479,11 @@ public class GameSession : MonoBehaviour
         // for nothing. That is only reachable on a board with fewer than two
         // tiles (Board.Shuffle rules out every other refusal), which is a board
         // with no selection worth keeping.
-        chainController.CancelChain();
+        //
+        // Only for an item that touches the board (his call, 2026-10-26): the
+        // Doubler just arms itself, and clearing the word you built to arm it
+        // for was a word thrown away for nothing.
+        if (consumable.ChangesBoard) chainController.CancelChain();
 
         bool used = consumable.Use(new ConsumableUse
         {

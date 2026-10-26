@@ -121,15 +121,12 @@ public class ScoreCalculator
             // resolved wild's beat reads "E" rather than "*".
             string who = string.IsNullOrEmpty(tile.Shown) ? tile.Face : tile.Shown;
 
-            // INFECTED: takes away what it would have added — its base worth
-            // comes OFF, and none of its badges fire (a 2W on an infected tile
-            // does nothing). Its letters already came off the length in Opening.
-            if (tile.Mark == TileMark.Infected)
-            {
-                if (tile.LetterPoints != 0) ctx.AddPoints(-tile.LetterPoints, who);
-                else ctx.Beat(who);
-                continue;
-            }
+            // INFECTED: skipped here and charged AFTER the walk (below). Points
+            // are floored at 0 on every step, so a penalty taken early in the
+            // word was partly forgiven — ZAP and ADZ through the same infected Z
+            // scored differently. Charged last, position can't matter. None of
+            // its badges fire; its letters already came off the length in Opening.
+            if (tile.Mark == TileMark.Infected) continue;
 
             // The tile's corner shows the BASE letter value; the badge is what
             // tells the player it gets multiplied. This is where that happens,
@@ -152,6 +149,20 @@ public class ScoreCalculator
                 if (modifier != null && modifier.WordMultiplier != 1)
                     ctx.MultiplyPoints(modifier.WordMultiplier, modifier.badgeLabel);
             }
+        }
+
+        // The infected tiles' penalties, in chain order, each as its own beat on
+        // its own tile — after every clean tile, so where the infected tile sat
+        // in the word changes nothing.
+        for (int i = 0; i < chain.Count; i++)
+        {
+            var tile = chain[i];
+            if (tile == null || tile.Mark != TileMark.Infected) continue;
+
+            ctx.Acting(ScoreActor.Tile, tile.Spec);
+            string who = string.IsNullOrEmpty(tile.Shown) ? tile.Face : tile.Shown;
+            if (tile.LetterPoints != 0) ctx.AddPoints(-tile.LetterPoints, who);
+            else ctx.Beat(who);
         }
 
         return opening;

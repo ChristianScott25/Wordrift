@@ -406,7 +406,7 @@ than away from one, and the word row shows you whether you got there only at the
 
 - **Length:** an infected tile's letters come OFF the word's length. CRATE through an infected R
   counts as 3 (4 clean − 1) for length points and the length multiplier. The live preview shows it.
-- **Points:** its letter value comes off the score, on its own beat.
+- **Points:** its letter value comes off the score, on its own beat after every clean tile.
 - **Badges:** none of them fire — not 2L/3L, not 2W/3W.
 - **The shorter length counts EVERYWHERE** (his call, 2026-10-22): a word whose shortened length
   is under the minimum is refused ("Infected letters make this too short"), and Marginalia and
@@ -424,8 +424,14 @@ both of which happen inside `ScoreCalculator` before any librarian gets a turn.
 infected tile it equals the plain letter count, which is why every other round scores exactly as
 before.
 
-⚠️ **The score is floored at 0 on every step**, so a word that is mostly infected bottoms out at 0
-rather than going negative — and the order of tiles can matter a little right at that floor.
+**The penalties land AFTER every clean tile** (2026-10-26). The score is floored at 0 on every
+step, so a penalty charged in place was partly forgiven when it came early in the word — the same
+infected Z cost less at the start than at the end. Charged last, position changes nothing. A word
+that is mostly infected still bottoms out at 0 rather than going negative.
+
+**An empty bag ends the round once the CLEAN letters can't make a word.** `OutOfTiles` counts
+`Board.ScoringLetterCount` (infected letters left out), so a board of leftover infected tiles is a
+loss, not a round that never ends.
 
 ---
 

@@ -47,7 +47,9 @@ public class ColumnGravity : IGravityRule
             Empties = new List<Vector2Int>(),
         };
 
-        foreach (var column in cells.GroupBy(c => c.x))
+        // Columns sorted, so the Empties list — which is the order the refill
+        // draws in — is left to right whatever order the cells arrive in.
+        foreach (var column in cells.GroupBy(c => c.x).OrderBy(g => g.Key))
         {
             var columnCells = column.OrderBy(c => c.y).ToList();
             var survivors = columnCells.Where(occupied.Contains).ToList();

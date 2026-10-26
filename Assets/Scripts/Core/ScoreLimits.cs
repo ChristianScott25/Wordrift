@@ -61,7 +61,7 @@ public static class ScoreLimits
     {
         if (double.IsNaN(value)) return 0;
         if (value <= 0d) return 0;
-        return value >= MaxPoints ? MaxPoints : (int)System.Math.Round(value);
+        return value >= MaxPoints ? MaxPoints : (int)System.Math.Round(value, System.MidpointRounding.AwayFromZero);
     }
 
     /// <summary>Keeps a multiplier finite and non-negative.</summary>
