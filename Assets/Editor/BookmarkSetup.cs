@@ -9,7 +9,8 @@ using UnityEngine;
 /// Idempotent, and it splits the fields two ways for the same reason
 /// TileModifierSetup does: what a bookmark IS (its name and description) is
 /// refreshed every run, while its PRICE is a balance number, so a price is
-/// written only when the asset's is still 0.
+/// written only when the asset's is still 0. Card art, likewise, only fills an
+/// empty slot.
 ///
 /// Adding another is a code + Inspector job — subclass Bookmark, then
 /// Create -> Word Crush -> Bookmark -> ..., and add it to a mode's list.
@@ -31,22 +32,26 @@ public static class BookmarkSetup
         var bookend = CreateOrLoad<BookendBookmark>("Bookend");
         bookend.multiplier = 2f;
         Describe(bookend, "Bookend", "x2 Mult if the word starts and ends with the same letter.", price: 12);
+        Art(bookend, "bookmark_book");
         bookmarks.Add(bookend);
 
         var dejaVu = CreateOrLoad<DejaVuBookmark>("DejaVu");
         dejaVu.bonusPoints = 10;
         Describe(dejaVu, "Deja Vu", "+10 Points for a word you already spelled this round.", price: 10);
+        Art(dejaVu, "bookmark_witch");
         bookmarks.Add(dejaVu);
 
         var vowels = CreateOrLoad<VowelFanaticBookmark>("VowelFanatic");
         vowels.multiplierBonus = 4f;
         vowels.vowels = "aeiou";
         Describe(vowels, "Vowel Fanatic", "+4 Mult if the word has more vowels than consonants. Y is a consonant.", price: 14);
+        Art(vowels, "bookmark_sun");
         bookmarks.Add(vowels);
 
         var spine = CreateOrLoad<SpineBookmark>("Spine");
         spine.multiplier = 2f;
         Describe(spine, "Spine", "x2 Mult if no letter appears twice in the word.", price: 16);
+        Art(spine, "bookmark_tree");
         bookmarks.Add(spine);
 
         // Marginalia and Shorthand are deliberately opposed — one pays for long
@@ -55,11 +60,13 @@ public static class BookmarkSetup
         var marginalia = CreateOrLoad<MarginaliaBookmark>("Marginalia");
         marginalia.multPerExtraLetter = 1;
         Describe(marginalia, "Marginalia", "+1 Mult for every letter past the minimum word length.", price: 13);
+        Art(marginalia, "bookmark_fox");
         bookmarks.Add(marginalia);
 
         var shorthand = CreateOrLoad<ShorthandBookmark>("Shorthand");
         shorthand.multBonus = 4;
         Describe(shorthand, "Shorthand", "+4 Mult on a word of exactly the minimum length.", price: 13);
+        Art(shorthand, "bookmark_ribbon");
         bookmarks.Add(shorthand);
 
         int added = AttachToModes(bookmarks);
@@ -79,6 +86,18 @@ public static class BookmarkSetup
         // and anything already priced is left as tuned.
         if (asset.price == 0) asset.price = price;
 
+        EditorUtility.SetDirty(asset);
+    }
+
+    /// <summary>
+    /// 🚧 TEMPORARY AI ART. Fills an EMPTY card-art slot only, so a picture
+    /// swapped by hand sticks. Which bookmark got which picture was a guess
+    /// (2026-10-27) — none of them were drawn for a particular bookmark.
+    /// </summary>
+    private static void Art(Bookmark asset, string fileName)
+    {
+        if (asset.cardArt != null) return;
+        asset.cardArt = WordCrushSetup.LoadTempArt(fileName);
         EditorUtility.SetDirty(asset);
     }
 

@@ -29,7 +29,8 @@ using UnityEngine.UI;
 public static class BagViewSetup
 {
     private const string ViewName = "Bag View";
-    private const string CloseSpritePath = "Assets/Sprites/Gameplay UI/X.png";
+    // 🚧 TEMPORARY AI ART. "Gameplay UI/X.png" is the hand-drawn one it replaced.
+    private const string CloseArt = "close_icon";
 
     /// <summary>Panel inset from the canvas edges, as a fraction.</summary>
     private const float SideInset = 0.04f;
@@ -169,8 +170,7 @@ public static class BagViewSetup
 
         // 🚧 The info box's plate, borrowed, and greyed down so the cream tiles
         // read against it. Both go when this gets art of its own.
-        InspectBoxSetup.StampSpriteImport(InspectBoxSetup.BoxSpritePath, InspectBoxSetup.SpriteBorder);
-        image.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(InspectBoxSetup.BoxSpritePath);
+        image.sprite = InspectBoxSetup.BoxSprite();
 
         // Sliced, and deliberately not through WordCrushSetup.SetSprite — that
         // sets preserveAspect, and stretching is the entire point of a 9-slice.
@@ -202,8 +202,7 @@ public static class BagViewSetup
         rect.anchoredPosition = new Vector2(-Pad, -Pad);
 
         var image = go.GetComponent<Image>() ?? go.AddComponent<Image>();
-        InspectBoxSetup.StampSpriteImport(CloseSpritePath, 0);
-        image.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(CloseSpritePath);
+        image.sprite = WordCrushSetup.LoadTempArt(CloseArt);
         image.raycastTarget = true;
 
         // White, so the art's own black lines come through unchanged — a tint

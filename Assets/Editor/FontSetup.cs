@@ -30,7 +30,7 @@ using UnityEngine.TextCore.LowLevel;
 /// </summary>
 public static class FontSetup
 {
-    private const string SourcePath = "Assets/Fonts/Pixel Font.ttf";
+    private const string SourcePath = "Assets/Fonts/KarenFat.ttf"; // 🚧 trying out; was "Pixel Font.ttf"
     private const string AssetPath = "Assets/Fonts/Pixel Font SDF.asset";
 
     // Big enough that the SDF gradient has room to be sharp, small enough that

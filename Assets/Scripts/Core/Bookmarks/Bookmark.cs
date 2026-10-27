@@ -24,6 +24,10 @@ public abstract class Bookmark : ScriptableObject, IInspectable
              "number you've tuned alone.")]
     [Min(0)] public int price = 0;
 
+    [Tooltip("The bookmark's own picture on its card. Empty = the plain card " +
+             "with the name on it. 🚧 Every one filled today is temporary AI art.")]
+    public Sprite cardArt;
+
     /// <summary>
     /// The name to show, falling back to the asset's file name — the same
     /// fallback Librarian, Checkout and Consumable all take, so a bookmark whose

@@ -188,7 +188,7 @@ public static class WordActionsSetup
         if (button == null) return;
 
         var image = button.GetComponent<Image>();
-        var sprite = WordCrushSetup.LoadSprite("Medium Button");
+        var sprite = GameLayoutSetup.PlateSprite();   // just to know it loaded
 
         if (sprite == null)
         {
@@ -198,7 +198,11 @@ public static class WordActionsSetup
 
         // White on the Image, colour in the ColorBlock: the tint multiplies the
         // plate, so anything other than white here would double-tint it.
-        WordCrushSetup.SetSprite(image, sprite, Color.white);
+        // 9-SLICED, filling the whole slot (2026-10-27). Drawn Simple with its
+        // shape kept, the plate shrank with the band whenever the band was the
+        // shorter side, and the width it gave up became a wide gap between the
+        // two buttons. Sliced, a short band makes them wider instead.
+        GameLayoutSetup.StylePlate(image);
         button.targetGraphic = image;
 
         var colors = button.colors;

@@ -35,20 +35,20 @@ public static class InspectBoxSetup
     private const string BoxName = "Info Box";
 
     /// <summary>
-    /// The plate the box is drawn on — a cream rounded rectangle with a black
-    /// outline, 200x100, used 9-SLICED so one sprite covers every size.
+    /// 🚧 TEMPORARY AI ART (2026-10-27): the plate the box is drawn on — a small
+    /// parchment in a wooden frame, used 9-SLICED so one sprite covers every
+    /// size. It replaced the hand-drawn "Main Item Text Box" in Gameplay UI (a
+    /// cream rounded rectangle, 200x100, border 8), which is still there.
     ///
-    /// ⚠️ There is a "Mini Item Text Box" beside it in the same folder and it is
-    /// NOT used, on purpose. Its corner curve and its outline are pixel for pixel
-    /// the same as this one's — the only difference is how much flat middle was
-    /// drawn, and the flat middle is exactly the part 9-slice generates. One
-    /// sprite at two sizes is two things to keep in step for no gain.
+    /// ⚠️ "Mini Item Text Box" beside that one was never used, on purpose: its
+    /// corners are pixel for pixel the same, and the flat middle it adds is
+    /// exactly the part 9-slice generates.
     /// </summary>
-    internal const string BoxSpritePath = "Assets/Sprites/Gameplay UI/Main Item Text Box.png";
+    private const string BoxArt = "small_parchment_panel";
 
     /// <summary>
     /// How far in from each edge the sprite stops being a corner and starts being
-    /// a stretchable edge, in sprite pixels.
+    /// a stretchable edge, in PNG pixels (left, bottom, right, top).
     ///
     /// ⚠️ THIS IS STAMPED ONTO THE TEXTURE'S IMPORT SETTINGS, not just read. The
     /// border lives on the importer, which means it is normally set by hand in
@@ -57,11 +57,10 @@ public static class InspectBoxSetup
     /// wrong corners) nobody would trace back to an import setting. Same argument
     /// as BoxWidth below.
     ///
-    /// 8 because the art's corner curve is finished by pixel 7 and its outline is
-    /// 3 thick, so 8 contains the whole corner with a pixel to spare. Redraw the
-    /// corner bigger and this has to grow with it.
+    /// The wooden frame measured on the cropped file plus room for the brass
+    /// studs and the parchment's rounded inner corners. New art needs new numbers.
     /// </summary>
-    internal const int SpriteBorder = 8;
+    private static readonly Vector4 BoxBorder = new Vector4(34, 30, 36, 30);
 
     /// <summary>
     /// THE BOX'S WHOLE LOOK, AND ALL OF IT IS WRITTEN ON EVERY RUN.
@@ -232,14 +231,9 @@ public static class InspectBoxSetup
     /// Bilinear filtering and compression are the other two: both quietly smear a
     /// 3-pixel black outline, which is most of what this art IS.
     /// </summary>
-    private static Sprite BoxSprite()
-    {
-        StampSpriteImport(BoxSpritePath, SpriteBorder);
-        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(BoxSpritePath);
-        if (sprite == null)
-            Debug.LogError($"No sprite at {BoxSpritePath} — the info box will have no plate.");
-        return sprite;
-    }
+    /// ⚠️ internal: the bag view and pause view draw their panels on this same
+    /// plate.
+    internal static Sprite BoxSprite() => WordCrushSetup.LoadTempArt(BoxArt, BoxBorder);
 
     /// <summary>
     /// Makes a texture importable as one 9-sliceable pixel-art sprite. Re-imports

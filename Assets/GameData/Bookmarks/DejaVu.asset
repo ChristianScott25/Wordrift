@@ -15,4 +15,5 @@ MonoBehaviour:
   displayName: Deja Vu
   description: +10 Points for a word you already spelled this round.
   price: 10
+  cardArt: {fileID: 21300000, guid: 7514e5642edcb443393f2a8698f5bd2d, type: 3}
   bonusPoints: 10

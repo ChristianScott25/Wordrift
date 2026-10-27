@@ -66,10 +66,17 @@ public static class GameLayoutSetup
     private const float ItemsPlateInset = 14f;
 
     // 🚧 The boxes that used to be see-through black panels — the round header
-    // and the resource chips — now sit on the Medium Button art (2026-10-07).
-    // The art is CREAM, so every word drawn on it has to be dark ink instead of
-    // the white it was; these are those inks.
-    private const string PlateArt = "Medium Button";
+    // and the resource chips — now sit on a plate (2026-10-07). It was the
+    // hand-drawn Medium Button; since 2026-10-27 it is TEMPORARY AI ART, a
+    // parchment in a wooden frame. Both are CREAM in the middle, so every word
+    // drawn on it has to be dark ink instead of the white it was; these are
+    // those inks.
+    private const string PlateArt = "framed_parchment_panel";
+
+    // Its 9-slice border, in PNG pixels (left, bottom, right, top): the wooden
+    // frame measured on the cropped file, plus room for the brass studs and the
+    // parchment's rounded inner corners. New art needs new numbers.
+    private static readonly Vector4 PlateBorder = new Vector4(40, 34, 40, 38);
     private const float PlateBorderScale = 2.5f;   // same chunkiness as the info box
     private static readonly Color Ink = new Color(0.12f, 0.13f, 0.17f);
     private static readonly Color QuietInk = new Color(0.12f, 0.13f, 0.17f, 0.65f);
@@ -320,7 +327,9 @@ public static class GameLayoutSetup
 
         var avatar = Slot(root.transform, "Avatar", 0.04f, 0.08f, 0.30f, 0.70f);
         var portrait = Image(avatar, Color.white);
-        WordCrushSetup.SetSprite(portrait, WordCrushSetup.LoadSprite("Librarian Avatar Placeholder"),
+        // 🚧 TEMPORARY AI ART. One portrait for every librarian; "Librarian Avatar
+        // Placeholder" in Gameplay UI is the hand-drawn one it replaced.
+        WordCrushSetup.SetSprite(portrait, WordCrushSetup.LoadTempArt("librarian_portrait"),
                                  Color.white);
 
         // Everything right of the portrait is one CENTRED column: the round's
@@ -380,6 +389,14 @@ public static class GameLayoutSetup
         WordCrushSetup.SetColor(widget, "labelColor", QuietInk);
         WordCrushSetup.SetColor(widget, "valueColor", Ink);
         WordCrushSetup.SetColor(widget, "urgentColor", UrgentInk);
+
+        // 🚧 TEMPORARY AI ART: icons where the chips' labels were. A chip whose
+        // slot is empty shows its label instead. The quill, paper ball and
+        // hourglass were cut out of one generated sheet.
+        WordCrushSetup.SetRef(widget, "moneyIcon", WordCrushSetup.LoadTempArt("coin_icon"));
+        WordCrushSetup.SetRef(widget, "movesIcon", WordCrushSetup.LoadTempArt("quill_icon"));
+        WordCrushSetup.SetRef(widget, "discardsIcon", WordCrushSetup.LoadTempArt("paper_ball_icon"));
+        WordCrushSetup.SetRef(widget, "roundIcon", WordCrushSetup.LoadTempArt("hourglass_icon"));
     }
 
     /// <summary>
@@ -468,10 +485,12 @@ public static class GameLayoutSetup
         WordCrushSetup.SetRef(widget, "captionLabel", captionText);
         WordCrushSetup.SetRef(widget, "slotSprite", Square());
 
-        // 🚧 The tile body, borrowed. An item has no art of its own yet, and
-        // looking like something off the board beats looking like nothing.
-        var tile = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Tile - white.png");
-        if (tile != null) WordCrushSetup.SetRef(widget, "itemSprite", tile);
+        // 🚧 TEMPORARY AI ART: one book for every item. Items carry no name on
+        // the slot, so until each has its own art a tap is what tells them
+        // apart. Drawn white, so the art shows as drawn.
+        var book = WordCrushSetup.LoadTempArt("book_item_icon");
+        if (book != null) WordCrushSetup.SetRef(widget, "itemSprite", book);
+        WordCrushSetup.SetColor(widget, "itemColor", Color.white);
 
         // A direct reference because this widget lives in one scene — the shape
         // WordActionsWidget uses, and the reason the generator wires the field
@@ -492,8 +511,12 @@ public static class GameLayoutSetup
         RenameChild(root.transform, "SettingsButton", "PauseButton");
 
         // See ButtonRow for where these two fractions come from.
-        var info = FindOrMakeIconButton(root.transform, "InfoButton", "Info Button", 0f, IconSplit);
-        var pause = FindOrMakeIconButton(root.transform, "PauseButton", "Pause Button", 1f - IconSplit, 1f);
+        // 🚧 TEMPORARY AI ART. "Info Button" / "Pause Button" in Gameplay UI are
+        // the hand-drawn ones they replaced. The dark pause button was made from
+        // the info button's frame so the two match (the AI one was cream).
+        // That makes it a derivative of the AI art, so it goes with the rest.
+        var info = FindOrMakeIconButton(root.transform, "InfoButton", WordCrushSetup.LoadTempArt("info_button"), 0f, IconSplit);
+        var pause = FindOrMakeIconButton(root.transform, "PauseButton", WordCrushSetup.LoadTempArt("pause_button_dark"), 1f - IconSplit, 1f);
 
         WordCrushSetup.SetRef(widget, "infoButton", info);
         WordCrushSetup.SetRef(widget, "pauseButton", pause);
@@ -758,7 +781,7 @@ public static class GameLayoutSetup
     }
 
     /// <summary>
-    /// The Medium Button art behind a box, 9-sliced so it stretches to any shape
+    /// The shared plate art (PlateArt) behind a box, 9-sliced so it stretches to any shape
     /// with its corners left alone. 🚧 Borrowed until the boxes get art of their own.
     ///
     /// ⚠️ WRITTEN EVERY RUN, not only on a new Image: it replaced a see-through
@@ -790,17 +813,12 @@ public static class GameLayoutSetup
     }
 
     /// <summary>
-    /// The Medium Button sprite, with its 9-slice border stamped onto the import
-    /// settings first — the file had none, and a Sliced image with no border is
-    /// just a stretched one. Harmless to PLAY/DISCARD, which draw it Simple and
-    /// so never read the border.
+    /// The shared plate, with its 9-slice border stamped onto the import
+    /// settings first — a Sliced image with no border is just a stretched one.
+    /// Internal so PLAY/DISCARD (WordActionsSetup) draw the same plate; they
+    /// draw it Simple and so never read the border.
     /// </summary>
-    private static Sprite PlateSprite()
-    {
-        string path = $"Assets/Sprites/Gameplay UI/{PlateArt}.png";
-        InspectBoxSetup.StampSpriteImport(path, InspectBoxSetup.SpriteBorder);
-        return WordCrushSetup.LoadSprite(PlateArt);
-    }
+    internal static Sprite PlateSprite() => WordCrushSetup.LoadTempArt(PlateArt, PlateBorder);
 
     /// <summary>
     /// A child pinned to a fractional rectangle of its parent.
@@ -885,7 +903,7 @@ public static class GameLayoutSetup
     /// darkens it. These two are always pressable, so unlike PLAY and DISCARD
     /// there is no state to say anything about.
     /// </summary>
-    private static Button FindOrMakeIconButton(Transform parent, string name, string spriteName,
+    private static Button FindOrMakeIconButton(Transform parent, string name, Sprite art,
                                                float xMin, float xMax)
     {
         // The FULL band height, like PLAY and DISCARD. It was 0.1-0.9, which is
@@ -893,7 +911,7 @@ public static class GameLayoutSetup
         var slot = Slot(parent, name, xMin, 0f, xMax, 1f);
 
         var image = slot.GetComponent<Image>() ?? slot.AddComponent<Image>();
-        WordCrushSetup.SetSprite(image, WordCrushSetup.LoadSprite(spriteName), Color.white);
+        WordCrushSetup.SetSprite(image, art, Color.white);
 
         var button = slot.GetComponent<Button>() ?? slot.AddComponent<Button>();
         button.targetGraphic = image;

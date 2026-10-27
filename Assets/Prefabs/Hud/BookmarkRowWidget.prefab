@@ -321,4 +321,5 @@ MonoBehaviour:
   cardTextColor: {r: 0.16, g: 0.17, b: 0.23, a: 1}
   board: {fileID: 0}
   boardGap: 12
+  topGap: 16
   maxY: 2400

@@ -1,4 +1,3 @@
-using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -36,9 +35,6 @@ public class ConsumableSlotView : MonoBehaviour,
              "reads as something you could put on the board rather than a new " +
              "kind of object.")]
     [SerializeField] private Image body;
-
-    [Tooltip("The item's name, over the body. Blank when the slot is empty.")]
-    [SerializeField] private TMP_Text label;
 
     [SerializeField] private Button button;
 
@@ -95,35 +91,6 @@ public class ConsumableSlotView : MonoBehaviour,
         if (button == null) button = gameObject.AddComponent<Button>();
         button.targetGraphic = body;
 
-        if (label == null) label = GetComponentInChildren<TMP_Text>(true);
-        if (label == null)
-        {
-            var text = new GameObject("Label", typeof(RectTransform));
-            text.transform.SetParent(transform, false);
-
-            var rect = (RectTransform)text.transform;
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-
-            // A new TMP_Text takes whatever font is TMP's DEFAULT at the moment
-            // it is created, which Word Crush/Create Font Asset has already set
-            // to the game's one typeface. That is the whole reason it is set.
-            var tmp = text.AddComponent<TextMeshProUGUI>();
-            tmp.alignment = TextAlignmentOptions.Center;
-            tmp.fontStyle = FontStyles.Bold;
-            tmp.enableAutoSizing = true;
-            tmp.fontSizeMin = 8f;
-            tmp.fontSizeMax = 24f;
-            tmp.textWrappingMode = TextWrappingModes.Normal;
-
-            // The label must not eat the tap — the body is what's clickable.
-            tmp.raycastTarget = false;
-
-            label = tmp;
-        }
-
         // ⚠️ THE BUTTON IS HERE FOR ITS COLOURS, NOT ITS CLICK. Reading and
         // spending are both handled by this class's own pointer handlers, which
         // is what lets a drag suppress the tap; Button.onClick has no idea a
@@ -139,7 +106,7 @@ public class ConsumableSlotView : MonoBehaviour,
     /// </summary>
     public void Bind(ConsumablesAreaWidget owner, int slot, Consumable consumable,
                      Sprite filledSprite, Color filledColor,
-                     Sprite emptySprite, Color emptyColor, Color textColor)
+                     Sprite emptySprite, Color emptyColor)
     {
         this.owner = owner;
         this.slot = slot;
@@ -167,11 +134,8 @@ public class ConsumableSlotView : MonoBehaviour,
             body.raycastTarget = filled;
         }
 
-        if (label != null)
-        {
-            label.text = filled ? consumable.Title.ToUpperInvariant() : "";
-            label.color = textColor;
-        }
+        // No name on the slot (2026-10-27, his call): the item's art says what
+        // it is and a tap opens the box with its name and power.
 
         if (button != null)
         {

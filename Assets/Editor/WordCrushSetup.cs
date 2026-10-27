@@ -423,6 +423,63 @@ public static class WordCrushSetup
     }
 
     /// <summary>
+    /// 🚧 The AI art is pixel art blown up to roughly six PNG pixels per art
+    /// pixel; ours is drawn one to one at 100. Importing it at 600 makes a
+    /// 9-sliced corner come out about the size ours did, so every border scale
+    /// tuned against our art still holds and none had to be retuned for art that
+    /// is going away. Simple (non-sliced) images don't read it at all.
+    /// </summary>
+    private const float TempArtPixelsPerUnit = 600f;
+
+    /// <summary>
+    /// 🚧 TEMPORARY AI ART — a sprite out of Assets/Sprites/Temporary AI sprites,
+    /// by file name without the extension, import settings stamped first: one
+    /// Single, point-filtered, uncompressed sprite at TempArtPixelsPerUnit, with
+    /// `border` (left, bottom, right, top, in PNG pixels) for a 9-sliced panel.
+    /// Every caller of this is something that must be redrawn before any
+    /// release; grep for it.
+    /// </summary>
+    internal static Sprite LoadTempArt(string fileName, Vector4 border = default)
+    {
+        string path = $"Assets/Sprites/Temporary AI sprites/{fileName}.png";
+        StampTempArtImport(path, border);
+        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        if (sprite == null) Debug.LogError($"No sprite at {path}.");
+        return sprite;
+    }
+
+    /// <summary>Re-imports only when something actually had to change.</summary>
+    private static void StampTempArtImport(string path, Vector4 border)
+    {
+        if (AssetImporter.GetAtPath(path) is not TextureImporter importer) return;
+
+        var settings = new TextureImporterSettings();
+        importer.ReadTextureSettings(settings);
+        bool changed = false;
+
+        if (settings.textureType != TextureImporterType.Sprite) { settings.textureType = TextureImporterType.Sprite; changed = true; }
+        // Multiple makes the sprite a sub-asset, and LoadAssetAtPath<Sprite> then finds nothing.
+        if (settings.spriteMode != (int)SpriteImportMode.Single) { settings.spriteMode = (int)SpriteImportMode.Single; changed = true; }
+        if (settings.spriteMeshType != SpriteMeshType.FullRect) { settings.spriteMeshType = SpriteMeshType.FullRect; changed = true; }
+        if (!Mathf.Approximately(settings.spritePixelsPerUnit, TempArtPixelsPerUnit)) { settings.spritePixelsPerUnit = TempArtPixelsPerUnit; changed = true; }
+        if (settings.spriteBorder != border) { settings.spriteBorder = border; changed = true; }
+        if (settings.filterMode != FilterMode.Point) { settings.filterMode = FilterMode.Point; changed = true; }
+        if (settings.mipmapEnabled) { settings.mipmapEnabled = false; changed = true; }
+        if (!settings.alphaIsTransparency) { settings.alphaIsTransparency = true; changed = true; }
+        if (changed) importer.SetTextureSettings(settings);
+
+        var platform = importer.GetDefaultPlatformTextureSettings();
+        if (platform.textureCompression != TextureImporterCompression.Uncompressed)
+        {
+            platform.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SetPlatformTextureSettings(platform);
+            changed = true;
+        }
+
+        if (changed) importer.SaveAndReimport();
+    }
+
+    /// <summary>
     /// Points an Image at a sprite WITHOUT letting it stretch.
     ///
     /// ⚠️ preserveAspect matters for all the art that goes through HERE: it has

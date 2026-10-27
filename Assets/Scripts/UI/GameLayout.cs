@@ -319,6 +319,9 @@ public class GameLayout : MonoBehaviour
         rect.offsetMin = new Vector2(0f, rect.offsetMin.y);
         rect.offsetMax = new Vector2(0f, rect.offsetMax.y);
 
+        // A sliced plate (PLAY) stretches to its whole slot, so it's already flush.
+        if (image.type == Image.Type.Sliced || image.type == Image.Type.Tiled) return;
+
         float width = rect.rect.width;
         float artWidth = Mathf.Min(width, rect.rect.height * art.x / art.y);
         float spare = Mathf.Max(0f, width - artWidth);

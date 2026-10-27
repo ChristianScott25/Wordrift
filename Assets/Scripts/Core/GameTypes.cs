@@ -64,6 +64,20 @@ public struct WordResult
 }
 
 /// <summary>
+/// What a status chip IS, for a HUD that wants to draw a picture in place of
+/// its label. A kind rather than a match on the label text, because the label
+/// is display text and the HUD must never parse it.
+/// </summary>
+public enum StatusIcon
+{
+    None,
+    Money,
+    Moves,
+    Discards,
+    Round,
+}
+
+/// <summary>
 /// One readout in the HUD's resource strip — "$ 25", "MOVES 12/15", "ROUND 2".
 ///
 /// A strip of these replaced the single crammed string RogueDemoMode used to
@@ -81,12 +95,30 @@ public struct StatusChip
     /// <summary>Running out, so the chip can go red.</summary>
     public bool Urgent;
 
-    public StatusChip(string label, string value, float fraction = -1f, bool urgent = false)
+    /// <summary>
+    /// What this chip is, so a HUD with art for it can draw that instead of
+    /// Label. Label must still be filled in: a HUD without the art shows it.
+    /// </summary>
+    public StatusIcon Icon;
+
+    /// <summary>
+    /// What a tap on the chip says — its name and one line on what it means.
+    /// Both empty = the chip isn't tappable. ⚠️ Status is rebuilt every frame,
+    /// so pass constant strings here, never ones built on the spot.
+    /// </summary>
+    public string Title;
+    public string About;
+
+    public StatusChip(string label, string value, float fraction = -1f, bool urgent = false,
+                      StatusIcon icon = StatusIcon.None, string title = null, string about = null)
     {
         Label = label;
         Value = value;
         Fraction = fraction;
         Urgent = urgent;
+        Icon = icon;
+        Title = title;
+        About = about;
     }
 }
 

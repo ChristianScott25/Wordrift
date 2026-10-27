@@ -59,6 +59,11 @@ public class BookmarkRowWidget : MonoBehaviour
              "has a border drawn outside its cells.")]
     [SerializeField] private float boardGap = -6f;
 
+    [Tooltip("Empty space left above the cards, in canvas units, so their tops " +
+             "stay clear of whatever is over the row (the score bar). The cards " +
+             "lose it off their TOP — their bottoms stay on the book.")]
+    [Min(0f)][SerializeField] private float topGap = 16f;
+
     [Tooltip("The highest the row may be pinned. The ceiling that stops the " +
              "cards climbing into the word row above them \u2014 see PinAboveBoard.")]
     [SerializeField] private float maxY = 2400f;
@@ -276,7 +281,8 @@ public class BookmarkRowWidget : MonoBehaviour
 
         Sprite sprite = cardSkin == null ? null : cardSkin.baseSprite;
         for (int i = 0; i < count; i++)
-            cards[i].Bind(this, owned[i], sprite, cardColor, cardTextColor);
+            cards[i].Bind(this, owned[i], sprite, cardColor, cardTextColor,
+                          owned[i]?.bookmark != null ? owned[i].bookmark.cardArt : null);
 
         LayOut(-1);
         PinAboveBoard();
@@ -361,13 +367,19 @@ public class BookmarkRowWidget : MonoBehaviour
             var rect = cards[i].Rect;
             if (rect == null) continue;
 
-            // The row's own height, not a field of its own: a card is exactly as
-            // tall as the strip it lives in, and the two being separate numbers
-            // that had to be "kept in step" was a standing invitation to desync.
-            rect.sizeDelta = new Vector2(slot, row.rect.height);
-            if (i != held) rect.anchoredPosition = new Vector2(first + i * pitch, 0f);
+            // Off the row's own height, not a field of its own: a card is as tall
+            // as the strip it lives in less topGap, and the two being separate
+            // numbers that had to be "kept in step" was a standing invitation to
+            // desync.
+            rect.sizeDelta = new Vector2(slot, CardHeight);
+            if (i != held) rect.anchoredPosition = new Vector2(first + i * pitch, CardY);
         }
     }
+
+    // A card is the row's height less topGap, centred-pivot like the template,
+    // so it sits half the gap low to keep its bottom on the row's bottom.
+    private float CardHeight => Mathf.Max(1f, row.rect.height - topGap);
+    private float CardY => -(row.rect.height - CardHeight) * 0.5f;
 
     private int ActiveCount()
     {
@@ -532,7 +544,7 @@ public class BookmarkRowWidget : MonoBehaviour
         // X only. A card that could be flung upward would end up over the board,
         // and there is nothing up there for it to mean.
         float held = Mathf.Clamp(local.x, first, first + pitch * (count - 1));
-        card.Rect.anchoredPosition = new Vector2(held, 0f);
+        card.Rect.anchoredPosition = new Vector2(held, CardY);
 
         int target = Mathf.Clamp(Mathf.RoundToInt((held - first) / pitch), 0, count - 1);
         if (target == dragTo) return;

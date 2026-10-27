@@ -637,7 +637,8 @@ public class RogueDemoMode : GameMode
     {
         chips.Clear();
 
-        if (run != null) chips.Add(new StatusChip("$", MoneyText()));
+        if (run != null) chips.Add(new StatusChip("$", MoneyText(), icon: StatusIcon.Money,
+                                             title: "MONEY", about: MoneyAbout));
 
         chips.Add(new StatusChip(
             "MOVES",
@@ -647,7 +648,8 @@ public class RogueDemoMode : GameMode
             // grants extra moves makes those two different numbers, and the
             // config's would send the bar past full on the first frame.
             rules.Moves > 0 ? (float)movesLeft / rules.Moves : 0f,
-            movesLeft <= config.urgentMoves && !TargetReached));
+            movesLeft <= config.urgentMoves && !TargetReached,
+            StatusIcon.Moves, "MOVES", MovesAbout));
 
         // Only when the round HAS discards — a mode or a librarian that takes
         // them away should take the readout away too, not show a dead "0".
@@ -657,10 +659,20 @@ public class RogueDemoMode : GameMode
                 Fraction(ref discardsText, ref discardsShown, ref discardsAllowanceShown,
                          discardsLeft, rules.Discards),
                 (float)discardsLeft / rules.Discards,
-                discardsLeft == 0));
+                discardsLeft == 0,
+                StatusIcon.Discards, "DISCARDS", DiscardsAbout));
 
-        if (run != null) chips.Add(new StatusChip("ROUND", RoundText()));
+        if (run != null) chips.Add(new StatusChip("ROUND", RoundText(), icon: StatusIcon.Round,
+                                             title: "ROUND", about: RoundAbout));
     }
+
+    // What a tap on each chip says. Constants, because the chips are rebuilt
+    // every frame. 🚧 Hand-written: retune how payouts or discards work and
+    // these have to be edited to match.
+    private const string MoneyAbout = "Spend it in the shop between rounds. Clearing a round pays out.";
+    private const string MovesAbout = "Each word you play uses one. Reach the target before they run out.";
+    private const string DiscardsAbout = "Swap tiles you don't want for new ones from the bag. Each tile you discard uses one. They refill every round.";
+    private const string RoundAbout = "How far into the run you are. Each round's target is higher than the last.";
 
     // ⚠️ EVERY READOUT'S TEXT IS MEMOISED, and this is not premature. BuildChips
     // runs once per frame, and the obvious version — interpolating "12/20" and

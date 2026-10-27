@@ -121,7 +121,7 @@ The screen is a stack of bands, top to bottom:
 | Band | What's in it |
 |---|---|
 | **Round header** | Who you're up against — the librarian's name, portrait and rule — and your score over the round's target. On a round with no librarian the box stays exactly the same size and shows the round number instead. Beside it, the **tile bag** (how many tiles are left to draw, out of your whole bag) and your **items** (§10). |
-| **Resource strip** | Small readouts: money, moves, discards, round. |
+| **Resource strip** | Small readouts, each an icon and a number: money (a coin), moves (a quill), discards (a crumpled paper ball), round (an hourglass). No words on them — **tap one** to read what it is. 🚧 The icons are temporary art. |
 | **Score bar** | Three labelled columns on a dark bar — **POINTS × MULT = TOTAL**. What your word's LENGTH is worth, and only that, while you're selecting. After you hit PLAY it's where the whole score gets counted out in front of you, a beat at a time (§3). |
 | **Bookmarks** | The tops of your bookmark cards, standing up out of the top edge of the book (§8). |
 | **Word row** | The word you're spelling, laid out left to right as tiles, **on the board's page** just above the grid. When the selection won't score it says **WON'T SCORE** here instead, with the librarian's reason underneath when a librarian is the reason. |
@@ -195,7 +195,8 @@ room up there and drop below instead.)*
 | What you're reading | How |
 |---|---|
 | A tile on the board | **Press and hold it.** A quick tap already means "add this letter" |
-| A bookmark, an item | **Tap it.** Dragging a bookmark still reorders it; dragging an item still plays it |
+| A bookmark, an item | **Tap it.** Dragging a bookmark still reorders it; dragging an item still plays it. Items don't show their name on the slot, so this is where you find it |
+| A readout in the resource strip | **Tap it.** Says what the icon stands for and what it's for |
 
 *(Two gestures rather than one, and that's a deliberate trade. One rule would be easier to
 learn, but the board is the one place where touching something already means something, and

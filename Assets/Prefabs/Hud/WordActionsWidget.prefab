@@ -68,7 +68,7 @@ MonoBehaviour:
   m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 11daabd5270de4776b889864148a7789, type: 2}
-  m_sharedMaterial: {fileID: 4593583240426084301, guid: 11daabd5270de4776b889864148a7789, type: 2}
+  m_sharedMaterial: {fileID: 5671371141582519187, guid: 11daabd5270de4776b889864148a7789, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -204,16 +204,16 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 707a60c2627ac4916b3b2760097c165b, type: 3}
-  m_Type: 0
-  m_PreserveAspect: 1
+  m_Sprite: {fileID: 21300000, guid: 318bfe6a40afe4ba2be038a77efe624c, type: 3}
+  m_Type: 1
+  m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 0.4
 --- !u!114 &6639637185342705888
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -384,7 +384,7 @@ MonoBehaviour:
   m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 11daabd5270de4776b889864148a7789, type: 2}
-  m_sharedMaterial: {fileID: 4593583240426084301, guid: 11daabd5270de4776b889864148a7789, type: 2}
+  m_sharedMaterial: {fileID: 5671371141582519187, guid: 11daabd5270de4776b889864148a7789, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -520,16 +520,16 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 707a60c2627ac4916b3b2760097c165b, type: 3}
-  m_Type: 0
-  m_PreserveAspect: 1
+  m_Sprite: {fileID: 21300000, guid: 318bfe6a40afe4ba2be038a77efe624c, type: 3}
+  m_Type: 1
+  m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 0.4
 --- !u!114 &676643688191737187
 MonoBehaviour:
   m_ObjectHideFlags: 0

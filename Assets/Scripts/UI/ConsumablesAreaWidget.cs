@@ -45,8 +45,6 @@ public class ConsumablesAreaWidget : MonoBehaviour
 
     [SerializeField] private Color itemColor = Color.white;
 
-    [SerializeField] private Color itemTextColor = new Color(0.12f, 0.13f, 0.17f);
-
     [SerializeField] private float slotGap = 8f;
 
     [Tooltip("How far the slots sit inside the area's edges — clears the plate " +
@@ -220,7 +218,7 @@ public class ConsumablesAreaWidget : MonoBehaviour
         {
             var consumable = run != null && i < run.Consumables.Count ? run.Consumables[i] : null;
             slots[i].Bind(this, i, consumable,
-                          itemSprite, itemColor, slotSprite, slotColor, itemTextColor);
+                          itemSprite, itemColor, slotSprite, slotColor);
         }
 
         LayOut();

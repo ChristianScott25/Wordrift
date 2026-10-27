@@ -55,26 +55,57 @@ public class BookmarkCard : MonoBehaviour,
     /// <summary>This card's RectTransform, fetched once.</summary>
     public RectTransform Rect { get; private set; }
 
+    // How the body was authored, so a reused card can go back to the plain look
+    // after showing a bookmark that had art of its own.
+    private Image.Type plainType;
+    private bool plainTypeKnown;
+
     private void Awake() => Rect = (RectTransform)transform;
 
     /// <summary>
     /// Everything the card is. Called on every refresh rather than once at
     /// creation, because a card is REUSED: reordering hands card 0 a different
     /// bookmark rather than destroying and rebuilding the row.
+    ///
+    /// `art` is the bookmark's own picture. When there is one it IS the card,
+    /// drawn as is (untinted, not stretched) and with no name over it — the
+    /// name is a tap away in the info box. Every card is a reuse, so both looks
+    /// are set in full each time.
     /// </summary>
-    public void Bind(BookmarkRowWidget owner, BookmarkSpec spec, Sprite sprite, Color bodyColor, Color textColor)
+    public void Bind(BookmarkRowWidget owner, BookmarkSpec spec, Sprite sprite, Color bodyColor, Color textColor,
+                     Sprite art = null)
     {
         this.owner = owner;
         this.spec = spec;
         if (Rect == null) Rect = (RectTransform)transform;
 
+        bool hasArt = art != null;
+
         if (body != null)
         {
-            // Only override the authored sprite when there is one to use, the
-            // same bargain TileSkin takes everywhere else: a null field means
-            // "keep what this was authored with", not "go blank".
-            if (sprite != null) body.sprite = sprite;
-            body.color = bodyColor;
+            if (!plainTypeKnown)
+            {
+                plainType = body.type;
+                plainTypeKnown = true;
+            }
+
+            if (hasArt)
+            {
+                body.sprite = art;
+                body.type = Image.Type.Simple;
+                body.preserveAspect = true;
+                body.color = Color.white;
+            }
+            else
+            {
+                // Only override the authored sprite when there is one to use, the
+                // same bargain TileSkin takes everywhere else: a null field means
+                // "keep what this was authored with", not "go blank".
+                if (sprite != null) body.sprite = sprite;
+                body.type = plainType;
+                body.preserveAspect = false;
+                body.color = bodyColor;
+            }
 
             // Belt and braces. A card that isn't a raycast target can't be
             // dragged AND stops shielding the board from the same press.
@@ -83,6 +114,7 @@ public class BookmarkCard : MonoBehaviour,
 
         if (label != null)
         {
+            if (label.gameObject.activeSelf == hasArt) label.gameObject.SetActive(!hasArt);
             string name = spec == null ? "" : spec.Name;
             label.text = name == null ? "" : name.ToUpperInvariant();
             label.color = textColor;
