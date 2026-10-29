@@ -59,6 +59,33 @@ public class BookmarkRowWidget : MonoBehaviour
              "has a border drawn outside its cells.")]
     [SerializeField] private float boardGap = -6f;
 
+    /// <summary>
+    /// 🚧 What a TAP on a card does, when something wants it to do more than
+    /// describe the bookmark. Null (the Game scene and the ordinary Shop) opens
+    /// the info box as always; the Bookshop sets it to open its SELL panel.
+    /// An instance hook rather than a static one, so it dies with the scene.
+    /// Drags are untouched either way — reordering still works in all three.
+    /// </summary>
+    public System.Action<BookmarkSpec, RectTransform> CardTapped;
+
+    /// <summary>
+    /// A card was tapped (not dragged). Called by BookmarkCard, which knows a tap
+    /// from a drag; this decides what a tap means.
+    /// </summary>
+    public void TapCard(BookmarkSpec spec, RectTransform rect)
+    {
+        if (spec == null) return;
+        if (CardTapped != null) CardTapped(spec, rect);
+        else Inspector.Show(spec, Inspector.ScreenRectOf(rect));
+    }
+
+    /// <summary>
+    /// Redraws from the run now. For a host that changed the run's bookmarks
+    /// without raising RunState.Changed — the Bookshop, after a purchase
+    /// (RunState.AddBookmark is deliberately silent).
+    /// </summary>
+    public void Redraw() => Refresh();
+
     [Tooltip("Empty space left above the cards, in canvas units, so their tops " +
              "stay clear of whatever is over the row (the score bar). The cards " +
              "lose it off their TOP — their bottoms stay on the book.")]

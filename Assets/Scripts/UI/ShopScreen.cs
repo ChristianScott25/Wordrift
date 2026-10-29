@@ -76,7 +76,7 @@ public class ShopScreen : MonoBehaviour
     [SerializeField] private string gameSceneName = "Game";
     [SerializeField] private string menuSceneName = "Main Menu";
 
-    private readonly List<Offer> offers = new();
+    private readonly List<ShopOffer> offers = new();
     private RunState run;
 
     // The shelf row whose description is open, or -1 for none. The panel reads
@@ -87,6 +87,9 @@ public class ShopScreen : MonoBehaviour
     // The run's shop stream, taken once and kept: asking RunState again would
     // restart the sequence and re-roll the same offers every purchase.
     private Rng rng;
+
+    // Every roll the shelf makes, off that one stream. Built once beside it.
+    private ShopRoller roller;
 
     // Rerolls bought THIS VISIT — what the next one costs. Per-visit rather than
     // per-run, which needs no code to enforce: a fresh visit never goes through
@@ -148,6 +151,7 @@ public class ShopScreen : MonoBehaviour
                            "Word Crush > Create Shop Scene.", this);
 
         rng = run.StreamFor(RunState.ShopStream);
+        roller = new ShopRoller(run, rng);
 
         if (headline != null) headline.text = $"ROUND {run.Round} CLEARED";
         if (detail != null) detail.text = $"NEXT TARGET   {run.Template.TargetForRound(run.Round + 1)}";
@@ -164,22 +168,8 @@ public class ShopScreen : MonoBehaviour
         Save();
     }
 
-    /// <summary>
-    /// A row that costs nothing is almost always an asset nobody priced: `price`
-    /// defaults to 0 on every sellable asset, and the seeders only fill a 0 for
-    /// the assets they know about — so a checkout or bookmark authored by hand
-    /// and dropped into a mode's pool is FREE, and TrySpend(0) succeeds without
-    /// complaint. Checked once per visit rather than in Refresh, which runs
-    /// again after every purchase.
-    /// </summary>
-    private void WarnAboutFreeRows()
-    {
-        foreach (var offer in offers)
-            if (offer.HasStock && offer.ListPrice <= 0)
-                Debug.LogWarning($"Shop row '{offer.Title}' costs nothing — its asset's " +
-                                 "price is still 0. Set one, or run the matching " +
-                                 "Word Crush > Create ... Assets to seed the default.", this);
-    }
+    /// <summary>See ShopRoller.WarnAboutFreeRows. Once per stocking, not per Refresh.</summary>
+    private void WarnAboutFreeRows() => ShopRoller.WarnAboutFreeRows(offers, this);
 
     /// <summary>
     /// Writes the run out with the shelf as it stands. Called on arriving (the
@@ -257,397 +247,8 @@ public class ShopScreen : MonoBehaviour
     public const int Slots =
         ModifierSlots + BookmarkSlots + CheckoutSlots + TileSlots + ConsumableSlots;
 
-    /// <summary>
-    /// One thing on the shelf. Subclassed rather than switched on, so the row
-    /// rendering below never learns what kinds of stock exist.
-    /// </summary>
-    private abstract class Offer
-    {
-        /// <summary>
-        /// Bought this visit. Separate from HasStock because it can't be
-        /// re-derived: a sold bookmark is just one the run owns, which looks
-        /// exactly like one it owned before walking in.
-        /// </summary>
-        public bool Sold;
-
-        /// <summary>The row's name — "2L → E", "SPINE", "GREAT EXPECTATIONS".</summary>
-        public abstract string Title { get; }
-
-        /// <summary>What it does, in the player's words. The description panel's body.</summary>
-        public abstract string Description { get; }
-
-        /// <summary>What the asset says it costs, BEFORE the run's discount.</summary>
-        public abstract int ListPrice { get; }
-
-        /// <summary>
-        /// False when this slot has nothing to sell at all — every bookmark
-        /// owned, every tile full. The row hides rather than greying out: there
-        /// is nothing to grey.
-        /// </summary>
-        public abstract bool HasStock { get; }
-
-        /// <summary>Can still be bought right now.</summary>
-        public bool Available => !Sold && HasStock;
-
-        /// <summary>
-        /// Why this can't be taken right now, in the player's own words — or null
-        /// when it can. The buy button shows it instead of BUY.
-        ///
-        /// Deliberately NOT the same question as HasStock. Out of stock means
-        /// there is nothing to sell and the row hides, because there is nothing
-        /// to read. Blocked means there IS something, and what it is and what it
-        /// does are exactly what the player needs in order to decide whether to
-        /// go and make room — so the row stays, and says why.
-        ///
-        /// It takes the run rather than caching an answer because the answer
-        /// changes mid-visit: buying the bookmark in row 2 is what fills the run
-        /// up and blocks row 3.
-        /// </summary>
-        public virtual string Blocked(RunState run) => null;
-
-        /// <summary>
-        /// Has a row on screen at all — either something to sell, or the memory
-        /// of having sold it.
-        ///
-        /// The second half is load-bearing: buying the third modifier for a tile
-        /// makes that tile ineligible, so a sold upgrade row's HasStock flips to
-        /// false the instant it's bought. Keying the row off HasStock alone would
-        /// make the row you just paid for disappear rather than read SOLD.
-        /// </summary>
-        public bool Visible => Sold || HasStock;
-
-        /// <summary>Applies the purchase to the run. Money has already been taken.</summary>
-        public abstract void Deliver(RunState run);
-
-        /// <summary>
-        /// This row, written down. Stock is SAVED rather than re-derived from the
-        /// seed: the shop's roll order changes whenever its code does, and a
-        /// saved shelf must not depend on that.
-        /// </summary>
-        public abstract ShopOfferData Capture(Dictionary<TileSpec, int> tileIndex);
-    }
-
-    /// <summary>
-    /// A tile upgrade, landing on a random bag tile rolled up front.
-    ///
-    /// A tile can only hold so many modifiers (ModeConfig.maxModifiersPerTile),
-    /// so the roll only ever returns one with room. When the whole bag is full it
-    /// returns null, which is this row's "nothing to sell".
-    /// </summary>
-    private class ModifierOffer : Offer
-    {
-        public TileModifier Modifier;
-        public TileSpec Target;    // the bag tile this purchase would gild
-        public int ModifierLimit;  // 0 = no limit
-
-        // Both halves matter: no tile to gild, or a tile that's since filled up.
-        // ConfirmBuy checks Available BEFORE taking money, which is what makes
-        // Deliver's own guard unreachable rather than a way to be charged for
-        // nothing.
-        public override bool HasStock =>
-            Modifier != null && Target != null && Target.CanAddModifier(ModifierLimit);
-
-        public override int ListPrice => Modifier == null ? 0 : Modifier.price;
-
-        public override string Title =>
-            Modifier == null || Target == null
-                ? ""
-                : $"{Modifier.badgeLabel} → {Target.letters.ToUpperInvariant()}";
-
-        public override string Description
-        {
-            get
-            {
-                if (Modifier == null || Target == null) return "";
-
-                string letter = Target.letters.ToUpperInvariant();
-                string effect = string.IsNullOrWhiteSpace(Modifier.description)
-                    ? ""
-                    : Modifier.description + "\n\n";
-
-                // Naming the tile's CURRENT badges matters: this is the only
-                // place the player can tell a fresh tile from one they've already
-                // gilded twice, and the two are worth very different money.
-                string carried = Target.ModifierCount == 0
-                    ? "It carries nothing yet."
-                    : $"It already carries {BadgeList(Target)}.";
-
-                return $"{effect}Stamps {Modifier.badgeLabel} onto one {letter} in your bag " +
-                       $"— that one tile, for the rest of the run. {carried}";
-            }
-        }
-
-        private static string BadgeList(TileSpec tile)
-        {
-            var badges = new List<string>();
-            foreach (var modifier in tile.modifiers)
-                if (modifier != null) badges.Add(modifier.badgeLabel);
-            return string.Join(" ", badges);
-        }
-
-        public override void Deliver(RunState run)
-        {
-            // Unreachable: Available has already said this tile has room, and
-            // ConfirmBuy checks it before spending. Loud rather than silent,
-            // because by the time we're here the money is GONE — a quiet return
-            // would charge the player for nothing.
-            if (!Target.AddModifier(Modifier, ModifierLimit))
-                Debug.LogError($"Bought {Modifier.name} for a tile that couldn't take it — " +
-                               "the player has been charged and given nothing.");
-        }
-
-        public override ShopOfferData Capture(Dictionary<TileSpec, int> tileIndex) => new ShopOfferData
-        {
-            kind = ShopOfferData.Modifier,
-            assetName = Modifier == null ? "" : Modifier.name,
-            targetTile = Target != null && tileIndex.TryGetValue(Target, out int i) ? i : -1,
-            sold = Sold,
-        };
-    }
-
-    /// <summary>
-    /// A bookmark the run doesn't own. When there are none left unowned the slot
-    /// simply has nothing in it and the row disappears.
-    /// </summary>
-    private class BookmarkOffer : Offer
-    {
-        public Bookmark Bookmark;
-
-        public override bool HasStock => Bookmark != null;
-        public override int ListPrice => Bookmark == null ? 0 : Bookmark.price;
-        public override string Title =>
-            Bookmark == null ? "" : Bookmark.displayName.ToUpperInvariant();
-        public override string Description => Bookmark == null ? "" : Bookmark.description;
-
-        /// <summary>
-        /// ⚠️ The cap is answered HERE and not in HasStock, on purpose. HasStock
-        /// decides whether the row exists, and buying the bookmark in row 2 is
-        /// what fills the run — so gating stock on the cap would make row 3
-        /// VANISH while still unsold, which is the one thing the shelf promises
-        /// it never does. (It's the same failure RollTarget's `taken` list was
-        /// written to avoid on the upgrade rows.) The row stays and says FULL.
-        /// </summary>
-        public override string Blocked(RunState run) =>
-            run != null && run.BookmarksFull ? "BOOKMARKS FULL" : null;
-
-        public override void Deliver(RunState run)
-        {
-            // Unreachable in a healthy run — the shelf only ever stocks bookmarks
-            // the run doesn't own. Loud rather than silent for the same reason
-            // ModifierOffer is: by the time Deliver runs the money is GONE, so a
-            // quiet refusal charges the player for nothing. The way it happens is
-            // two bookmark assets sharing a file name in different folders: the
-            // save records the name, FindByName resolves both rows to the first
-            // match, and the second purchase buys what you already own.
-            if (!run.AddBookmark(Bookmark))
-                Debug.LogError($"Bought bookmark '{Bookmark.name}' that the run already owns — " +
-                               "the player has been charged and given nothing.");
-        }
-
-        public override ShopOfferData Capture(Dictionary<TileSpec, int> tileIndex) => new ShopOfferData
-        {
-            kind = ShopOfferData.Bookmark,
-
-            // Empty here is the whole point: it means the run already owns every
-            // bookmark, and the row must stay gone after a resume.
-            assetName = Bookmark == null ? "" : Bookmark.name,
-            sold = Sold,
-        };
-    }
-
-    /// <summary>
-    /// A checkout the run doesn't own — a permanent perk that takes effect the
-    /// moment it's bought, including on the prices of the rows beside it.
-    /// </summary>
-    private class CheckoutOffer : Offer
-    {
-        public Checkout Checkout;
-
-        public override bool HasStock => Checkout != null;
-        public override int ListPrice => Checkout == null ? 0 : Checkout.price;
-        public override string Title => Checkout == null ? "" : Checkout.Title.ToUpperInvariant();
-        public override string Description =>
-            Checkout == null
-                ? ""
-                : $"{Checkout.Power}\n\nYours for the rest of the run.";
-
-        public override void Deliver(RunState run)
-        {
-            // See BookmarkOffer.Deliver — same unreachable case, same reason it
-            // shouts instead of shrugging.
-            if (!run.AddCheckout(Checkout))
-                Debug.LogError($"Bought checkout '{Checkout.name}' that the run already owns — " +
-                               "the player has been charged and given nothing.");
-        }
-
-        public override ShopOfferData Capture(Dictionary<TileSpec, int> tileIndex) => new ShopOfferData
-        {
-            kind = ShopOfferData.Checkout,
-            assetName = Checkout == null ? "" : Checkout.name,
-            sold = Sold,
-        };
-    }
-
-    /// <summary>
-    /// A one-shot item to carry into a round.
-    ///
-    /// Like the tile row and unlike every other kind, it NEVER RUNS OUT: an item
-    /// you spend is not an item you own, so the same one may be offered while
-    /// you're already carrying it.
-    ///
-    /// ⚠️ THE CARRY CAP IS A `Blocked`, NOT A `HasStock`. Out of stock means
-    /// there is nothing to sell and the row hides; full means there IS something
-    /// and you can't take it, which is exactly when knowing what it does matters
-    /// most. Gating HasStock on the cap would make the row vanish WHILE STILL
-    /// UNSOLD the moment you bought your second item — the one thing the shelf
-    /// promises it never does. Same rule BookmarkOffer follows.
-    /// </summary>
-    private class ConsumableOffer : Offer
-    {
-        public Consumable Consumable;
-
-        public override bool HasStock => Consumable != null;
-        public override int ListPrice => Consumable == null ? 0 : Consumable.price;
-        public override string Title => Consumable == null ? "" : Consumable.Title.ToUpperInvariant();
-        public override string Description =>
-            Consumable == null
-                ? ""
-                : $"{Consumable.Power}\n\nCarried into a round and gone once you use it.";
-
-        public override string Blocked(RunState run) =>
-            run != null && run.ConsumablesFull ? "ITEMS FULL" : null;
-
-        public override void Deliver(RunState run)
-        {
-            // Reachable only if the cap check above and this one disagree, which
-            // they can't — but the money is already gone by the time this runs,
-            // so it shouts rather than shrugging. See BookmarkOffer.Deliver.
-            // Consumable?.name, not Consumable.name: AddConsumable(null) returns
-            // false too, and an error path that throws reports nothing at all.
-            if (!run.AddConsumable(Consumable))
-                Debug.LogError($"Bought consumable '{Consumable?.name}' the run can't hold — " +
-                               "the player has been charged and given nothing.");
-        }
-
-        public override ShopOfferData Capture(Dictionary<TileSpec, int> tileIndex) => new ShopOfferData
-        {
-            kind = ShopOfferData.Consumable,
-            assetName = Consumable == null ? "" : Consumable.name,
-            sold = Sold,
-        };
-    }
-
-    /// <summary>
-    /// A brand-new tile for the bag — a multi-letter one, which is the only kind
-    /// anything sells. Unlike every other row it can't run out and doesn't care
-    /// what the run already owns: two CH tiles are twice as likely to turn up as
-    /// one, which is the whole reason to buy a second.
-    ///
-    /// It holds the catalog ROW rather than a TileSpec so that nothing is built
-    /// until the purchase goes through — and so the row's price and score come
-    /// from the asset every time they're read, rather than from a copy taken when
-    /// the shop opened.
-    /// </summary>
-    private class TileOffer : Offer
-    {
-        public LetterSet.Entry Entry;
-
-        public override bool HasStock => Entry != null;
-        public override int ListPrice => Entry == null ? 0 : Entry.price;
-
-        public override string Title =>
-            Entry == null ? ""
-            : Entry.IsWild ? $"NEW TILE   WILD {TileSpec.WildSpelling}"
-            : $"NEW TILE   {Entry.letter.ToUpperInvariant()}";
-
-        /// <summary>
-        /// A choice row's options read out as words — "A, E or I". Built from the
-        /// row rather than written down, so a group retuned in the catalog can't
-        /// be described here by the letters it used to have.
-        /// </summary>
-        private string OptionList
-        {
-            get
-            {
-                if (Entry == null || string.IsNullOrEmpty(Entry.letter)) return "";
-
-                var options = Entry.letter.ToUpperInvariant().Split(TileSpec.ChoiceSeparator);
-                if (options.Length == 1) return options[0];
-
-                return string.Join(", ", options, 0, options.Length - 1) +
-                       " or " + options[options.Length - 1];
-            }
-        }
-
-        /// <summary>
-        /// Written from the row's own numbers, the same discipline as
-        /// Checkout.PowerText — a hand-authored second copy is how the shop ends
-        /// up describing a tile that was retuned last week.
-        /// </summary>
-        public override string Description
-        {
-            get
-            {
-                if (Entry == null) return "";
-
-                if (Entry.IsWild)
-                    return "A wild tile, worth no points at all, added to your bag " +
-                           "for the rest of the run.\n\n" +
-                           "It becomes whichever letter makes the best word it can " +
-                           "— counting the round's rules, so it will dodge a banned " +
-                           "letter if any other letter fits. It can't be upgraded.";
-
-                // Deliberately says what it ISN'T. The pairs are the other thing
-                // this row sells, and "does it lengthen my word?" is the one
-                // question that tells the two apart.
-                if (Entry.IsChoice)
-                    return $"A {Entry.letter.ToUpperInvariant()} tile, worth " +
-                           $"{Entry.points} points, added to your bag for the " +
-                           "rest of the run.\n\n" +
-                           $"It becomes {OptionList} — whichever of them makes " +
-                           "the best word it can, counting the round's rules. It " +
-                           "plays as ONE letter, so it won't lengthen a word the " +
-                           "way a letter pair does.";
-
-                string spelling = Entry.letter.ToUpperInvariant();
-                string howMany = Entry.letter.Length == 2 ? "both letters" : "every letter";
-                return $"A new {spelling} tile, worth {Entry.points} points, added to " +
-                       "your bag for the rest of the run.\n\n" +
-                       $"It spells {howMany} from a single square, and the word counts " +
-                       "them all — so it reaches a longer word off fewer tiles.";
-            }
-        }
-
-        public override void Deliver(RunState run)
-        {
-            // The spec is built HERE, not when the shelf was stocked: one made
-            // up front and then not bought is a tile nobody owns, and — worse —
-            // buying twice would hand out the SAME spec object, which is two
-            // board tiles sharing one identity, so gilding one would gild both.
-            //
-            // Null-guarded rather than assumed. ConfirmBuy checks Available,
-            // which checks HasStock, so it can't be null — but Deliver runs
-            // AFTER the money is gone, and an exception here would leave the
-            // player charged with the shelf half-updated.
-            if (Entry == null || !run.AddTile(LetterSet.CreateSpec(Entry)))
-                Debug.LogError($"Bought a '{(Entry == null ? "?" : Entry.letter)}' tile that " +
-                               "couldn't be added to the bag — the player has been charged " +
-                               "and given nothing.");
-        }
-
-        public override ShopOfferData Capture(Dictionary<TileSpec, int> tileIndex) => new ShopOfferData
-        {
-            kind = ShopOfferData.Tile,
-
-            // The catalog KEY, not an asset file name — a catalog row isn't an
-            // asset of its own. It resolves the same way everything else does:
-            // against the mode's own letter set, so there's nothing to keep in
-            // sync and a renamed row invalidates the save exactly like a renamed
-            // asset would.
-            assetName = Entry == null ? "" : Entry.letter,
-            sold = Sold,
-        };
-    }
+    // The Offer classes (one per kind of stock) live in Shop/ShopOffers.cs,
+    // shared with the 🚧 Bookshop. The rolls live in Shop/ShopRoller.cs.
 
     /// <summary>
     /// Fills the six slots. THE ROLL ORDER IS PART OF THE SEED — every draw
@@ -677,8 +278,8 @@ public class ShopScreen : MonoBehaviour
         {
             // Modifier FIRST: the target roll needs to know what would be
             // stamped, because a 0-point tile is no use to a letter multiplier.
-            var modifier = RollModifier();
-            var target = RollTarget(modifier, taken);
+            var modifier = roller.RollModifier();
+            var target = roller.RollTarget(modifier, taken);
             if (target != null) taken.Add(target);
 
             offers.Add(new ModifierOffer
@@ -692,12 +293,12 @@ public class ShopScreen : MonoBehaviour
         // Drawn together rather than one at a time, so the two rows can't offer
         // the same bookmark — which they otherwise would, often, against a pool
         // this small.
-        var bookmarks = RollBookmarks(BookmarkSlots);
+        var bookmarks = roller.RollBookmarks(BookmarkSlots);
         for (int i = 0; i < BookmarkSlots; i++)
             offers.Add(new BookmarkOffer { Bookmark = i < bookmarks.Count ? bookmarks[i] : null });
 
         for (int i = 0; i < CheckoutSlots; i++)
-            offers.Add(new CheckoutOffer { Checkout = RollCheckout() });
+            offers.Add(new CheckoutOffer { Checkout = roller.RollCheckout() });
 
         // Appended after everything above it, which is the rule for adding a
         // slot. ⚠️ THE 2026-09-27 CONSUMABLE CHANGE BROKE IT ANYWAY: dropping one
@@ -707,14 +308,14 @@ public class ShopScreen : MonoBehaviour
         // upgrade rows did the same job, and nothing records a seed yet), but
         // don't read this comment as saying old seeds are safe. They aren't.
         for (int i = 0; i < TileSlots; i++)
-            offers.Add(new TileOffer { Entry = RollTile() });
+            offers.Add(new TileOffer { Entry = roller.RollTile() });
 
         // And this one after THAT, for the same reason. The shelf reads by kind
         // top to bottom — upgrade, bookmarks, checkout, tile, item — which is
         // the roll order too, and keeping the two the same is what makes "add to
         // the end" a rule anyone can follow.
         for (int i = 0; i < ConsumableSlots; i++)
-            offers.Add(new ConsumableOffer { Consumable = RollConsumable() });
+            offers.Add(new ConsumableOffer { Consumable = roller.RollConsumable() });
     }
 
     /// <summary>
@@ -754,309 +355,26 @@ public class ShopScreen : MonoBehaviour
 
         foreach (var entry in saved.offers)
         {
-            switch (entry.kind)
+            // ⚠️ An unknown kind is a complaint, never a guess — see
+            // ShopRoller.Restore. Restoring it as anything would put the wrong
+            // thing on the shelf behind a save version bump that looked fine.
+            var offer = roller.Restore(entry);
+            if (offer == null)
             {
-                case ShopOfferData.Bookmark:
-                    offers.Add(new BookmarkOffer
-                    {
-                        // Resolved whether or not the run owns it — a SOLD row has
-                        // to keep saying which bookmark it sold. Null is allowed
-                        // and means the slot was empty, which Refresh hides.
-                        Bookmark = FindByName(run.Template.bookmarks, entry.assetName),
-                        Sold = entry.sold,
-                    });
-                    break;
-
-                case ShopOfferData.Checkout:
-                    offers.Add(new CheckoutOffer
-                    {
-                        Checkout = FindByName(run.Template.checkouts, entry.assetName),
-                        Sold = entry.sold,
-                    });
-                    break;
-
-                case ShopOfferData.Tile:
-                    offers.Add(new TileOffer
-                    {
-                        Entry = FindEntry(entry.assetName),
-                        Sold = entry.sold,
-                    });
-                    break;
-
-                case ShopOfferData.Consumable:
-                    offers.Add(new ConsumableOffer
-                    {
-                        Consumable = FindByName(run.Template.consumables, entry.assetName),
-                        Sold = entry.sold,
-                    });
-                    break;
-
-                // ⚠️ The modifier row is an explicit case, and `default` is a
-                // complaint. It used to BE the default, which meant a kind
-                // nobody had written a case for restored silently as a tile
-                // upgrade — wrong stock, no warning, and a save version bump
-                // that looked like it had worked.
-                case ShopOfferData.Modifier:
-                    // Read out rather than built inline: the re-roll below has to
-                    // be handed the same modifier, or a restored 2L row could land
-                    // on a 0-point tile that StockShelves would never have offered.
-                    var modifier = FindByName(run.Template.tileModifiers, entry.assetName);
-                    var target = run.TileAt(entry.targetTile);
-
-                    // A saved target that's since filled up (it can't within one
-                    // visit, but a save is not one visit) is re-rolled rather than
-                    // restored — otherwise the row would offer a purchase Deliver
-                    // would refuse. A SOLD row keeps its target either way, since
-                    // the tile it names is the one it landed on.
-                    if (!entry.sold && target != null &&
-                        !target.CanAddModifier(run.Template.maxModifiersPerTile))
-                        target = null;
-
-                    offers.Add(new ModifierOffer
-                    {
-                        Modifier = modifier,
-                        Target = target ?? (entry.sold ? null : RollTarget(modifier)),
-                        ModifierLimit = run.Template.maxModifiersPerTile,
-                        Sold = entry.sold,
-                    });
-                    break;
-
-                default:
-                    Debug.LogError($"Saved shop row has kind '{entry.kind}', which this " +
-                                   "shop doesn't know how to restore — re-rolling the " +
-                                   "visit rather than putting the wrong thing on the shelf.");
-                    StockShelves();
-                    return;
+                Debug.LogError($"Saved shop row has kind '{entry.kind}', which this " +
+                               "shop doesn't know how to restore — re-rolling the " +
+                               "visit rather than putting the wrong thing on the shelf.");
+                StockShelves();
+                return;
             }
+            offers.Add(offer);
         }
-    }
-
-    /// <summary>
-    /// The catalog row a saved tile row named, or null if the catalog no longer
-    /// has it. Null is allowed and means the slot comes back empty, the same as
-    /// every other kind of vanished stock.
-    /// </summary>
-    private LetterSet.Entry FindEntry(string key)
-    {
-        var letters = run.Template.letterSet;
-        return letters == null ? null : letters.EntryFor(key);
-    }
-
-    private static T FindByName<T>(List<T> pool, string assetName) where T : UnityEngine.Object
-    {
-        if (pool == null || string.IsNullOrEmpty(assetName)) return null;
-        foreach (var asset in pool)
-            if (asset != null && asset.name == assetName) return asset;
-        return null;
-    }
-
-    /// <summary>
-    /// One of the mode's modifiers, at random. Rolled rather than taken in list
-    /// order, so which upgrades a visit offers is part of the seed rather than
-    /// part of how the Inspector list happens to be sorted.
-    /// </summary>
-    private TileModifier RollModifier()
-    {
-        var pool = run.Template.tileModifiers;
-        if (pool == null) return null;
-
-        var available = new List<TileModifier>();
-        foreach (var modifier in pool)
-            if (modifier != null) available.Add(modifier);
-
-        return available.Count == 0 ? null : available[rng.Range(0, available.Count)];
-    }
-
-    /// <summary>
-    /// A random tile out of the run's bag that still has room for a modifier —
-    /// what this purchase would land on. Null when every tile is full, which
-    /// takes the row off the shelf.
-    ///
-    /// Deliberately rolls over the ELIGIBLE tiles rather than rolling over the
-    /// whole bag and retrying: a retry loop's draw count depends on how full the
-    /// bag is, and the shop's stream position is saved.
-    /// </summary>
-    /// <param name="modifier">
-    /// What this row would stamp on. Needed because a tile worth 0 — a choice
-    /// tile over 1-point letters, say — is a pointless target for a LETTER
-    /// multiplier: 2L on nothing is nothing, and the row would charge for it.
-    /// Word multipliers are fine there, so the test asks the modifier rather than
-    /// its type (TileModifier.WorksOnZeroPointTile).
-    /// </param>
-    /// <param name="taken">
-    /// Tiles another row on this shelf is already offering, or null for none.
-    /// Excluded so two rows can't sell upgrades for the same tile — see
-    /// StockShelves. Excluding shrinks the list a single draw indexes into; it
-    /// never changes how many draws happen.
-    /// </param>
-    private TileSpec RollTarget(TileModifier modifier, List<TileSpec> taken = null)
-    {
-        int limit = run.Template.maxModifiersPerTile;
-
-        // Worked out once rather than per tile: it's a property of the modifier,
-        // and the bag is a hundred tiles long.
-        //
-        // It can't empty the list on its own — every one of the starting 104
-        // tiles scores, and RunState.AddTile only ever appends — so this narrows
-        // what the single draw below indexes into without changing whether that
-        // draw happens. Same property the `taken` exclusion relies on, and the
-        // reason neither of them moves an existing seed.
-        bool zeroPointOk = modifier == null || modifier.WorksOnZeroPointTile;
-
-        var available = new List<TileSpec>();
-        foreach (var tile in run.TileBag)
-            // A WILD is skipped outright: it has no letter of its own to gild,
-            // and a 3W that fits into any word at all would be the strongest
-            // thing in the game by a distance. A CHOICE tile is fenced in enough
-            // that it stays a legitimate target — a 3W on Q/Z is 21 points, well
-            // under the 3W'd QU the shop already sells. Same "nothing to sell"
-            // answer as a bag with no room — the row just doesn't draw.
-            if (tile != null && !tile.IsWild && tile.CanAddModifier(limit) &&
-                (zeroPointOk || tile.baseScore != 0) &&
-                (taken == null || !taken.Contains(tile)))
-                available.Add(tile);
-
-        return available.Count == 0 ? null : available[rng.Range(0, available.Count)];
-    }
-
-    /// <summary>
-    /// Up to `count` DIFFERENT bookmarks the run doesn't own — fewer, or none, when
-    /// it owns nearly all of them. A short list is a normal answer, not an error.
-    /// </summary>
-    private List<Bookmark> RollBookmarks(int count)
-    {
-        var picked = new List<Bookmark>();
-
-        var available = new List<Bookmark>();
-        var pool = run.Template.bookmarks;
-        if (pool != null)
-            foreach (var bookmark in pool)
-                if (bookmark != null && !run.Owns(bookmark)) available.Add(bookmark);
-
-        // Draws without replacement off the one stream, so two rows can't collide
-        // and the number of draws depends only on how many are left — not on how
-        // unlucky the rolls were.
-        while (picked.Count < count && available.Count > 0)
-        {
-            int i = rng.Range(0, available.Count);
-            picked.Add(available[i]);
-            available.RemoveAt(i);
-        }
-
-        return picked;
-    }
-
-    /// <summary>
-    /// A random checkout the run doesn't own, or null when it owns every one the
-    /// mode offers. Null is a normal answer — the shop just has none today.
-    /// </summary>
-    private Checkout RollCheckout()
-    {
-        var pool = run.Template.checkouts;
-        if (pool == null) return null;
-
-        var available = new List<Checkout>();
-        foreach (var checkout in pool)
-            if (checkout != null && !run.Owns(checkout)) available.Add(checkout);
-
-        return available.Count == 0 ? null : available[rng.Range(0, available.Count)];
-    }
-
-    /// <summary>
-    /// A random multi-letter tile from the catalog, or null when the catalog has
-    /// none. Deliberately unfiltered by what the run already owns: duplicates are
-    /// the point, so a pair you bought last visit can be offered again.
-    ///
-    /// A row left at price 0 is NOT filtered out either — it reaches the shelf
-    /// and trips WarnAboutFreeRows, which is a loud complaint about an unpriced
-    /// catalog row rather than a tile that silently never appears.
-    /// </summary>
-    private LetterSet.Entry RollTile()
-    {
-        var letters = run.Template.letterSet;
-        if (letters == null) return null;
-
-        var available = new List<LetterSet.Entry>();
-        foreach (var entry in letters.Entries)
-            if (entry != null && entry.IsForSale) available.Add(entry);
-
-        return available.Count == 0 ? null : available[rng.Range(0, available.Count)];
-    }
-
-    /// <summary>
-    /// A random consumable from the mode's pool, or null when the pool is empty.
-    ///
-    /// Deliberately unfiltered by what the run is carrying — the same call the
-    /// tile row makes, and for the same reason: duplicates are legal, and with a
-    /// pool this small, filtering would leave the row empty most visits.
-    ///
-    /// Exactly ONE draw, whatever the pool, so the stream stays predictable.
-    /// </summary>
-    private Consumable RollConsumable()
-    {
-        var pool = run.Template.consumables;
-        if (pool == null) return null;
-
-        var available = new List<Consumable>();
-        foreach (var consumable in pool)
-            if (consumable != null) available.Add(consumable);
-
-        return available.Count == 0 ? null : available[rng.Range(0, available.Count)];
     }
 
     // ---- Re-rolling the shelf ----------------------------------------------
 
-    /// <summary>
-    /// What the next reroll costs, or 0 when the mode has rerolls switched off.
-    ///
-    /// Compounds off the EXACT price and rounds up only at the very end, so the
-    /// ceiling can't accumulate into a ladder steeper than the config asks for:
-    /// $5 · $8 · $12 · $17 · $26 at 1.5x, rather than $5 · $8 · $12 · $18 · $27.
-    ///
-    /// NOT run through RunState.PriceOf, deliberately. PriceOf is still the only
-    /// place a PERCENTAGE discount is applied — a reroll simply isn't discounted
-    /// by one, so that Sense and Frugality and the voucher below can't compound
-    /// into a free reroll. RunPerks.RerollDiscount is the different thing: a flat
-    /// cut to the BASE, which shifts the whole ladder rather than one rung, and
-    /// THIS IS THE ONE PLACE IT LANDS.
-    /// </summary>
-    private int RerollPrice
-    {
-        get
-        {
-            if (run == null || run.Template == null) return 0;
-
-            // The config's own number decides whether rerolls exist at all, and
-            // it is read BEFORE the voucher: otherwise a run carrying the voucher
-            // into a mode with rerolls switched off would resurrect them at $1.
-            int basePrice = run.Template.rerollBasePrice;
-            if (basePrice <= 0) return 0;
-
-            // Floored at 1 for the reason RunState.PriceOf clamps its discount at
-            // 90%: a shop that gives things away has stopped being a decision.
-            basePrice = Mathf.Max(1, basePrice - run.Perks.RerollDiscount);
-
-            double exact = basePrice *
-                System.Math.Pow(Mathf.Max(1f, run.Template.rerollPriceGrowth), rerolls);
-
-            // Rounded to six places BEFORE the ceiling. Math.Pow can land a
-            // hair over a whole number, and a ceiling turns 9.000000000000002
-            // into 10 — an off-by-one on a price the player is charged, with
-            // nothing on screen to suggest anything went wrong. Belt and braces
-            // at today's numbers (1.5^n is exact in binary), but the growth
-            // factor is an Inspector field and won't always be 1.5.
-            double ceiling = System.Math.Ceiling(System.Math.Round(exact, 6));
-            if (double.IsNaN(ceiling)) return basePrice;
-
-            // Saturating, like every other number the player is charged: 1.5^n
-            // passes int.MaxValue somewhere around the 52nd reroll, and a wrapped
-            // price comes back NEGATIVE — which TrySpend refuses with no
-            // explanation at all. Same argument as RunState.PriceOf and
-            // ScoreLimits. Infinity satisfies the comparison, so it's covered.
-            return ceiling >= int.MaxValue ? int.MaxValue : (int)ceiling;
-        }
-    }
-
+    /// <summary>What the next reroll costs, or 0 when the mode has them off. See ShopRoller.RerollPrice.</summary>
+    private int RerollPrice => ShopRoller.RerollPrice(run, rerolls);
     /// <summary>
     /// Wired to the REROLL button. Buys a whole new shelf.
     ///
@@ -1218,12 +536,7 @@ public class ShopScreen : MonoBehaviour
             if (row?.button != null) row.button.gameObject.SetActive(visible);
     }
 
-    /// <summary>
-    /// "$22" normally, "<s>$22</s> $18" when a checkout is taking something off —
-    /// the discount is only believable if the player can see what it used to cost.
-    /// </summary>
-    private static string PriceText(int listPrice, int price) =>
-        price == listPrice ? $"${price}" : $"<alpha=#60><s>${listPrice}</s><alpha=#FF> ${price}";
+    private static string PriceText(int listPrice, int price) => ShopRoller.PriceText(listPrice, price);
 
     private void Refresh()
     {
@@ -1314,39 +627,7 @@ public class ShopScreen : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// What the run is carrying, on one line — the things with no picture of
-    /// their own. Bookmarks used to share it; they have cards now.
-    /// </summary>
-    private string BuildOwnedLine()
-    {
-        // Bookmarks are deliberately NOT here any more: BookmarkRowWidget draws
-        // them as cards a few pixels above this line, in the order they score.
-        // A second copy as text could only ever be redundant or wrong.
-        var names = new List<string>();
-        foreach (var checkout in run.Checkouts) names.Add(checkout.Title.ToUpperInvariant());
-
-        // The bag size rides along because it is the ONLY thing buying a tile
-        // changes that the player can see. Everything else on this shelf hands
-        // over something with a name; a tile goes into a bag of a hundred and
-        // then waits for a round to deal it, so without this the purchase looks
-        // like it did nothing.
-        string bag = $"BAG {run.TileBag.Count}";
-
-        // Items, for the same reason the bag count is here: you cannot see them
-        // from the shop, and "ITEMS 2/2" is what explains the consumable row's
-        // buy button reading ITEMS FULL. Shown only when carrying something —
-        // an empty count would be one more number to read on every visit.
-        string items = run.Consumables.Count == 0
-            ? ""
-            : run.Template.maxConsumables > 0
-                ? $"      ITEMS {run.Consumables.Count}/{run.Template.maxConsumables}"
-                : $"      ITEMS {run.Consumables.Count}";
-
-        return names.Count == 0
-            ? bag + items
-            : $"OWNED   {string.Join("  ·  ", names)}      {bag}{items}";
-    }
+    private string BuildOwnedLine() => ShopRoller.OwnedLine(run);
 
     /// <summary>Wired to the Continue button. Starts the next round of the run.</summary>
     public void Continue()

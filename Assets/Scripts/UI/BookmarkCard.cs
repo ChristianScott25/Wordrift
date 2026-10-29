@@ -134,10 +134,15 @@ public class BookmarkCard : MonoBehaviour,
     /// <summary>Every gesture starts as a tap until it moves.</summary>
     public void OnPointerDown(PointerEventData eventData) => dragged = false;
 
-    /// <summary>A tap, not a drag: say what this bookmark does.</summary>
+    /// <summary>A tap, not a drag: hand it to the row (which, by default, says what this bookmark does).</summary>
     public void OnPointerClick(PointerEventData eventData)
     {
         if (dragged || spec == null) return;
-        Inspector.Show(spec, Inspector.ScreenRectOf(Rect));
+
+        // The row decides what a tap means — the info box everywhere, except
+        // the 🚧 Bookshop, which opens SELL. No owner can't happen once bound,
+        // but falls back to the old behaviour rather than doing nothing.
+        if (owner != null) owner.TapCard(spec, Rect);
+        else Inspector.Show(spec, Inspector.ScreenRectOf(Rect));
     }
 }

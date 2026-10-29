@@ -33,7 +33,9 @@ public class RogueDemoModeConfig : ModeConfig
              "0 turns discarding off entirely.")]
     [Min(0)] public int discardsPerRound = 5;
 
-    [Tooltip("Scene a cleared round continues to, between the rounds of a run.")]
+    [Tooltip("Scene a cleared round continues to, between the rounds of a run — " +
+             "and the one CONTINUE goes back to when a run was saved in its shop. " +
+             "\"Shop\" is the ordinary shop; 🚧 \"Bookshop\" is the upgradeable one.")]
     public string shopSceneName = "Shop";
 
     [Header("Targets")]
@@ -113,6 +115,99 @@ public class RogueDemoModeConfig : ModeConfig
              "so the rounding can't stack into a curve steeper than this says: " +
              "at 1.5 it runs $5, $8, $12, $17, $26.")]
     [Min(1f)] public float rerollPriceGrowth = 1.5f;
+
+    [Header("🚧 Bookshop (the upgradeable test shop)")]
+    [Tooltip("🚧 TEMPORARY — ONLY READ WHEN Shop Scene Name IS THE BOOKSHOP.\n\n" +
+             "Each section's ladder: how it starts (level 0 — 0 slots is locked) " +
+             "and what each upgrade costs and gives. A section missing from this " +
+             "list never appears. Tune these on Mode_RogueDemo_Bookshop; the real " +
+             "mode carries them only because both are the same kind of asset.")]
+    public List<BookshopSection> bookshopSections = DefaultBookshopSections();
+
+    [Tooltip("🚧 What EVERY upgrade bought adds to the price of every upgrade " +
+             "after it, whichever section it was in. A flat amount, so the ladder " +
+             "stays readable ($10 → $13) and can't run away in an endless run.")]
+    [Min(0)] public int bookshopUpgradeStep = 3;
+
+    [Tooltip("🚧 What selling a bookmark or item in the Bookshop pays back, as a " +
+             "percentage of its shop price — rounded down, never under $1. 50 = half, " +
+             "his call (2026-10-28): selling is a way out of a bad pick, not a profit.")]
+    [Range(0, 100)] public int sellRefundPercent = 50;
+
+    /// <summary>
+    /// The starting numbers (2026-10-28) — all 🚧 placeholders to tune. Round 1
+    /// pays about $19, bookmarks cost $10–16 and items $5–10, for scale.
+    /// </summary>
+    public static List<BookshopSection> DefaultBookshopSections() => new()
+    {
+        new BookshopSection
+        {
+            section = ShopSection.Bookmarks,
+            levels = { new BookshopLevel(2, 0), new BookshopLevel(3, 10), new BookshopLevel(4, 16) },
+        },
+        new BookshopSection
+        {
+            section = ShopSection.Consumables,
+            levels = { new BookshopLevel(1, 0), new BookshopLevel(2, 6), new BookshopLevel(3, 10) },
+        },
+        new BookshopSection
+        {
+            section = ShopSection.Tiles,
+            levels = { new BookshopLevel(0, 0), new BookshopLevel(2, 10), new BookshopLevel(3, 14) },
+        },
+        new BookshopSection
+        {
+            section = ShopSection.Checkouts,
+            levels = { new BookshopLevel(0, 0), new BookshopLevel(1, 15), new BookshopLevel(2, 22) },
+        },
+    };
+
+    /// <summary>The authored ladder for a section, or null when this mode has none.</summary>
+    public BookshopSection BookshopSectionFor(ShopSection section)
+    {
+        if (bookshopSections == null) return null;
+        foreach (var entry in bookshopSections)
+            if (entry != null && entry.section == section && entry.levels != null && entry.levels.Count > 0)
+                return entry;
+        return null;
+    }
+
+    /// <summary>The highest level a section can reach. 0 = no upgrades (or no section).</summary>
+    public int BookshopMaxLevel(ShopSection section)
+    {
+        var entry = BookshopSectionFor(section);
+        return entry == null ? 0 : entry.levels.Count - 1;
+    }
+
+    /// <summary>How many slots a section has at a level. 0 = locked, or no such section.</summary>
+    public int BookshopSlots(ShopSection section, int level)
+    {
+        var entry = BookshopSectionFor(section);
+        if (entry == null) return 0;
+        level = Mathf.Clamp(level, 0, entry.levels.Count - 1);
+        return Mathf.Max(0, entry.levels[level]?.slots ?? 0);
+    }
+
+    /// <summary>
+    /// What it costs to take a section from `level` to the next one, given how
+    /// many upgrades the run has bought in total. 0 means there is no next level.
+    /// THE one place an upgrade's price is worked out.
+    ///
+    /// Floored at 1 rather than 0, so an upgrade authored at $0 is still an
+    /// upgrade and doesn't read as "maxed" — the same reason an unpriced shop row
+    /// trips a warning instead of vanishing.
+    /// </summary>
+    public int BookshopUpgradePrice(ShopSection section, int level, int upgradesBought)
+    {
+        var entry = BookshopSectionFor(section);
+        if (entry == null || level < 0 || level + 1 >= entry.levels.Count) return 0;
+
+        long price = (long)Mathf.Max(0, entry.levels[level + 1]?.price ?? 0) +
+                     (long)Mathf.Max(0, bookshopUpgradeStep) * Mathf.Max(0, upgradesBought);
+
+        // Saturating, like every price the player is charged.
+        return (int)System.Math.Clamp(price, 1, int.MaxValue);
+    }
 
     [Header("Payout")]
     [Tooltip("Points needed per $1 of the round's payout. 10 = a 60-point round pays $6.")]

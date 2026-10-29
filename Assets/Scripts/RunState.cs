@@ -330,6 +330,58 @@ public class RunState
         return (int)System.Math.Min((discounted + 99) / 100, int.MaxValue);
     }
 
+    // ---- 🚧 The Bookshop's upgrades ----------------------------------
+    //
+    // TEMPORARY, with the Bookshop experiment (see BookshopScreen). Ignored by
+    // the ordinary shop, so a run on any other shop simply never raises them.
+
+    /// <summary>
+    /// How far each Bookshop section has been upgraded, indexed by ShopSection.
+    /// 0 is how it starts. SAVED (RunSaveData.shopLevels): an upgrade is bought
+    /// once and lasts the whole run.
+    /// </summary>
+    private readonly List<int> shopLevels = new();
+
+    public int ShopLevel(ShopSection section)
+    {
+        int i = (int)section;
+        return i >= 0 && i < shopLevels.Count ? shopLevels[i] : 0;
+    }
+
+    /// <summary>Every upgrade bought this run, across all sections — what the shared price step multiplies.</summary>
+    public int ShopUpgradesBought
+    {
+        get
+        {
+            int total = 0;
+            foreach (int level in shopLevels) total += level;
+            return total;
+        }
+    }
+
+    /// <summary>How many things a section offers each visit right now. 0 = locked.</summary>
+    public int ShopSlots(ShopSection section) =>
+        Template == null ? 0 : Template.BookshopSlots(section, ShopLevel(section));
+
+    /// <summary>What the section's next upgrade costs this run, or 0 when it has none left.</summary>
+    public int ShopUpgradePrice(ShopSection section) =>
+        Template == null ? 0 : Template.BookshopUpgradePrice(section, ShopLevel(section), ShopUpgradesBought);
+
+    /// <summary>
+    /// Buys a section's next upgrade: refuses (and changes nothing) when there
+    /// isn't one or it can't be paid for. The only thing that raises a level.
+    /// </summary>
+    public bool TryUpgradeShop(ShopSection section)
+    {
+        int price = ShopUpgradePrice(section);
+        if (price <= 0 || !TrySpend(price)) return false;
+
+        int i = (int)section;
+        while (shopLevels.Count <= i) shopLevels.Add(0);
+        shopLevels[i]++;
+        return true;
+    }
+
     // ---- Librarians ----------------------------------------------------
 
     /// <summary>
@@ -434,8 +486,24 @@ public class RunState
 
     public int TargetScore => Template.TargetForRound(Round);
 
-    /// <summary>Pays the run. The only way money comes IN — see RogueDemoModeConfig.RewardFor.</summary>
+    /// <summary>
+    /// Pays the run for a cleared round — see RogueDemoModeConfig.RewardFor. The
+    /// only other way money comes in is a 🚧 Bookshop sale; both go through Credit.
+    /// </summary>
     public void AddMoney(int amount)
+    {
+        if (amount <= 0) return;
+        Credit(amount);
+        LastPayout = amount;
+    }
+
+    /// <summary>
+    /// Puts money in. Private, so every way money arrives is a named method on
+    /// this class: a round's payout (AddMoney) and 🚧 a Bookshop sale
+    /// (SellBookmark / SellConsumable) — which deliberately leaves LastPayout
+    /// alone, so the shop's "+$21 EARNED" keeps meaning what the ROUND paid.
+    /// </summary>
+    private void Credit(int amount)
     {
         if (amount <= 0) return;
         // Saturating, for the same reason the score is (see ScoreLimits): a
@@ -443,7 +511,45 @@ public class RunState
         // everything in the shop with no explanation. Cheap insurance —
         // RogueDemoModeConfig.maxRoundPayout already bounds what one round pays.
         Money = (int)System.Math.Min((long)Money + amount, int.MaxValue);
-        LastPayout = amount;
+    }
+
+    // ---- 🚧 Selling (the Bookshop only, for now) ----------------------------
+
+    /// <summary>
+    /// What selling something with this shop price pays back. THE one place a
+    /// sell price is worked out: the mode's percentage, rounded down, never
+    /// under $1 for anything that cost money. Off the LIST price, not a
+    /// discounted one, so a discount can't make selling worth less.
+    /// </summary>
+    public int SellPrice(int listPrice)
+    {
+        if (listPrice <= 0 || Template == null) return 0;
+        long back = (long)listPrice * Mathf.Clamp(Template.sellRefundPercent, 0, 100) / 100;
+        return (int)System.Math.Max(1, back);
+    }
+
+    /// <summary>
+    /// Sells a bookmark the run owns: it leaves the run (and goes back in the
+    /// pool, so the shop can offer it again) and its sell price is paid. Raises
+    /// Changed — the bookmark row, the shop and the save all re-read the run.
+    /// </summary>
+    public bool SellBookmark(BookmarkSpec spec)
+    {
+        if (spec == null || !Bookmarks.Remove(spec)) return false;
+        Credit(SellPrice(spec.bookmark != null ? spec.bookmark.price : 0));
+        RaiseChanged();
+        return true;
+    }
+
+    /// <summary>Sells a carried item, by slot. See SellBookmark.</summary>
+    public bool SellConsumable(int index)
+    {
+        if (index < 0 || index >= Consumables.Count) return false;
+        var item = Consumables[index];
+        Consumables.RemoveAt(index);
+        Credit(SellPrice(item != null ? item.price : 0));
+        RaiseChanged();
+        return true;
     }
 
     /// <summary>
@@ -598,6 +704,8 @@ public class RunState
         // Both halves, and both are load-bearing: the current one because it's
         // the round's rule, and the unseen pool because it's the no-repeat rule.
         // Saving only the first would resume the right round into the wrong run.
+        data.shopLevels.AddRange(shopLevels);
+
         data.librarian = Librarian == null ? "" : Librarian.name;
         foreach (var librarian in librariansUnseen)
             if (librarian != null) data.librariansUnseen.Add(librarian.name);
@@ -732,6 +840,15 @@ public class RunState
         // run with an empty RunPerks is a run that quietly lost every perk it
         // bought, and it would look exactly like a working one.
         RebuildPerks();
+
+        // 🚧 Clamped to what the mode can reach NOW, so a ladder shortened in
+        // the Inspector can't leave a run past its top. (A retune discards the
+        // save through the fingerprint anyway — this is for the save's sake,
+        // not the player's.) An older file has none, which reads as "nothing
+        // bought" and is the honest answer.
+        if (data.shopLevels != null)
+            for (int i = 0; i < data.shopLevels.Count; i++)
+                shopLevels.Add(Mathf.Clamp(data.shopLevels[i], 0, template.BookshopMaxLevel((ShopSection)i)));
 
         // Read back, never re-rolled. Re-deriving the draw would give the same
         // answer only while the pool and the roll order both stayed put, and the

@@ -11,6 +11,10 @@ using UnityEngine.UI;
 public class MainMenu : MonoBehaviour
 {
     [SerializeField] private string gameSceneName = "Game";
+
+    [Tooltip("Where CONTINUE goes for a run saved in its shop, if the run's own " +
+             "mode doesn't name a shop scene. Normally the mode does — it's the " +
+             "mode that decides which shop it uses (🚧 the Bookshop experiment).")]
     [SerializeField] private string shopSceneName = "Shop";
 
     [Tooltip("Shown only when there's a run worth resuming. Hidden otherwise, so " +
@@ -56,7 +60,13 @@ public class MainMenu : MonoBehaviour
         if (RunState.Resume(template, saved) == null) return;
 
         ModeSelection.Select(template);
-        SceneManager.LoadScene(saved.location == SaveLocation.Shop ? shopSceneName : gameSceneName);
+
+        // The MODE's shop, not this menu's: a run saved in the 🚧 Bookshop has to
+        // go back to the Bookshop. Reading the menu's own field sent every saved
+        // shop to the ordinary one, which would hand a Bookshop run's saved shelf
+        // to a screen that lays it out differently.
+        string shop = string.IsNullOrEmpty(template.shopSceneName) ? shopSceneName : template.shopSceneName;
+        SceneManager.LoadScene(saved.location == SaveLocation.Shop ? shop : gameSceneName);
     }
 
     public void Quit() => Application.Quit();

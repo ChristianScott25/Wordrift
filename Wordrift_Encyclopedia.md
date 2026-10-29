@@ -1123,6 +1123,65 @@ allows two or three rerolls a visit. Both numbers are tuning knobs.
 ❓ Still open: whether you choose which tile gets upgraded, and whether you can sell or
 *remove* tiles from your bag — adding to it is now answered, taking away isn't.
 
+### 🚧 The Bookshop (an experiment)
+
+🚧 **TEMPORARY — AN EXPERIMENT, played from its own menu button (BOOKSHOP RUN).** A different
+shop that might replace the one above, or might be thrown away. Everything else about the run
+is identical; only what happens between rounds changes. **Don't balance anything around it
+yet** — every number below is a first guess.
+
+**The idea: the shop is part of your build.** It starts small, and you spend money upgrading
+*the shop itself* — more slots in a section, or whole new sections. Upgrades last the whole run.
+Different runs end up with differently shaped shops, so you have to decide what kind of shop
+you're building.
+
+**It's one scrolling page of sections.** Each section has its name, an **upgrade button**, and
+its cards, which wrap onto a second row when there are more than four. Locked sections sit in
+an **ADD A SECTION** card at the bottom. REROLL and CONTINUE stay pinned under the page.
+
+| Section | At the start | Upgrade 1 | Upgrade 2 |
+|---|---|---|---|
+| **Bookmarks** | open, 2 slots | 3 slots, $10 | 4 slots, $16 |
+| **Consumables** | open, 1 slot | 2 slots, $6 | 3 slots, $10 |
+| **Tiles** (pairs, wilds, choice tiles) | locked | open with 2 slots, $10 | 3 slots, $14 |
+| **Checkouts** | locked | open with 1 slot, $15 | 2 slots, $22 |
+
+- **Every upgrade you buy makes every other upgrade $3 dearer**, whichever section it's in. The
+  first upgrade is the cheap one, so focusing on a couple of sections pays and opening
+  everything doesn't.
+- **An upgrade fills in straight away.** Buy a slot and a new card appears in that section
+  during the same visit; open Tiles and two tiles appear.
+- **Buying works exactly like the ordinary shop**, for cards *and* upgrades: tap to read what
+  it does, then BUY. Sold cards stay on screen greyed out; ones you can't afford stay readable.
+- **A section's cards are all different** where the pool allows it — two bookmark slots never
+  show the same bookmark.
+- **REROLL** restocks every open section at the same climbing price as the ordinary shop.
+  Upgrades are untouched by it.
+- **Not sold here (yet):** tile upgrades (2L / 3W). The idea is tiles that come with upgrades
+  already on them, and maybe a section for upgrades later. The two shop-shaped checkouts —
+  **Sense and Frugality** and **A Tale of Two Shelves** — are left out too, because they're
+  meant to become shop upgrades.
+- **What you own sits at the top, and you can SELL it.** Your bookmarks are the usual
+  draggable row (drag still reorders them — the order is the scoring order); under it, an
+  **ITEMS 1/2** strip shows the items you're carrying, with empty slots drawn faint. Tap a
+  bookmark or an item and the panel opens with **SELL FOR $X** instead of a price.
+  - **Selling pays back half its shop price**, rounded down, never less than $1. It's a way out
+    of a bad pick, not a profit.
+  - A sold bookmark goes back into the pool, so the shop can offer it again later.
+  - Selling frees the slot at once — a bookmark row that said BOOKMARKS FULL can buy again.
+  - The "+$X EARNED" next to your money still means what the round paid; sales don't change it.
+  - 🚧 **Only in the Bookshop for now.** The ordinary shop has no selling.
+- 🚧 **The art is placeholder**: the same parchment plates the rest of the game uses (the
+  description panel included), PLAY/DISCARD-style buttons — green to buy or continue, red to
+  sell, amber to reroll — the bookmarks' card art, and one book icon for every item.
+
+🚧 **There's an unlimited-money version too** (the BOOKSHOP $∞ button), so every section and
+upgrade can be tried in one visit. Like Unlimited Money (§11), it's a test tool, not a way to judge
+the economy.
+
+❓ **Open:** the final look; "services" (discount, cheaper rerolls, holding an item for next
+visit) as upgrades; rarity and "better items" upgrades; and every price.
+
 ---
 
 ## 9. Checkouts
@@ -1359,6 +1418,8 @@ and right now there's nothing you can do about it except spend one.
 |---|---|
 | **Rogue Demo** | Everything described in this document. The only mode you'd actually play. |
 | 🚧 **Unlimited Money** | A TEST MODE. Identical to Rogue Demo except nothing is ever too expensive — buy every row, reroll as often as you like, stack checkouts in one visit. Both money readouts say `$∞`. |
+| 🚧 **Bookshop $∞** | A TEST MODE. The Bookshop with unlimited money. |
+| 🚧 **Bookshop** | AN EXPERIMENT. Identical to Rogue Demo except the shop between rounds is the upgradeable Bookshop (§8), and the two shop-shaped checkouts aren't sold. Started from the BOOKSHOP RUN button. |
 
 *Timed and Overflow modes were cut on 2026-08-25, and Moves — the last arcade round — on
 2026-08-28. This is a roguelike now, not an arcade collection.*
@@ -1406,6 +1467,9 @@ one. It comes out before release.
 | Max interest per round | $25 (0 = no cap) | `Mode_RogueDemo.asset` |
 | 🚧 Unlimited money | off | `Mode_RogueDemo.asset` — on in `Mode_RogueDemo_Unlimited.asset` |
 | Shop slots | 1 upgrade · 2 bookmarks · 1 checkout · 1 new tile · 1 consumable | `ShopScreen` (code, not an asset) |
+| 🚧 Bookshop sections | bookmarks 2→3→4 · consumables 1→2→3 · tiles locked→2→3 · checkouts locked→1→2 (prices in §8) | `Mode_RogueDemo_Bookshop.asset` |
+| 🚧 Bookshop upgrade step | +$3 to every other upgrade, per upgrade bought | `Mode_RogueDemo_Bookshop.asset` |
+| 🚧 Bookshop sell price | 50% of the shop price, rounded down, min $1 | `Mode_RogueDemo_Bookshop.asset` |
 | Modifier prices | 5 / 9 / 14 / 22 | each asset in `GameData/Modifiers/` |
 | Bookmark prices | 10 / 12 / 13 / 13 / 14 / 16 | each asset in `GameData/Bookmarks/` |
 | Bookmarks you may hold | 5 (0 = no limit) | `Mode_RogueDemo.asset` |
@@ -1459,6 +1523,8 @@ perks, including interest on savings and a cheaper reroll (§9) · runs that sav
 🚧 **consumables** — six one-shot items (Shuffle, Doubler, Second Edition, Strikethrough,
 Bookworm, Ink Blot), bought in the shop and dragged onto the board — or onto one tile — to play
 (§10) ·
+🚧 **the Bookshop** — an experimental shop you upgrade as you go, playable from its own menu
+button beside the ordinary one (§8) ·
 🚧 **info boxes** — hold a tile, or tap a bookmark or an item, and a card says what it is (§2) ·
 🚧 **the tile bag view** — tap the bag to see everything still to be drawn, grouped and counted
 (§6) ·

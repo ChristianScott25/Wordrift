@@ -361,6 +361,9 @@ public static class WordCrushSetup
         if (File.Exists(MenuScenePath)) wanted.Add(MenuScenePath);
         wanted.Add(ScenePath);
         if (File.Exists(ShopSceneSetup.ScenePath)) wanted.Add(ShopSceneSetup.ScenePath);
+        // 🚧 The Bookshop experiment — kept registered if it's been built, or a
+        // Rebuild would quietly drop it and its mode's rounds would load nothing.
+        if (File.Exists(BookshopSceneSetup.ScenePath)) wanted.Add(BookshopSceneSetup.ScenePath);
 
         EditorBuildSettings.scenes = wanted
             .Select(path => new EditorBuildSettingsScene(path, true))

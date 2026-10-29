@@ -73,6 +73,15 @@ public class RunSaveData
     public List<string> consumables = new();
 
     /// <summary>
+    /// 🚧 How far each Bookshop section has been upgraded, indexed by
+    /// ShopSection's value (which is why that enum is append-only). Empty for a
+    /// run that never used the Bookshop — and for a file written before this
+    /// existed, which reads back as "nothing bought", the honest answer. No
+    /// version bump for that reason.
+    /// </summary>
+    public List<int> shopLevels = new();
+
+    /// <summary>
     /// The librarian this round is played against, by asset name. Empty on an
     /// ordinary round, which is most of them.
     /// </summary>

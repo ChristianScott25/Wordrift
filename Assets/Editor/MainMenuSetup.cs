@@ -26,12 +26,18 @@ public static class MainMenuSetup
     /// <summary>🚧 TEMPORARY — see the block at the bottom of this file.</summary>
     private const string UnlimitedName = "Unlimited Money Button";
 
+    /// <summary>🚧 TEMPORARY — the Bookshop experiment's button. See BookshopModeSetup.</summary>
+    private const string BookshopName = "Bookshop Button";
+    private const string BookshopUnlimitedName = "Bookshop Unlimited Button";
+
     // Absolute, not relative: a re-run must land the buttons in the same place.
     // The menu's buttons are 300x100, so a pitch of 140 leaves a 40px gap between
     // them. Keep any new one on that pitch.
     private static readonly Vector2 ContinueAt = new Vector2(0f, 70f);
     private static readonly Vector2 PlayAt = new Vector2(0f, -70f);
     private static readonly Vector2 UnlimitedAt = new Vector2(0f, -210f);
+    private static readonly Vector2 BookshopAt = new Vector2(0f, -350f);
+    private static readonly Vector2 BookshopUnlimitedAt = new Vector2(0f, -490f);
 
     [MenuItem("Word Crush/Set Up Main Menu")]
     public static void SetUp()
@@ -70,12 +76,16 @@ public static class MainMenuSetup
         var resume = EnsureContinueButton(menu, play);
         WordCrushSetup.SetRef(menu, "continueButton", resume);
         bool testMode = EnsureUnlimitedButton(menu, play);
+        bool bookshop = EnsureBookshopButton(menu, play);
+        EnsureModeButton(menu, play, BookshopModeSetup.UnlimitedPath, BookshopUnlimitedName,
+            "BOOKSHOP $∞", BookshopUnlimitedAt, "🚧 Create Bookshop Mode");
         WireModes(menu);
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         Debug.Log("Main menu ready: CONTINUE added, PLAY relabelled NEW RUN." +
-                  (testMode ? " 🚧 UNLIMITED MONEY added below it." : ""));
+                  (testMode ? " 🚧 UNLIMITED MONEY added below it." : "") +
+                  (bookshop ? " 🚧 BOOKSHOP added below that." : ""));
     }
 
     /// <summary>
@@ -97,7 +107,9 @@ public static class MainMenuSetup
     }
 
     /// <summary>A button this script generated, as opposed to the hand-authored one.</summary>
-    private static bool IsOurs(string name) => name == ContinueName || name == UnlimitedName;
+    private static bool IsOurs(string name) =>
+        name == ContinueName || name == UnlimitedName ||
+        name == BookshopName || name == BookshopUnlimitedName;
 
     private static Button FindByName(MainMenu menu, string name)
     {
@@ -179,26 +191,45 @@ public static class MainMenuSetup
     /// asset isn't there, so this menu item still works on a project where
     /// 🚧 Create Unlimited Money Mode has never been run.
     /// </summary>
-    private static bool EnsureUnlimitedButton(MainMenu menu, Button play)
+    private static bool EnsureUnlimitedButton(MainMenu menu, Button play) =>
+        EnsureModeButton(menu, play, UnlimitedMoneyModeSetup.AssetPath, UnlimitedName,
+            "UNLIMITED MONEY", UnlimitedAt, "🚧 Create Unlimited Money Mode");
+
+    /// <summary>
+    /// 🚧 The Bookshop experiment's button, a fourth one below the test mode's.
+    /// Same rules as that one, including the IsOurs listing. Deleting it is this
+    /// method, BookshopName and BookshopAt, the call in Run(), and the button in
+    /// Main Menu.unity — and the same for its unlimited-money twin (BookshopUnlimited*,
+    /// one call in Run()). See BookshopModeSetup for the rest of the experiment.
+    /// </summary>
+    private static bool EnsureBookshopButton(MainMenu menu, Button play) =>
+        EnsureModeButton(menu, play, BookshopModeSetup.AssetPath, BookshopName,
+            "BOOKSHOP RUN", BookshopAt, "🚧 Create Bookshop Mode");
+
+    /// <summary>
+    /// Adds (or re-wires) a button that starts one particular mode asset. Silently
+    /// does nothing when the asset isn't there, so this menu item still works on a
+    /// project where that mode has never been created.
+    /// </summary>
+    private static bool EnsureModeButton(MainMenu menu, Button play, string assetPath,
+                                         string buttonName, string label, Vector2 at, string createItem)
     {
-        var config = AssetDatabase.LoadAssetAtPath<RogueDemoModeConfig>(
-            UnlimitedMoneyModeSetup.AssetPath);
+        var config = AssetDatabase.LoadAssetAtPath<RogueDemoModeConfig>(assetPath);
 
         if (config == null)
         {
-            Debug.Log("No Mode_RogueDemo_Unlimited.asset, so no test-mode button. " +
-                      "Run Word Crush > 🚧 Create Unlimited Money Mode first if you want one.");
+            Debug.Log($"No {assetPath}, so no '{label}' button. " +
+                      $"Run Word Crush > {createItem} first if you want one.");
             return false;
         }
 
-        // +1: below the play button, matching where it sits on screen. CONTINUE has
-        // already been inserted above it by now, so this index is the settled one.
-        var button = FindByName(menu, UnlimitedName) ?? BuildCopyOfPlayButton(
-            play, UnlimitedName, "UNLIMITED MONEY", UnlimitedAt,
-            play.transform.GetSiblingIndex() + 1);
+        // Right after the play button in the hierarchy. Only draw order — the
+        // position on screen is set absolutely just below.
+        var button = FindByName(menu, buttonName) ?? BuildCopyOfPlayButton(
+            play, buttonName, label, at, play.transform.GetSiblingIndex() + 1);
 
-        Place(button.gameObject, UnlimitedAt);
-        Relabel(button, "UNLIMITED MONEY");
+        Place(button.gameObject, at);
+        Relabel(button, label);
 
         // Rewired from scratch every run rather than only when empty, unlike
         // CONTINUE: this listener carries the mode ASSET as its argument, and a
