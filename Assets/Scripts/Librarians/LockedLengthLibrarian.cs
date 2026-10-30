@@ -7,9 +7,9 @@ using UnityEngine;
 /// Stateless, and it needs no save support: it never has to remember which
 /// length was chosen, because under its own rule every word already played has
 /// that length — so ANY of them answers the question. That matters more than it
-/// looks. WordCheck.WordsThisRound is a SET and has no order, so "the first
-/// word" isn't a thing this could read even if it wanted to; "every word so far
-/// agrees" is, and it's the same rule.
+/// looks. WordCheck.WordsThisRound is in play order now (2026-10-29), so "the
+/// first word" COULD be read — but "every word so far agrees" is the same rule
+/// and needs nothing from the order, so it was left as it was.
 ///
 /// 🎯 The choice is the first word, and it's made before you know what the board
 /// will give you later — take the long word and you've promised to keep finding

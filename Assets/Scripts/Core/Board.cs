@@ -68,6 +68,14 @@ public class Board : MonoBehaviour
     public Vector2 BoardSize { get; private set; }
 
     /// <summary>
+    /// The box the board's SHAPE fills, in cells, inclusive — worked out BEFORE
+    /// any closed cell is taken out, so a hole the Dilapidated punches in a
+    /// corner doesn't move where the edge is. The corner and edge bookmarks read
+    /// it through ScoringContext.BoardBounds.
+    /// </summary>
+    public RectInt CellBounds { get; private set; }
+
+    /// <summary>
     /// The board as it's DRAWN: BoardSize plus the backing's border, which
     /// sticks out half of (cellScale - 1) cells past the tiles on every side.
     /// What anything lining itself up with the board's visible edge wants —
@@ -262,6 +270,13 @@ public class Board : MonoBehaviour
         }
 
         cells = new HashSet<Vector2Int>(shape.Cells());
+        if (cells.Count > 0)
+        {
+            int minX = cells.Min(c => c.x), minY = cells.Min(c => c.y);
+            CellBounds = new RectInt(minX, minY,
+                                     cells.Max(c => c.x) - minX + 1,
+                                     cells.Max(c => c.y) - minY + 1);
+        }
         if (ClosedCells != null) cells.ExceptWith(ClosedCells);
 
         if (cells.Count == 0)

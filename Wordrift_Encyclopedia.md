@@ -638,10 +638,26 @@ scores from then on.
 | **Vowel Fanatic** | **+4 Mult** if the word has more vowels than consonants | $14 |
 | **Marginalia** | **+1 Mult** for every letter past the minimum word length | $13 |
 | **Shorthand** | **+4 Mult** on a word of exactly the minimum length | $13 |
+| **Looking Glass** | **×3 Mult** if the word reads the same backwards (`POP`, `LEVEL`) | $16 |
+| **Double Spaced** | **+4 Mult** if the same letter appears twice in a row (the `TT` in `LETTER`) | $12 |
+| **Verse** | **+2 Mult** if the word ends in the same 2 letters as your last word — and **+2 more for each word the rhyme keeps going** (+2, +4, +6…) | $14 |
+| **Sequel** | **+20 Points** if the word starts with the letter your last word ended on | $10 |
+| **Antiquarian** | **×2 Mult** with 2 rare letters (J K Q V X Z), **+1×** for each one past that (×3, ×4…) | $15 |
+| **Golden Ratio** | **×5 Mult** on an 8-letter word, if your last two words were 3 letters and then 5 | $18 |
+| **Dog-Ear** | **+15 Points** if the word uses a corner tile | $10 |
+| **Centerpiece** | **+4 Mult** if no tile in the word touches the edge of the board | $13 |
+| **Gilt Edge** | **×2 Mult** if every tile in the word is on the edge of the board | $14 |
+| **Columnist** | **×3 Mult** if the word uses a tile in every column | $16 |
+| **Ruled Paper** | **×3 Mult** if the word uses a tile in every row | $16 |
 
-Every shape is represented, deliberately: Bookend and Spine are multiplicative because their
-conditions are rare and hard to engineer; Vowel Fanatic, Marginalia and Shorthand are additive
-because theirs are easy to hit; Deja Vu works on the points side entirely.
+🚧 **The last eleven (added 2026-10-29) are a first pass** — names, sizes and prices were picked
+by feel so the Bookshop has more to sell, and haven't been balanced. They also **reuse the six
+original card pictures** for now, so two bookmarks can share a face until each gets its own.
+
+Every shape is represented, deliberately: the ×Mult ones (Bookend, Spine, Looking Glass,
+Antiquarian, Golden Ratio, Gilt Edge, Columnist, Ruled Paper) have conditions that are rare or
+hard to engineer; the +Mult ones (Vowel Fanatic, Marginalia, Shorthand, Double Spaced, Verse,
+Centerpiece) are easier to hit; Deja Vu, Sequel and Dog-Ear work on the points side.
 
 🎯 **Marginalia and Shorthand are opposites, and they share a pool on purpose.** One pays for
 long words, the other only for the shortest legal one — so a shelf offering both is asking
@@ -656,8 +672,8 @@ The rules around them:
   own. Once you're carrying five it still *offers* them: the row shows what it is, what it
   does and what it costs, and the buy button reads **BOOKMARKS FULL** and won't take your
   money. Being full and being broke are different problems, so they say different things.
-  (With six bookmarks in the game the cap only ever blocks the sixth. It's built for a
-  bigger roster than this one.)
+  (With seventeen bookmarks in the game, the cap now really bites: you'll fill up long before
+  the shop runs out.)
 - **They stack**, and the way they stack depends on their shapes — see the worked example
   in §3.
 - **They fire left to right, and you choose the order.** Your bookmarks sit as cards below
@@ -674,6 +690,18 @@ Details worth knowing:
 - **Deja Vu counts repeats within a round only** — the list resets when a new round starts.
   Nothing in the game stops you playing the same word twice, so this turns a quirk into a
   tactic: spell `EYE`, then spell it again for +10.
+- **Verse, Sequel and Golden Ratio look at the words you played before this one — this round
+  only.** The round keeps every word you play, in order, and that list starts empty each round,
+  so a round's first word never fires them. Verse doesn't count the same word twice as a rhyme
+  (`CAT` then `CAT` is a repeat, not a rhyme), and any word that doesn't rhyme ends the streak.
+  Golden Ratio's three words have to be back to back.
+- **Lengths here are letters**, so a `CH` tile counts as two.
+- **Antiquarian counts the letters you spelled**, so a `QU` tile gives you its Q and a wild that
+  became a Z counts as a Z. Two Zs count as two.
+- **Corners and edges are the board's outer box.** If The Dilapidated closes a corner, that corner
+  just can't be used that round; the edge stays where it was.
+- **A wild will happily become the letter that fires one.** The wild already picks whichever
+  letter scores best, and that includes your bookmarks — so with Verse it'll pick a rhyme.
 - **Each bookmark shows itself as it fires.** Pressing PLAY walks the two numbers forward one
   bookmark at a time — the card shakes and its `×2` floats off it — rather than jumping to a
   total.
@@ -1500,6 +1528,16 @@ one. It comes out before release.
 | Spine multiplier | ×2 Mult | `Spine.asset` |
 | Marginalia bonus | +1 Mult a letter | `Marginalia.asset` |
 | Shorthand bonus | +4 Mult | `Shorthand.asset` |
+| 🚧 Looking Glass multiplier | ×3 Mult | `LookingGlass.asset` |
+| 🚧 Double Spaced bonus | +4 Mult | `DoubleSpaced.asset` |
+| 🚧 Verse | last 2 letters; +2 Mult per word in the streak | `Verse.asset` |
+| 🚧 Sequel bonus | +20 Points | `Sequel.asset` |
+| 🚧 Antiquarian | J K Q V X Z; ×2 at 2, +1× each extra | `Antiquarian.asset` |
+| 🚧 Golden Ratio | 3 → 5 → 8 letters, ×5 Mult | `GoldenRatio.asset` |
+| 🚧 Dog-Ear bonus | +15 Points | `DogEar.asset` |
+| 🚧 Centerpiece bonus | +4 Mult | `Centerpiece.asset` |
+| 🚧 Gilt Edge multiplier | ×2 Mult | `GiltEdge.asset` |
+| 🚧 Columnist / Ruled Paper | ×3 Mult each | `Columnist.asset` / `RuledPaper.asset` |
 | Score walk-through pace | first beat 0.45s, each next one ×0.95, 0.35s to finish | `ScoreTallyTiming` (code, not an asset) |
 | Score ceiling | 1,000,000,000 points, ×1,000,000 mult | `ScoreLimits` (code, not an asset) |
 
@@ -1514,8 +1552,8 @@ multipliers · the run (rounds, escalating
 targets, a persistent finite tile bag) · money · **multi-letter tiles** — eight of them, bought
 outright, spelling two letters from one square (§4) · **wild tiles**, which become whichever
 letter scores best and route around a banned one (§4) · **choice tiles** — ten of them, each
-becoming one of two or three named letters (§4) · bookmarks (six of them, with a scoring
-pipeline built to take many more) · a shop of six slots with set prices, one purchase each, and a
+becoming one of two or three named letters (§4) · bookmarks (seventeen of them — 🚧 eleven
+added 2026-10-29, unbalanced and sharing the original six pictures — with a scoring pipeline built to take many more) · a shop of six slots with set prices, one purchase each, and a
 description you read before you buy (§8) · **paying to reroll the shelf**, at a price that
 climbs within a visit and resets between them (§8) · **checkouts** — six permanent run-wide
 perks, including interest on savings and a cheaper reroll (§9) · runs that save and resume themselves (§6) ·
@@ -1546,6 +1584,8 @@ real; every pixel of the art is placeholder.
   §6.)
 - **The bag view showing your WHOLE bag**, with the tiles already drawn greyed out rather than
   missing. It shows only what's left to draw today, which answers a different question.
+- **A "words you've played" list for the round**, in order. The round already keeps that list
+  (2026-10-29, for Verse, Sequel and Golden Ratio); nothing shows it yet.
 
 ### ❓ Open questions
 

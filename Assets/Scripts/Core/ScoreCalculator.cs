@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 /// <summary>
 /// Turns a chain of tiles into a score, as TWO numbers that multiply:
@@ -47,6 +48,14 @@ public class ScoreCalculator
     private readonly ModeConfig config;
 
     public ScoreCalculator(ModeConfig config) => this.config = config;
+
+    /// <summary>
+    /// The board's outer box in cells (Board.CellBounds), handed to every
+    /// context so a bookmark can ask "is this tile on a corner / the edge".
+    /// Set once by GameSession after Board.Build — the shape never changes
+    /// mid-run. Left empty, nothing counts as a corner or an edge.
+    /// </summary>
+    public RectInt BoardBounds { get; set; }
 
     /// <summary>
     /// The two numbers a word of this length OPENS on, before a single tile is
@@ -169,8 +178,9 @@ public class ScoreCalculator
     }
 
     /// <param name="wordsThisRound">
-    /// What's already been played this round, so a bookmark can spot a repeat.
-    /// Must NOT contain the word being scored yet.
+    /// What's already been played this round, in play order, so a bookmark can
+    /// spot a repeat or read the previous word. Must NOT contain the word being
+    /// scored yet.
     /// </param>
     /// <param name="bookmarks">The run's bookmarks in slot order; null for a mode without a run.</param>
     /// <param name="roundRule">
@@ -186,7 +196,7 @@ public class ScoreCalculator
     /// thousands of strings per frame of a drag.
     /// </param>
     public WordResult Evaluate(IReadOnlyList<Tile> chain, string word,
-                               ICollection<string> wordsThisRound = null,
+                               IReadOnlyList<string> wordsThisRound = null,
                                IReadOnlyList<BookmarkSpec> bookmarks = null,
                                IScoreRule roundRule = null,
                                bool recording = true)
@@ -204,6 +214,7 @@ public class ScoreCalculator
             Length = chain != null ? ChainController.ScoringLength(chain)
                                    : (word == null ? 0 : word.Length),
             WordsThisRound = wordsThisRound,
+            BoardBounds = BoardBounds,
             Recording = recording,
         };
 

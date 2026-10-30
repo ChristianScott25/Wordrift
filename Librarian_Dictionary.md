@@ -126,9 +126,9 @@ finding sixes.
 
 **Implementation note worth keeping.** It never records *which* length was chosen, because under
 its own rule every word already played has that length — so any of them answers the question.
-That isn't just tidiness: `WordCheck.WordsThisRound` is a **set** and has no order, so "the first
-word" is not something it could read even if it wanted to. "Every word so far agrees" is the same
-rule, and it's order-free.
+"Every word so far agrees" is the same rule as "match the first word", and it's order-free.
+(`WordCheck.WordsThisRound` was a set with no order until 2026-10-29; it's a list in play order
+now, so the first word *could* be read — but nothing needed changing.)
 
 ---
 

@@ -68,12 +68,20 @@ public class ScoringContext
     public int Length;
 
     /// <summary>
-    /// Words already accepted this round, NOT counting this one — so a bookmark
-    /// can ask "have they spelled this before?" and get the honest answer.
-    /// Read it, never add to it; it's ICollection only because that's the
-    /// narrowest interface with an O(1) Contains on a HashSet.
+    /// Words already accepted this round, IN PLAY ORDER and repeats included,
+    /// NOT counting this one — so a bookmark can ask "have they spelled this
+    /// before?" or "what came just before?" and get the honest answer. Read it,
+    /// never add to it. It's the session's own list, so it's resolved words
+    /// (a wild already became its letter).
     /// </summary>
-    public ICollection<string> WordsThisRound;
+    public IReadOnlyList<string> WordsThisRound;
+
+    /// <summary>
+    /// The board's outer box in cells (Board.CellBounds). What the corner and
+    /// edge bookmarks measure a tile's Cell against. Empty when no board was
+    /// handed over, and then nothing counts as a corner or an edge.
+    /// </summary>
+    public RectInt BoardBounds;
 
     /// <summary>What the word is worth. Read it; change it with AddPoints / MultiplyPoints.</summary>
     public int Points;
@@ -104,8 +112,44 @@ public class ScoringContext
     private object actor;
 
     /// <summary>True when the word was played earlier this round.</summary>
-    public bool IsRepeat =>
-        WordsThisRound != null && Word != null && WordsThisRound.Contains(Word);
+    public bool IsRepeat
+    {
+        get
+        {
+            // A loop, not LINQ: this runs once per candidate on a wild chain,
+            // on every frame of a drag. A round is ~20 words.
+            if (WordsThisRound == null || Word == null) return false;
+            for (int i = 0; i < WordsThisRound.Count; i++)
+                if (WordsThisRound[i] == Word) return true;
+            return false;
+        }
+    }
+
+    /// <summary>The word played just before this one this round; null on the round's first.</summary>
+    public string PreviousWord => WordBefore(1);
+
+    /// <summary>
+    /// The word played <paramref name="stepsBack"/> words ago this round (1 =
+    /// the previous one), or null when the round doesn't go back that far.
+    /// </summary>
+    public string WordBefore(int stepsBack)
+    {
+        if (WordsThisRound == null || stepsBack < 1) return null;
+        int index = WordsThisRound.Count - stepsBack;
+        return index >= 0 ? WordsThisRound[index] : null;
+    }
+
+    /// <summary>True when the cell is one of the board's four corners.</summary>
+    public bool IsCorner(Vector2Int cell) =>
+        BoardBounds.width > 0 && BoardBounds.height > 0 &&
+        (cell.x == BoardBounds.xMin || cell.x == BoardBounds.xMax - 1) &&
+        (cell.y == BoardBounds.yMin || cell.y == BoardBounds.yMax - 1);
+
+    /// <summary>True when the cell is on the board's outer edge (corners included).</summary>
+    public bool IsEdge(Vector2Int cell) =>
+        BoardBounds.width > 0 && BoardBounds.height > 0 &&
+        (cell.x == BoardBounds.xMin || cell.x == BoardBounds.xMax - 1 ||
+         cell.y == BoardBounds.yMin || cell.y == BoardBounds.yMax - 1);
 
     /// <summary>
     /// Seats the opening numbers — the word's length, on both sides. Not a step:

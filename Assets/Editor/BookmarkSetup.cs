@@ -69,6 +69,84 @@ public static class BookmarkSetup
         Art(shorthand, "bookmark_ribbon");
         bookmarks.Add(shorthand);
 
+        // ---- 2026-10-29: eleven more, so the Bookshop has something to sell.
+        // 🚧 They REUSE the six AI pictures for now (his call, 2026-10-29), so two
+        // bookmarks can share a card face until each gets its own.
+
+        var lookingGlass = CreateOrLoad<PalindromeBookmark>("LookingGlass");
+        lookingGlass.multiplier = 3f;
+        Describe(lookingGlass, "Looking Glass", "x3 Mult if the word reads the same backwards, like POP or LEVEL.", price: 16);
+        Art(lookingGlass, "bookmark_witch");
+        bookmarks.Add(lookingGlass);
+
+        var doubleSpaced = CreateOrLoad<DoubleLetterBookmark>("DoubleSpaced");
+        doubleSpaced.multBonus = 4f;
+        Describe(doubleSpaced, "Double Spaced", "+4 Mult if the same letter appears twice in a row, like the TT in LETTER.", price: 12);
+        Art(doubleSpaced, "bookmark_ribbon");
+        bookmarks.Add(doubleSpaced);
+
+        var verse = CreateOrLoad<RhymeBookmark>("Verse");
+        verse.rhymeLetters = 2;
+        verse.multPerLink = 2f;
+        Describe(verse, "Verse", "+2 Mult if the word ends in the same 2 letters as your last word (not the same word). " +
+                                 "Keep the rhyme going for +2 more each word. Resets each round.", price: 14);
+        Art(verse, "bookmark_sun");
+        bookmarks.Add(verse);
+
+        var sequel = CreateOrLoad<ChainBookmark>("Sequel");
+        sequel.bonusPoints = 20;
+        Describe(sequel, "Sequel", "+20 Points if the word starts with the letter your last word ended on. Resets each round.", price: 10);
+        Art(sequel, "bookmark_book");
+        bookmarks.Add(sequel);
+
+        var antiquarian = CreateOrLoad<RareLetterBookmark>("Antiquarian");
+        antiquarian.rareLetters = "jkqvxz";
+        antiquarian.minimumRare = 2;
+        antiquarian.baseMultiplier = 2f;
+        antiquarian.extraPerLetter = 1f;
+        Describe(antiquarian, "Antiquarian", "x2 Mult if the word has 2 rare letters (J K Q V X Z), and +1x for each one past that.", price: 15);
+        Art(antiquarian, "bookmark_fox");
+        bookmarks.Add(antiquarian);
+
+        var goldenRatio = CreateOrLoad<FibonacciBookmark>("GoldenRatio");
+        goldenRatio.lengths = new[] { 3, 5, 8 };
+        goldenRatio.multiplier = 5f;
+        Describe(goldenRatio, "Golden Ratio", "x5 Mult on an 8-letter word, if your last two words this round were 3 letters and then 5.", price: 18);
+        Art(goldenRatio, "bookmark_tree");
+        bookmarks.Add(goldenRatio);
+
+        var dogEar = CreateOrLoad<CornerBookmark>("DogEar");
+        dogEar.bonusPoints = 15;
+        Describe(dogEar, "Dog-Ear", "+15 Points if the word uses a corner tile.", price: 10);
+        Art(dogEar, "bookmark_book");
+        bookmarks.Add(dogEar);
+
+        var centerpiece = CreateOrLoad<NoEdgeBookmark>("Centerpiece");
+        centerpiece.multBonus = 4f;
+        Describe(centerpiece, "Centerpiece", "+4 Mult if no tile in the word touches the edge of the board.", price: 13);
+        Art(centerpiece, "bookmark_sun");
+        bookmarks.Add(centerpiece);
+
+        var giltEdge = CreateOrLoad<EdgeOnlyBookmark>("GiltEdge");
+        giltEdge.multiplier = 2f;
+        Describe(giltEdge, "Gilt Edge", "x2 Mult if every tile in the word is on the edge of the board.", price: 14);
+        Art(giltEdge, "bookmark_ribbon");
+        bookmarks.Add(giltEdge);
+
+        var columnist = CreateOrLoad<EveryLineBookmark>("Columnist");
+        columnist.rows = false;
+        columnist.multiplier = 3f;
+        Describe(columnist, "Columnist", "x3 Mult if the word uses a tile in every column.", price: 16);
+        Art(columnist, "bookmark_tree");
+        bookmarks.Add(columnist);
+
+        var ruledPaper = CreateOrLoad<EveryLineBookmark>("RuledPaper");
+        ruledPaper.rows = true;
+        ruledPaper.multiplier = 3f;
+        Describe(ruledPaper, "Ruled Paper", "x3 Mult if the word uses a tile in every row.", price: 16);
+        Art(ruledPaper, "bookmark_fox");
+        bookmarks.Add(ruledPaper);
+
         int added = AttachToModes(bookmarks);
 
         AssetDatabase.SaveAssets();

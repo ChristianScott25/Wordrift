@@ -60,9 +60,11 @@ public class GameSession : MonoBehaviour
     // must not end mid-tally, and no save may be written.
     private bool tallying;
 
-    // Every word accepted this round. Bookmarks read it to spot a repeat, so it
-    // has to be cleared per round and written AFTER the word has been scored.
-    private readonly HashSet<string> wordsThisRound = new();
+    // Every word accepted this round, IN PLAY ORDER, repeats included. Bookmarks
+    // read it (a repeat, the previous word, a rhyme streak), so it has to be
+    // cleared per round and written AFTER the word has been scored. A list, not
+    // a set, so the order survives — a future "words played" view reads it too.
+    private readonly List<string> wordsThisRound = new();
 
     private void Awake()
     {
@@ -85,6 +87,7 @@ public class GameSession : MonoBehaviour
         mode.Attach(this, board);
         board.Build(Config.boardShape, Config.letterSet,
                     Config.tileSkins, Config.letterFont);
+        scorer.BoardBounds = board.CellBounds;
 
         // ⚠️ AFTER Build, BEFORE any widget's Start. Resolve reads BoardSize, so
         // it cannot run before the board exists; and every widget places itself
@@ -206,7 +209,7 @@ public class GameSession : MonoBehaviour
         wordsFound = saved.wordsFound;
         bestWord = saved.bestWord ?? "";
         bestWordPoints = saved.bestWordPoints;
-        foreach (var word in saved.wordsThisRound) wordsThisRound.Add(word);
+        wordsThisRound.AddRange(saved.wordsThisRound);
     }
 
     /// <summary>Replays the same mode without reloading the scene.</summary>

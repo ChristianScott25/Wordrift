@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b27d6fe0b9a094acd87d47d5658a445b, type: 3}
+  m_Name: Sequel
+  m_EditorClassIdentifier: Assembly-CSharp::ChainBookmark
+  displayName: Sequel
+  description: +20 Points if the word starts with the letter your last word ended
+    on. Resets each round.
+  price: 10
+  cardArt: {fileID: 21300000, guid: a0d02ff18fba148168d12c5038e149d0, type: 3}
+  bonusPoints: 20

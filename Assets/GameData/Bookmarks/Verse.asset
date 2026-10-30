@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807559b0ed84344aa99bc486330e8cb0, type: 3}
+  m_Name: Verse
+  m_EditorClassIdentifier: Assembly-CSharp::RhymeBookmark
+  displayName: Verse
+  description: +2 Mult if the word ends in the same 2 letters as your last word (not
+    the same word). Keep the rhyme going for +2 more each word. Resets each round.
+  price: 14
+  cardArt: {fileID: 21300000, guid: 6bd2e32111d1b4ce6b6aba84ddd975a8, type: 3}
+  rhymeLetters: 2
+  multPerLink: 2
