@@ -491,7 +491,7 @@ public class ShopScreen : MonoBehaviour
         int price = run.PriceOf(offer.ListPrice);
 
         if (detailTitle != null) detailTitle.text = offer.Title;
-        if (detailBody != null) detailBody.text = offer.Description;
+        if (detailBody != null) detailBody.text = RarityStyle.WithLine(offer.Description, offer.Rarity, offer.Cursed, onDark: true);
         if (detailPrice != null) detailPrice.text = PriceText(offer.ListPrice, price);
 
         // Three separate reasons a row might not be buyable, and they must not
@@ -578,9 +578,10 @@ public class ShopScreen : MonoBehaviour
 
             if (row.label != null)
             {
+                string title = RarityStyle.Name(offer.Title, offer.Rarity, onDark: true);
                 row.label.text = offer.Sold
-                    ? $"{offer.Title}     SOLD"
-                    : $"{offer.Title}     {PriceText(offer.ListPrice, price)}";
+                    ? $"{title}     SOLD"
+                    : $"{title}     {PriceText(offer.ListPrice, price)}";
 
                 // Sold is dimmer than merely unaffordable: one is over, the other
                 // is a target to save for.

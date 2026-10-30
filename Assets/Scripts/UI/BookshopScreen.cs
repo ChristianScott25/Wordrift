@@ -546,7 +546,8 @@ public class BookshopScreen : MonoBehaviour
             Place(big.gameObject, new Vector2(0f, 0.48f), new Vector2(1f, 1f), new Vector2(18f, 0f), new Vector2(-18f, -16f));
         }
 
-        string name = tile ? $"{((TileOffer)offer).Entry?.points ?? 0} PTS" : offer.Title;
+        string name = RarityStyle.Name(tile ? $"{((TileOffer)offer).Entry?.points ?? 0} PTS" : offer.Title,
+                                       offer.Rarity);
         var nameLabel = Label(go.transform, "Name", name, 30f, TextAlignmentOptions.Center, inkColor);
         nameLabel.enableAutoSizing = true;
         nameLabel.fontSizeMin = 16f;
@@ -653,7 +654,7 @@ public class BookshopScreen : MonoBehaviour
                 Place(pic, new Vector2(0f, 0f), new Vector2(0.3f, 1f), new Vector2(12f, 10f), new Vector2(0f, -10f));
             }
 
-            var name = Label(go.transform, "Name", item.Title.ToUpperInvariant(), 26f,
+            var name = Label(go.transform, "Name", RarityStyle.Name(item.Title.ToUpperInvariant(), item.rarity), 26f,
                              TextAlignmentOptions.Center, inkColor);
             name.enableAutoSizing = true;
             name.fontSizeMin = 14f;
@@ -880,7 +881,8 @@ public class BookshopScreen : MonoBehaviour
             string blocked = offer.Blocked(run);
             bool affordable = run.CanAfford(price);
 
-            SetDetail(offer.Title, offer.Description, ShopRoller.PriceText(offer.ListPrice, price),
+            SetDetail(offer.Title, RarityStyle.WithLine(offer.Description, offer.Rarity, offer.Cursed),
+                ShopRoller.PriceText(offer.ListPrice, price),
                 offer.Available && affordable && blocked == null,
                 !offer.Available ? "SOLD" : blocked ?? (affordable ? "BUY" : "NOT ENOUGH"), buyColor);
         }
@@ -889,7 +891,8 @@ public class BookshopScreen : MonoBehaviour
             var bookmark = pickedBookmark?.bookmark;
             if (bookmark == null || !run.Bookmarks.Contains(pickedBookmark)) { CloseDetail(); return; }
 
-            SetDetail(bookmark.displayName.ToUpperInvariant(), bookmark.description,
+            SetDetail(bookmark.Title.ToUpperInvariant(),
+                RarityStyle.WithLine(bookmark.description, bookmark.rarity, bookmark.cursed),
                 $"SELL FOR ${run.SellPrice(bookmark.price)}", true, "SELL", sellColor);
         }
         else if (picked == Picked.OwnedConsumable)
@@ -897,7 +900,7 @@ public class BookshopScreen : MonoBehaviour
             var item = pickedSlot >= 0 && pickedSlot < run.Consumables.Count ? run.Consumables[pickedSlot] : null;
             if (item == null) { CloseDetail(); return; }
 
-            SetDetail(item.Title.ToUpperInvariant(), item.Power,
+            SetDetail(item.Title.ToUpperInvariant(), RarityStyle.WithLine(item.Power, item.rarity, item.cursed),
                 $"SELL FOR ${run.SellPrice(item.price)}", true, "SELL", sellColor);
         }
         else

@@ -34,6 +34,10 @@ public abstract class TileModifier : ScriptableObject
              "leaves any number you've tuned alone.")]
     [Min(0)] public int price = 0;
 
+    [Tooltip("How rare this upgrade is in the shop. Ranked by Word Crush > Apply " +
+             "Rarities (RaritySetup), which rewrites it on every run. Unranked = Common.")]
+    public Rarity rarity = Rarity.Common;
+
     // The circle sprite itself lives on TileSkin, not here — so swapping the
     // badge treatment is one field on one asset rather than one per modifier.
     //

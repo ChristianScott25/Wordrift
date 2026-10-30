@@ -45,12 +45,24 @@ public sealed class InspectInfo
     /// </summary>
     public string Warning;
 
+    /// <summary>
+    /// How rare this is, drawn as the first chip in its tier's colour — or null
+    /// for something that has no rarity (a plain letter tile you started with).
+    /// Kept out of Tags because it's coloured and always goes first.
+    /// </summary>
+    public Rarity? Rarity;
+
+    /// <summary>Has a downside as well as an upside. Drawn as its own chip after the rarity.</summary>
+    public bool Cursed;
+
     /// <summary>Empties it, ready to be filled again. Keeps the lists' capacity.</summary>
     public void Clear()
     {
         Title = "";
         Body = "";
         Warning = "";
+        Rarity = null;
+        Cursed = false;
         Tags.Clear();
         Notes.Clear();
     }

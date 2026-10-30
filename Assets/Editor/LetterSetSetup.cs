@@ -288,6 +288,10 @@ public static class LetterSetSetup
 
         so.ApplyModifiedProperties();
 
+        // The shop rows' rarity, from RaritySetup's one table. After the write
+        // above, which leaves every row's rank wherever the resize put it.
+        RaritySetup.ApplyTiles(asset);
+
         // The catalog caches a lookup and a weight total on first use, and a
         // ScriptableObject stays loaded across a domain reload — so without this
         // an editor session that had already touched the letter set would keep

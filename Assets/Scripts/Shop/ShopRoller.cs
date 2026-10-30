@@ -12,9 +12,11 @@ using UnityEngine;
 /// that rule belongs to the screen calling them, not to this class.
 ///
 /// The `exclude` lists are new with the Bookshop, whose sections hold several
-/// rows of one kind. They only ever shrink the list a single draw indexes into,
-/// so they never change how many draws happen — and null (what ShopScreen
-/// passes) is exactly the old behaviour.
+/// rows of one kind. They only ever shrink the list a pick chooses from, so they
+/// never change how many draws happen — and null is what ShopScreen passes.
+///
+/// Every pick goes through PickByRarity (2026-10-30): a tier, then an item —
+/// two draws, or none when nothing can be sold.
 /// </summary>
 public class ShopRoller
 {
@@ -140,7 +142,7 @@ public class ShopRoller
         foreach (var modifier in pool)
             if (modifier != null) available.Add(modifier);
 
-        return available.Count == 0 ? null : available[rng.Range(0, available.Count)];
+        return PickByRarity(available, m => m.rarity);
     }
 
     /// <summary>
@@ -220,9 +222,10 @@ public class ShopRoller
         // unlucky the rolls were.
         while (picked.Count < count && available.Count > 0)
         {
-            int i = rng.Range(0, available.Count);
-            picked.Add(available[i]);
-            available.RemoveAt(i);
+            var bookmark = PickByRarity(available, b => b.rarity);
+            if (bookmark == null) break; // only tiers the shop never sells are left
+            picked.Add(bookmark);
+            available.Remove(bookmark);
         }
 
         return picked;
@@ -244,7 +247,7 @@ public class ShopRoller
                 (exclude == null || !exclude.Contains(checkout)))
                 available.Add(checkout);
 
-        return available.Count == 0 ? null : available[rng.Range(0, available.Count)];
+        return PickByRarity(available, c => c.rarity);
     }
 
     /// <summary>
@@ -270,7 +273,7 @@ public class ShopRoller
         foreach (var entry in letters.Entries)
             if (entry != null && entry.IsForSale) available.Add(entry);
 
-        return PickPreferring(available, exclude);
+        return PickPreferring(available, exclude, e => e.rarity);
     }
 
     /// <summary>
@@ -280,7 +283,7 @@ public class ShopRoller
     /// tile row makes, and for the same reason: duplicates are legal, and with a
     /// pool this small, filtering would leave the row empty most visits.
     ///
-    /// Exactly ONE draw, whatever the pool, so the stream stays predictable.
+    /// Rolled by rarity (PickByRarity), whose draw count depends only on the pool.
     /// </summary>
     /// <param name="exclude">Preferred against, like RollTile's. Null for none.</param>
     public Consumable RollConsumable(ICollection<Consumable> exclude = null)
@@ -292,16 +295,18 @@ public class ShopRoller
         foreach (var consumable in pool)
             if (consumable != null) available.Add(consumable);
 
-        return PickPreferring(available, exclude);
+        return PickPreferring(available, exclude, c => c.rarity);
     }
 
     /// <summary>
-    /// One draw from `available`, skipping anything in `exclude` unless that
-    /// would leave nothing — then duplicates are allowed. Either way it is ONE
-    /// draw (or none, on an empty pool), so the stream position never depends on
-    /// what was excluded.
+    /// A rarity pick from `available`, skipping anything in `exclude` unless that
+    /// would leave nothing the shop SELLS — then duplicates are allowed. "Sells",
+    /// not merely "nothing": what's left could all sit in a tier with odds of 0
+    /// (trash), and falling back only on an empty list would take the row away
+    /// when a duplicate was on offer. The draws are PickByRarity's either way.
     /// </summary>
-    private T PickPreferring<T>(List<T> available, ICollection<T> exclude) where T : class
+    private T PickPreferring<T>(List<T> available, ICollection<T> exclude,
+                                System.Func<T, Rarity> rarityOf) where T : class
     {
         if (available.Count == 0) return null;
 
@@ -310,10 +315,77 @@ public class ShopRoller
             var fresh = new List<T>(available.Count);
             foreach (var item in available)
                 if (!exclude.Contains(item)) fresh.Add(item);
-            if (fresh.Count > 0) available = fresh;
+            if (AnySellable(fresh, rarityOf)) available = fresh;
         }
 
-        return available[rng.Range(0, available.Count)];
+        return PickByRarity(available, rarityOf);
+    }
+
+    /// <summary>
+    /// The tiers in a FIXED order, walked by PickByRarity. Not Enum.GetValues:
+    /// the walk order decides which tier a roll lands in, so it's part of the
+    /// seed and must never depend on how the enum happens to be declared.
+    /// </summary>
+    private static readonly Rarity[] Tiers =
+        { Rarity.Common, Rarity.Uncommon, Rarity.Rare, Rarity.Legendary, Rarity.Trash };
+
+    /// <summary>
+    /// THE rarity roll (2026-10-30), shared by every row: a TIER first, weighted
+    /// by the mode's RarityOdds, then one thing from that tier, evenly. Tier
+    /// first is what lets an item be added without shifting the balance — a
+    /// sixth common doesn't make commons more common, it just splits their share.
+    ///
+    /// Only tiers that have something in `available` AND a weight above 0 take
+    /// part, so an empty tier (Legendary today, Trash always) is skipped rather
+    /// than wasting the roll. Null when nothing left can be sold — which takes
+    /// the row off the shelf, the same answer an empty pool always gave.
+    ///
+    /// Always TWO draws when it returns something, none when it doesn't — the
+    /// count depends only on what's available, never on how the rolls went.
+    /// ⚠️ This replaced a single even draw, so every seed recorded before it
+    /// stocks a different shelf. Deliberate, and nothing records seeds yet.
+    /// </summary>
+    private T PickByRarity<T>(List<T> available, System.Func<T, Rarity> rarityOf) where T : class
+    {
+        if (available == null || available.Count == 0) return null;
+
+        int total = 0;
+        foreach (var tier in Tiers) total += WeightIn(available, rarityOf, tier);
+        if (total <= 0) return null;
+
+        // Walk the same tiers the total counted; the roll is below the total, so
+        // it always lands in one of them.
+        int roll = rng.Range(0, total);
+        foreach (var tier in Tiers)
+        {
+            int weight = WeightIn(available, rarityOf, tier);
+            if (roll >= weight) { roll -= weight; continue; }
+
+            var inTier = new List<T>();
+            foreach (var item in available)
+                if (rarityOf(item) == tier) inTier.Add(item);
+            return inTier[rng.Range(0, inTier.Count)];
+        }
+        return null; // unreachable
+    }
+
+    /// <summary>
+    /// A tier's share of the roll: its odds if `available` holds anything in it,
+    /// else 0 — which is how an empty tier is skipped.
+    /// </summary>
+    private int WeightIn<T>(List<T> available, System.Func<T, Rarity> rarityOf, Rarity tier)
+    {
+        foreach (var item in available)
+            if (rarityOf(item) == tier) return run.Template.rarityOdds.WeightOf(tier);
+        return 0;
+    }
+
+    /// <summary>Would PickByRarity find anything to sell in this list?</summary>
+    private bool AnySellable<T>(List<T> items, System.Func<T, Rarity> rarityOf)
+    {
+        foreach (var item in items)
+            if (run.Template.rarityOdds.WeightOf(rarityOf(item)) > 0) return true;
+        return false;
     }
 
     // ---- Prices and text --------------------------------------------------

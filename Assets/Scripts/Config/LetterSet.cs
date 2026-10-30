@@ -43,6 +43,11 @@ public class LetterSet : ScriptableObject
                  "than quietly never being offered.")]
         [Min(0)] public int price = 0;
 
+        [Tooltip("How rare this tile is in the shop — only means anything on a row " +
+                 "that's for sale. Written by Create Letter Set from RaritySetup's " +
+                 "table on every run. Unranked = Common.")]
+        public Rarity rarity = Rarity.Common;
+
         /// <summary>
         /// Does this row put more than one letter into a word from one square?
         ///
@@ -128,7 +133,15 @@ public class LetterSet : ScriptableObject
     {
         letters = entry.letter,
         baseScore = entry.points,
+        ShopRarity = RarityOf(entry),
     };
+
+    /// <summary>
+    /// A row's rarity as a tile shows it: only a row the shop SELLS has one. The
+    /// one place that rule lives, so CreateSpec and a resumed run agree.
+    /// </summary>
+    public static Rarity? RarityOf(Entry entry) =>
+        entry != null && entry.IsForSale ? entry.rarity : (Rarity?)null;
 
     /// <summary>
     /// A bag of exactly <paramref name="targetCount"/> tiles, sharing them out

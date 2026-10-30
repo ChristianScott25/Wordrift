@@ -16,6 +16,8 @@ MonoBehaviour:
   description: x2 Mult if the word has 2 rare letters (J K Q V X Z), and +1x for
     each one past that.
   price: 15
+  rarity: 2
+  cursed: 0
   cardArt: {fileID: 21300000, guid: ab9d8f081420e4a3085166f28641d9a7, type: 3}
   rareLetters: jkqvxz
   minimumRare: 2

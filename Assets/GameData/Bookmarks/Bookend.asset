@@ -15,5 +15,7 @@ MonoBehaviour:
   displayName: Bookend
   description: x2 Mult if the word starts and ends with the same letter.
   price: 12
+  rarity: 1
+  cursed: 0
   cardArt: {fileID: 21300000, guid: a0d02ff18fba148168d12c5038e149d0, type: 3}
   multiplier: 2

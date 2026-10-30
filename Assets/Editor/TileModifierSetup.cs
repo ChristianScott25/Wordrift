@@ -42,6 +42,9 @@ public static class TileModifierSetup
 
         int added = AttachToModes(modifiers);
 
+        // Rarity is RaritySetup's table, not this file's — one ranking for every kind.
+        RaritySetup.Apply<TileModifier>();
+
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log($"Tile modifiers ready in {ModifierFolder}; {added} added to mode configs.");

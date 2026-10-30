@@ -16,6 +16,8 @@ MonoBehaviour:
   description: x5 Mult on an 8-letter word, if your last two words this round were
     3 letters and then 5.
   price: 18
+  rarity: 2
+  cursed: 0
   cardArt: {fileID: 21300000, guid: 12ca47b0c9c9a48a8be5e86d29b1d719, type: 3}
   lengths: 030000000500000008000000
   multiplier: 5

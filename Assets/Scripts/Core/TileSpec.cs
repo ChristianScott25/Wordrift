@@ -52,6 +52,15 @@ public class TileSpec : IInspectable
     /// </summary>
     [System.NonSerialized] public bool Retired;
 
+    /// <summary>
+    /// How rare this kind of tile is in the shop, for the info box — null for a
+    /// tile the shop doesn't sell (every plain letter), so a board of starting
+    /// letters doesn't read "COMMON" on every tap. Stamped by LetterSet.CreateSpec
+    /// and re-stamped on resume (RunState), never saved: it's the catalog's fact,
+    /// not the tile's, and a re-ranked row should re-rank the tiles already bought.
+    /// </summary>
+    [System.NonSerialized] public Rarity? ShopRarity;
+
     /// <summary>How many modifiers this tile carries. 0 for a plain tile.</summary>
     public int ModifierCount => modifiers == null ? 0 : modifiers.Count;
 
@@ -200,6 +209,7 @@ public class TileSpec : IInspectable
         if (info == null) return;
 
         info.Title = IsWild ? "WILD TILE" : Face.ToUpperInvariant();
+        info.Rarity = ShopRarity;
 
         var body = new System.Text.StringBuilder();
         if (IsWild)

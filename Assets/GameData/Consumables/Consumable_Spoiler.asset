@@ -15,4 +15,6 @@ MonoBehaviour:
   displayName: Spoiler
   powerOverride: 
   price: 6
+  rarity: 1
+  cursed: 1
   multiplier: 2

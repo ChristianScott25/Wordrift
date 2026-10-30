@@ -149,6 +149,9 @@ public static class BookmarkSetup
 
         int added = AttachToModes(bookmarks);
 
+        // Rarity is RaritySetup's table, not this file's — one ranking for every kind.
+        RaritySetup.Apply<Bookmark>();
+
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log($"Bookmarks ready in {BookmarkFolder}; {added} added to mode configs.");

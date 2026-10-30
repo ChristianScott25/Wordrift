@@ -15,5 +15,7 @@ MonoBehaviour:
   displayName: Looking Glass
   description: x3 Mult if the word reads the same backwards, like POP or LEVEL.
   price: 16
+  rarity: 1
+  cursed: 0
   cardArt: {fileID: 21300000, guid: 7514e5642edcb443393f2a8698f5bd2d, type: 3}
   multiplier: 3

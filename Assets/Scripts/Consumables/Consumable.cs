@@ -140,6 +140,15 @@ public abstract class Consumable : ScriptableObject, IInspectable
              "leaves any number you've tuned alone.")]
     [Min(0)] public int price = 0;
 
+    [Tooltip("How rare this is in the shop. Ranked by Word Crush > Apply Rarities " +
+             "(RaritySetup), which rewrites it on every run — change a rank in that " +
+             "table, not here. Unranked = Common.")]
+    public Rarity rarity = Rarity.Common;
+
+    [Tooltip("Has a downside as well as an upside. A separate flag, not a rarity: " +
+             "anything of any rarity can be cursed. Written by RaritySetup too.")]
+    public bool cursed;
+
     /// <summary>
     /// What this does, in the player's words, derived from its own settings.
     /// Derived rather than authored for the same reason a checkout's is: turning
@@ -187,6 +196,8 @@ public abstract class Consumable : ScriptableObject, IInspectable
     {
         if (info == null) return;
         info.Title = Title.ToUpperInvariant();
+        info.Rarity = rarity;
+        info.Cursed = cursed;
         info.Body = Power;
 
         // The only thing that tells the player this one has to be dropped on

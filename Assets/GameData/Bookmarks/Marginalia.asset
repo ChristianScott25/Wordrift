@@ -15,5 +15,7 @@ MonoBehaviour:
   displayName: Marginalia
   description: +1 Mult for every letter past the minimum word length.
   price: 13
+  rarity: 1
+  cursed: 0
   cardArt: {fileID: 21300000, guid: ab9d8f081420e4a3085166f28641d9a7, type: 3}
   multPerExtraLetter: 1

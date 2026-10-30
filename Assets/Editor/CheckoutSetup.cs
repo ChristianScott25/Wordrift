@@ -63,6 +63,9 @@ public static class CheckoutSetup
 
         int added = AttachToModes(checkouts);
 
+        // Rarity is RaritySetup's table, not this file's — one ranking for every kind.
+        RaritySetup.Apply<Checkout>();
+
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log($"Checkouts ready in {CheckoutFolder}; {added} added to mode configs.");

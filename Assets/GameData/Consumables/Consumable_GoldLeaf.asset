@@ -15,4 +15,6 @@ MonoBehaviour:
   displayName: Gold Leaf
   powerOverride: 
   price: 9
+  rarity: 1
+  cursed: 0
   modifier: {fileID: 11400000, guid: 4feeb697aa4bc4d6a8a5e0b449256678, type: 2}

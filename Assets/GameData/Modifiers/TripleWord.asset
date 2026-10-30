@@ -17,4 +17,5 @@ MonoBehaviour:
   badgeTextColor: {r: 1, g: 1, b: 1, a: 1}
   description: Multiplies the Points of any word this tile is part of by 3.
   price: 22
+  rarity: 2
   multiplier: 3

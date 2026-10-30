@@ -894,6 +894,11 @@ public class RunState
         foreach (var entry in data.tileBag)
         {
             var spec = new TileSpec { letters = entry.letters, baseScore = entry.baseScore, Retired = entry.retired };
+
+            // Not saved — looked up again, so a tile keeps whatever rank its
+            // catalog row has now (see TileSpec.ShopRarity).
+            if (template.letterSet != null)
+                spec.ShopRarity = LetterSet.RarityOf(template.letterSet.EntryFor(entry.letters));
             if (entry.modifiers != null)
                 foreach (var name in entry.modifiers)
                     spec.AddModifier(Resolve(template.tileModifiers, name));

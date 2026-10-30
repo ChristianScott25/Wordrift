@@ -15,3 +15,5 @@ MonoBehaviour:
   displayName: Reprint
   powerOverride: 
   price: 8
+  rarity: 2
+  cursed: 0

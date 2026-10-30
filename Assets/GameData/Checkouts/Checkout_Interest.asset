@@ -15,4 +15,6 @@ MonoBehaviour:
   displayName: Great Expectations
   powerOverride: 
   price: 40
+  rarity: 2
+  cursed: 0
   perTenHeld: 1

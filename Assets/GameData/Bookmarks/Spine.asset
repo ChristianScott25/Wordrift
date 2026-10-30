@@ -15,5 +15,7 @@ MonoBehaviour:
   displayName: Spine
   description: x2 Mult if no letter appears twice in the word.
   price: 16
+  rarity: 2
+  cursed: 0
   cardArt: {fileID: 21300000, guid: 12ca47b0c9c9a48a8be5e86d29b1d719, type: 3}
   multiplier: 2

@@ -17,179 +17,224 @@ MonoBehaviour:
     points: 1
     weight: 9
     price: 0
+    rarity: 0
   - letter: b
     points: 3
     weight: 2
     price: 0
+    rarity: 0
   - letter: c
     points: 3
     weight: 2
     price: 0
+    rarity: 0
   - letter: d
     points: 2
     weight: 4
     price: 0
+    rarity: 0
   - letter: e
     points: 1
     weight: 12
     price: 0
+    rarity: 0
   - letter: f
     points: 4
     weight: 2
     price: 0
+    rarity: 0
   - letter: g
     points: 2
     weight: 3
     price: 0
+    rarity: 0
   - letter: h
     points: 4
     weight: 2
     price: 0
+    rarity: 0
   - letter: i
     points: 1
     weight: 9
     price: 0
+    rarity: 0
   - letter: j
     points: 8
     weight: 1
     price: 0
+    rarity: 0
   - letter: k
     points: 5
     weight: 1
     price: 0
+    rarity: 0
   - letter: l
     points: 1
     weight: 4
     price: 0
+    rarity: 0
   - letter: m
     points: 3
     weight: 2
     price: 0
+    rarity: 0
   - letter: n
     points: 1
     weight: 6
     price: 0
+    rarity: 0
   - letter: o
     points: 1
     weight: 8
     price: 0
+    rarity: 0
   - letter: p
     points: 3
     weight: 2
     price: 0
+    rarity: 0
   - letter: q
     points: 10
     weight: 1
     price: 0
+    rarity: 0
   - letter: r
     points: 1
     weight: 6
     price: 0
+    rarity: 0
   - letter: s
     points: 1
     weight: 4
     price: 0
+    rarity: 0
   - letter: t
     points: 1
     weight: 6
     price: 0
+    rarity: 0
   - letter: u
     points: 1
     weight: 4
     price: 0
+    rarity: 0
   - letter: v
     points: 4
     weight: 2
     price: 0
+    rarity: 0
   - letter: w
     points: 4
     weight: 2
     price: 0
+    rarity: 0
   - letter: x
     points: 8
     weight: 1
     price: 0
+    rarity: 0
   - letter: y
     points: 4
     weight: 2
     price: 0
+    rarity: 0
   - letter: z
     points: 10
     weight: 1
     price: 0
+    rarity: 0
   - letter: er
     points: 3
     weight: 0
     price: 8
+    rarity: 0
   - letter: in
     points: 3
     weight: 0
     price: 8
+    rarity: 0
   - letter: ie
     points: 3
     weight: 0
     price: 8
+    rarity: 0
   - letter: ed
     points: 5
     weight: 0
     price: 10
+    rarity: 0
   - letter: th
     points: 8
     weight: 0
     price: 14
+    rarity: 0
   - letter: sh
     points: 8
     weight: 0
     price: 14
+    rarity: 0
   - letter: ch
     points: 11
     weight: 0
     price: 17
+    rarity: 0
   - letter: qu
     points: 17
     weight: 0
     price: 22
+    rarity: 1
   - letter: '*'
     points: 0
     weight: 0
     price: 35
+    rarity: 2
   - letter: r/s/t
     points: 0
     weight: 0
     price: 24
+    rarity: 2
   - letter: l/n/r
     points: 0
     weight: 0
     price: 22
+    rarity: 1
   - letter: b/c/p
     points: 2
     weight: 0
     price: 20
+    rarity: 1
   - letter: a/e/i
     points: 0
     weight: 0
     price: 18
+    rarity: 2
   - letter: f/h/w
     points: 3
     weight: 0
     price: 18
+    rarity: 1
   - letter: k/v/y
     points: 3
     weight: 0
     price: 15
+    rarity: 1
   - letter: d/g
     points: 1
     weight: 0
     price: 12
+    rarity: 1
   - letter: j/x
     points: 6
     weight: 0
     price: 12
+    rarity: 1
   - letter: q/z
     points: 7
     weight: 0
     price: 12
+    rarity: 1
   - letter: o/u
     points: 0
     weight: 0
     price: 10
+    rarity: 1

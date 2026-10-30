@@ -15,4 +15,6 @@ MonoBehaviour:
   displayName: Plagiarism
   powerOverride: 
   price: 2
+  rarity: 0
+  cursed: 1
   money: 15

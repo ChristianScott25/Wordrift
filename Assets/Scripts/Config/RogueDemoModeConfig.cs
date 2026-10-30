@@ -103,6 +103,14 @@ public class RogueDemoModeConfig : ModeConfig
     [Min(0)] public int maxConsumables = 2;
 
     [Header("Shop")]
+    [Tooltip("How often each rarity turns up in the shop, as relative weights. " +
+             "Every shelf row rolls a TIER first and then something from it, so " +
+             "these are the odds of a tier, whatever's in it. A tier with nothing " +
+             "left to sell is skipped, and a tier at 0 is NEVER offered (set " +
+             "Legendary to 0 and Epilogue stops appearing). Trash is 0 on purpose — " +
+             "it only comes from events, never the shop.")]
+    public RarityOdds rarityOdds = new();
+
     [Tooltip("What the FIRST reroll of a shop visit costs. Every reroll after " +
              "it costs the growth factor below times more, and the price resets " +
              "the next time the player walks into a shop — it is a per-visit " +

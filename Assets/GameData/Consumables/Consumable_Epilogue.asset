@@ -15,4 +15,6 @@ MonoBehaviour:
   displayName: Epilogue
   powerOverride: 
   price: 12
+  rarity: 3
+  cursed: 0
   threshold: 0.75

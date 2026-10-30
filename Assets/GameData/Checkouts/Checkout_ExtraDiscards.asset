@@ -15,4 +15,6 @@ MonoBehaviour:
   displayName: Second Thoughts
   powerOverride: 
   price: 25
+  rarity: 1
+  cursed: 0
   extraDiscards: 2

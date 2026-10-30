@@ -15,4 +15,6 @@ MonoBehaviour:
   displayName: Sense and Frugality
   powerOverride: 
   price: 30
+  rarity: 1
+  cursed: 0
   discountPercent: 20

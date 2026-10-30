@@ -15,5 +15,7 @@ MonoBehaviour:
   displayName: Gilt Edge
   description: x2 Mult if every tile in the word is on the edge of the board.
   price: 14
+  rarity: 1
+  cursed: 0
   cardArt: {fileID: 21300000, guid: dc44413a93bae4222a36c1032ff61ee3, type: 3}
   multiplier: 2

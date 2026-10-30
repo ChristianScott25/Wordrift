@@ -189,6 +189,9 @@ public static class ConsumableSetup
 
         int added = AttachToModes(consumables);
 
+        // Rarity is RaritySetup's table, not this file's — one ranking for every kind.
+        RaritySetup.Apply<Consumable>();
+
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log($"Consumables ready in {ConsumableFolder}; {added} added to mode configs.");

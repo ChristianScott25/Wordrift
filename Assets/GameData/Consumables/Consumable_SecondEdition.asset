@@ -15,3 +15,5 @@ MonoBehaviour:
   displayName: Second Edition
   powerOverride: 
   price: 7
+  rarity: 1
+  cursed: 0

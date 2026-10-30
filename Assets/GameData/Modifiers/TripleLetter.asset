@@ -17,4 +17,5 @@ MonoBehaviour:
   badgeTextColor: {r: 1, g: 1, b: 1, a: 1}
   description: Multiplies that one tile's letter score by 3.
   price: 9
+  rarity: 1
   multiplier: 3

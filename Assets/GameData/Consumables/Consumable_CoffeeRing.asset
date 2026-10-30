@@ -15,4 +15,6 @@ MonoBehaviour:
   displayName: Coffee Ring
   powerOverride: 
   price: 6
+  rarity: 1
+  cursed: 0
   radius: 1

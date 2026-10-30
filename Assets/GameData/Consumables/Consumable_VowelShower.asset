@@ -15,5 +15,7 @@ MonoBehaviour:
   displayName: Vowel Shower
   powerOverride: 
   price: 6
+  rarity: 1
+  cursed: 0
   count: 3
   vowels: aeiou

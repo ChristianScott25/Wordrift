@@ -15,5 +15,7 @@ MonoBehaviour:
   displayName: Centerpiece
   description: +4 Mult if no tile in the word touches the edge of the board.
   price: 13
+  rarity: 1
+  cursed: 0
   cardArt: {fileID: 21300000, guid: 6bd2e32111d1b4ce6b6aba84ddd975a8, type: 3}
   multBonus: 4

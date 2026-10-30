@@ -15,4 +15,6 @@ MonoBehaviour:
   displayName: One More Chapter
   powerOverride: 
   price: 35
+  rarity: 2
+  cursed: 0
   extraMoves: 1

@@ -214,7 +214,7 @@ public class InspectBoxWidget : MonoBehaviour
 
         if (titleLabel != null) titleLabel.text = info.Title;
         if (bodyLabel != null) bodyLabel.text = ComposeBody(info);
-        BuildChips(info.Tags);
+        BuildChips(info);
 
         root.SetActive(true);
         showing = true;
@@ -340,29 +340,45 @@ public class InspectBoxWidget : MonoBehaviour
     }
 
     /// <summary>
-    /// The quality chips. Pooled rather than rebuilt: this runs off a touch, and
-    /// a tile with three badges would otherwise make and destroy three
-    /// GameObjects every time it was read.
+    /// The quality chips: the rarity first and CURSED after it, each filled with
+    /// its own colour (RarityStyle), then the ordinary tags in the usual colours.
+    /// Pooled rather than rebuilt: this runs off a touch, and a tile with three
+    /// badges would otherwise make and destroy three GameObjects every time it
+    /// was read — which is also why every chip's colours are written on every
+    /// use, since a pooled chip may have been a rarity chip last time.
     /// </summary>
-    private void BuildChips(List<string> tags)
+    private void BuildChips(InspectInfo info)
     {
         if (tagRow == null) return;
 
-        int wanted = tags == null ? 0 : tags.Count;
+        int lead = (info.Rarity.HasValue ? 1 : 0) + (info.Cursed ? 1 : 0);
+        int wanted = lead + info.Tags.Count;
 
         while (chips.Count < wanted) chips.Add(MakeChip($"Tag {chips.Count}"));
 
-        for (int i = 0; i < chips.Count; i++)
-        {
-            bool used = i < wanted;
-            chips[i].SetActive(used);
-            if (!used) continue;
+        int next = 0;
+        if (info.Rarity.HasValue)
+            DressChip(chips[next++], RarityText.Label(info.Rarity.Value),
+                      RarityStyle.ColorOf(info.Rarity.Value), Color.white);
+        if (info.Cursed)
+            DressChip(chips[next++], RarityText.Cursed, RarityStyle.Cursed, Color.white);
+        for (int i = 0; i < info.Tags.Count; i++)
+            DressChip(chips[next++], info.Tags[i], chipColor, chipTextColor);
 
-            var label = chips[i].GetComponentInChildren<TMP_Text>(true);
-            if (label != null) label.text = tags[i];
-        }
+        for (int i = 0; i < chips.Count; i++) chips[i].SetActive(i < wanted);
 
         tagRow.gameObject.SetActive(wanted > 0);
+    }
+
+    private static void DressChip(GameObject chip, string text, Color fill, Color ink)
+    {
+        var image = chip.GetComponent<Image>();
+        if (image != null) image.color = fill;
+
+        var label = chip.GetComponentInChildren<TMP_Text>(true);
+        if (label == null) return;
+        label.text = text;
+        label.color = ink;
     }
 
     private GameObject MakeChip(string name)

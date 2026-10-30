@@ -1108,6 +1108,66 @@ from one you've gilded twice. Choosing needs a bag picker, and that's its own pi
 roughly "two cheap things, or one permanent one". Nothing here has been balanced against a
 full run.
 
+### Rarity
+
+🚧 *(Added 2026-10-30. The ranking and the odds are first guesses — "we can always change them".)*
+
+**Everything the shop sells has a rarity**: bookmarks, consumables, checkouts, tile upgrades and
+the tiles themselves. There are five tiers, and a rarer thing is generally a stronger one — counting
+how well it works with other things, not just what it does on its own.
+
+| Tier | Colour | Shop odds | What it means |
+|---|---|--:|---|
+| **Common** | grey | 60 | Okay on its own; doesn't do much with anything else |
+| **Uncommon** | green | 27 | Better, or works well alongside other things |
+| **Rare** | blue | 10 | Strong, or the centre of a build |
+| **Legendary** | orange | 3 | Genuinely unique — something nothing else does. Allowed to sit empty |
+| **Trash** | brown | 0 | Barely worth having. **Never sold** — see below |
+
+**How a row is rolled:** the shop picks a **tier first**, by the odds above, and then something from
+that tier at random. So adding a sixth common doesn't make commons turn up more often — it just
+splits the commons' share. A tier with nothing left to sell (you own every rare bookmark, say, or
+the tier is empty) is skipped, and the odds are shared among the rest. The odds are relative
+weights *(`rarityOdds` on the mode)*.
+
+**Cursed is a separate label, not a tier.** A cursed thing has a real downside as well as its
+upside, and anything of any rarity can be cursed. Today that's Banned Book, Plagiarism, Rush Order
+and Spoiler.
+
+**You see it wherever something describes itself:** a coloured chip at the front of the info box
+(plus a **CURSED** chip), a coloured label line at the top of both shops' descriptions, and a
+coloured name on the shelf (commons stay plain, so the others stand out). Plain letter tiles you
+started with have no rarity; a tile you *bought* — a pair, a choice tile, a wild — shows its own
+when you hold it.
+
+**The ranking today:**
+
+| | Common | Uncommon | Rare | Legendary |
+|---|---|---|---|---|
+| **Bookmarks** | Deja Vu, Dog-Ear, Sequel, Double Spaced, Shorthand | Vowel Fanatic, Marginalia, Bookend, Centerpiece, Gilt Edge, Verse, Looking Glass | Spine, Antiquarian, Columnist, Ruled Paper, Golden Ratio | — |
+| **Consumables** | Shuffle, Eraser, Scrap Paper, Spare Pen, Highlighter, Late Fee, Overdue Notice, Strikethrough, Bookworm, Transpose, Plagiarism ☠ | Doubler, Second Edition, Coffee Ring, Vowel Shower, Free Read, Cheat Sheet, Gold Leaf, Shredder, Rush Order ☠, Banned Book ☠, Spoiler ☠ | Bestseller, Ink Blot, Correction Fluid, Ghostwriter, Reprint | Epilogue |
+| **Checkouts** | Late Fees and Other Stories, A Tale of Two Shelves | Second Thoughts, Sense and Frugality | One More Chapter, Great Expectations | — |
+| **Tile upgrades** | 2L | 3L, 2W | 3W | — |
+| **Shop tiles** | ER, IN, IE, ED, TH, SH, CH | QU, B/C/P, L/N/R, F/H/W, K/V/Y, D/G, O/U, J/X, Q/Z | R/S/T, A/E/I, the wild | — |
+
+☠ = cursed. How they were judged: how often it fires, how big it is when it does, whether it
+combines with other things — and whether something added later could easily beat it (if so, it
+isn't Legendary). Some calls worth knowing:
+
+- **Spine is the strongest bookmark**: ×2 on nearly every word of five letters or fewer.
+- **Gold Leaf and Shredder are permanent but small** — a 2L on a 1-point tile is +1 point, and one
+  shredded tile is one in ~104 — so they're Uncommon, not Rare.
+- **Spoiler is Uncommon, not Rare**, though it's Cheat Sheet plus a Doubler: it takes the choice
+  away from you, which is its curse.
+- **Epilogue is the only Legendary**, as the one thing that clears a round outright. It drops to
+  Rare the day something stranger arrives.
+
+🚧 **Trash is empty, on purpose.** Trash will **only ever come from random events — never the
+shop** (its odds are 0), and events aren't built yet, so there's no trash in the game today. When
+it lands, there are meant to be two kinds of payoff for collecting it (§13): things that grow with
+the trash you've **used or sold** over the run, and stronger things — a Legendary, perhaps — that
+need trash **held**, because holding it costs you slots.
+
 ### Rerolling
 
 **REROLL replaces all six rows for a price that climbs each time you use it.** The first one
@@ -1441,8 +1501,8 @@ tile under your finger.
 ### 🚧 The 2026-10-29 batch
 
 Added all at once so the Bookshop has more to sell. **Every number and price is a first guess**,
-and the groups are only labels — there's no rarity yet, so a cursed item is as likely to show
-up as a weak one.
+and the groups below were only labels when they were added — how often each one turns up is now
+its **rarity** (§8), and the four cursed ones carry a **CURSED** label.
 
 | | Group | Costs | Aim | What it does |
 |---|---|--:|---|---|
@@ -1584,6 +1644,8 @@ one. It comes out before release.
 | Reroll, first of a visit | $5 (0 = no reroll button) | `Mode_RogueDemo.asset` |
 | Reroll price climb | ×1.5 each time, rounded up, resets per visit | `Mode_RogueDemo.asset` |
 | Reroll discount | $2 off the first one, floor $1 | `Checkout_RerollDiscount.asset` |
+| 🚧 Rarity odds (relative) | Common 60 · Uncommon 27 · Rare 10 · Legendary 3 · Trash 0 | `Mode_RogueDemo.asset` (`rarityOdds`) |
+| 🚧 What each thing's rarity is | the ranking table in §8 | `Editor/RaritySetup.cs` (rewritten onto the assets by Word Crush > Apply Rarities) |
 | Seed length | 8 characters | `Rng` (code, not an asset) |
 | Deja Vu bonus | +10 Points | `DejaVu.asset` |
 | Vowel Fanatic bonus | +4 Mult | `VowelFanatic.asset` |
@@ -1626,6 +1688,8 @@ perks, including interest on savings and a cheaper reroll (§9) · runs that sav
 (§10) ·
 🚧 **the Bookshop** — an experimental shop you upgrade as you go, playable from its own menu
 button beside the ordinary one (§8) ·
+🚧 **rarity** — everything for sale is Common, Uncommon, Rare or Legendary, rolled tier first,
+with a separate CURSED label, shown wherever it describes itself (§8) ·
 🚧 **info boxes** — hold a tile, or tap a bookmark or an item, and a card says what it is (§2) ·
 🚧 **the tile bag view** — tap the bag to see everything still to be drawn, grouped and counted
 (§6) ·
@@ -1647,6 +1711,12 @@ real; every pixel of the art is placeholder.
   §6.)
 - **The bag view showing your WHOLE bag**, with the tiles already drawn greyed out rather than
   missing. It shows only what's left to draw today, which answers a different question.
+- **Trash comes from random events, never the shop** (2026-10-30). The tier is built and empty
+  (§8); its shop odds are 0. Payoffs come in two kinds, both wanted: ones that count trash you've
+  **used or sold** this run (no slot cost, so smaller), and stronger ones — a Legendary, say —
+  that need trash **held**, which costs bookmark or item slots.
+- **A Bookshop upgrade that improves the rarity odds** (a "Rare Books Room") — rarity makes it
+  possible; not built.
 - **A "words you've played" list for the round**, in order. The round already keeps that list
   (2026-10-29, for Verse, Sequel and Golden Ratio); nothing shows it yet.
 

@@ -704,6 +704,11 @@ public class Board : MonoBehaviour
         if (!restoring && tile.Spec.letters == letters.ToLowerInvariant()) return false;
 
         var spec = letterSet.CreateSpec(letters);
+
+        // A face for the round, not a tile anyone bought — an Ink-Blotted tile
+        // mustn't call itself a RARE wild.
+        spec.ShopRarity = null;
+
         if (spec.IsWild) tile.BecomeWild(spec);
         else tile.PlayAs(spec);
         return true;

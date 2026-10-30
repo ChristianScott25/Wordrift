@@ -29,6 +29,12 @@ public abstract class ShopOffer
     /// <summary>What the asset says it costs, BEFORE the run's discount.</summary>
     public abstract int ListPrice { get; }
 
+    /// <summary>How rare the thing on this row is — null for nothing to show.</summary>
+    public virtual Rarity? Rarity => null;
+
+    /// <summary>Does the thing on this row have a downside? See Rarity.cs.</summary>
+    public virtual bool Cursed => false;
+
     /// <summary>
     /// False when this slot has nothing to sell at all — every bookmark
     /// owned, every tile full. The row hides rather than greying out: there
@@ -98,6 +104,7 @@ public class ModifierOffer : ShopOffer
         Modifier != null && Target != null && Target.CanAddModifier(ModifierLimit);
 
     public override int ListPrice => Modifier == null ? 0 : Modifier.price;
+    public override Rarity? Rarity => Modifier == null ? null : Modifier.rarity;
 
     public override string Title =>
         Modifier == null || Target == null
@@ -165,6 +172,8 @@ public class BookmarkOffer : ShopOffer
 
     public override bool HasStock => Bookmark != null;
     public override int ListPrice => Bookmark == null ? 0 : Bookmark.price;
+    public override Rarity? Rarity => Bookmark == null ? null : Bookmark.rarity;
+    public override bool Cursed => Bookmark != null && Bookmark.cursed;
     public override string Title =>
         Bookmark == null ? "" : Bookmark.displayName.ToUpperInvariant();
     public override string Description => Bookmark == null ? "" : Bookmark.description;
@@ -215,6 +224,8 @@ public class CheckoutOffer : ShopOffer
 
     public override bool HasStock => Checkout != null;
     public override int ListPrice => Checkout == null ? 0 : Checkout.price;
+    public override Rarity? Rarity => Checkout == null ? null : Checkout.rarity;
+    public override bool Cursed => Checkout != null && Checkout.cursed;
     public override string Title => Checkout == null ? "" : Checkout.Title.ToUpperInvariant();
     public override string Description =>
         Checkout == null
@@ -258,6 +269,8 @@ public class ConsumableOffer : ShopOffer
 
     public override bool HasStock => Consumable != null;
     public override int ListPrice => Consumable == null ? 0 : Consumable.price;
+    public override Rarity? Rarity => Consumable == null ? null : Consumable.rarity;
+    public override bool Cursed => Consumable != null && Consumable.cursed;
     public override string Title => Consumable == null ? "" : Consumable.Title.ToUpperInvariant();
     public override string Description =>
         Consumable == null
@@ -304,6 +317,7 @@ public class TileOffer : ShopOffer
 
     public override bool HasStock => Entry != null;
     public override int ListPrice => Entry == null ? 0 : Entry.price;
+    public override Rarity? Rarity => LetterSet.RarityOf(Entry);
 
     public override string Title =>
         Entry == null ? ""
