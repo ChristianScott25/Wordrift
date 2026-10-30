@@ -16,3 +16,5 @@ MonoBehaviour:
   powerOverride: 
   price: 8
   multiplier: 2
+  bonusPoints: 0
+  extraMoveCost: 0

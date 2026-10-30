@@ -149,6 +149,7 @@ public class BagViewWidget : MonoBehaviour
     {
         GameEvents.RoundStarted -= Close;
         GameEvents.RoundEnded -= OnRoundEnded;
+        ModalViews.Set(this, false);
     }
 
     private void OnRoundEnded(RoundSummary summary) => Close();
@@ -167,6 +168,7 @@ public class BagViewWidget : MonoBehaviour
                            "Run Word Crush > Set Up Game Layout.", this);
 
         root.SetActive(true);
+        ModalViews.Set(this, true);
 
         // After SetActive: the cell is worked out from the grid's width, and a
         // rect under an inactive parent isn't one to trust.
@@ -189,6 +191,7 @@ public class BagViewWidget : MonoBehaviour
     public void Close()
     {
         if (root != null) root.SetActive(false);
+        ModalViews.Set(this, false);
         Inspector.Hide();
 
         // Written to disk here rather than on every slider move — a smooth
@@ -452,7 +455,7 @@ public class BagViewWidget : MonoBehaviour
         if (countLabel == null) return;
 
         var run = RunState.Current;
-        int total = run == null ? 0 : run.TileBag.Count;
+        int total = run == null ? 0 : run.ActiveTileCount;
 
         countLabel.text = total > 0 ? $"{remaining} / {total}" : remaining.ToString();
     }

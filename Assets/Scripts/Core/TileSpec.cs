@@ -43,6 +43,15 @@ public class TileSpec : IInspectable
     // rather than a modifier — see the three views below.
     public List<TileModifier> modifiers;
 
+    /// <summary>
+    /// 🚧 Shredded out of the run's bag for good (ShredTileConsumable, 2026-10-29).
+    /// The tile STAYS in RunState.TileBag — a tile's identity is its index there,
+    /// and removing one would re-point every saved index after it — but nothing
+    /// deals it, counts it or upgrades it again. RunState.ActiveTiles is the one
+    /// place "the tiles you actually have" is answered.
+    /// </summary>
+    [System.NonSerialized] public bool Retired;
+
     /// <summary>How many modifiers this tile carries. 0 for a plain tile.</summary>
     public int ModifierCount => modifiers == null ? 0 : modifiers.Count;
 

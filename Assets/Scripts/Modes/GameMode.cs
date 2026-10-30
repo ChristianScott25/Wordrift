@@ -138,6 +138,22 @@ public abstract class GameMode
     public virtual bool ArmForNextWord(Consumable consumable) => false;
 
     /// <summary>
+    /// 🚧 An item changing this round's allowances (Spare Pen, Scrap Paper,
+    /// Rush Order). Adds to moves and discards; zeroDiscards empties discards
+    /// after that. False when the mode has nothing to change — and, in
+    /// RogueDemoMode, when an item would hand discards to a round whose rules
+    /// allow none (the boss beats the item). The item is then not spent.
+    /// </summary>
+    public virtual bool ChangeAllowances(int moves, int discards, bool zeroDiscards) => false;
+
+    /// <summary>
+    /// 🚧 Epilogue: if the round's score is at least `threshold` of the way to
+    /// its target (and not there yet), top it up to the target so the round
+    /// clears the ordinary way. False otherwise, and the item is not spent.
+    /// </summary>
+    public virtual bool TryFinishEarly(float threshold) => false;
+
+    /// <summary>
     /// The stream a consumable rolls from this round, or null for a mode that
     /// has none. It comes from the mode rather than straight off RunState
     /// because the mode is what records the stream's position in the round

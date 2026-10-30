@@ -436,18 +436,23 @@ public class ChainController : MonoBehaviour
     /// readout build up exactly as they would by hand. What the Cheat Sheet does
     /// once it has found its word. The path must already be a legal chain.
     /// </summary>
-    public void PlayHint(IReadOnlyList<Tile> path)
+    /// <param name="onFinished">🚧 Run once EVERY tile has gone in (Spoiler
+    /// presses PLAY with it). Not run when the hint is cut short — a press, or a
+    /// tile gone from under it — so a word the player interrupted is never
+    /// played for them.</param>
+    public void PlayHint(IReadOnlyList<Tile> path, System.Action onFinished = null)
     {
         ClearSelectionSilently();
         ChainChanged?.Invoke(chain);
         if (path == null || path.Count == 0) return;
 
         hinted = true;
-        hintRoutine = StartCoroutine(HintRoutine(new List<Tile>(path)));
+        hintRoutine = StartCoroutine(HintRoutine(new List<Tile>(path), onFinished));
     }
 
-    private IEnumerator HintRoutine(List<Tile> path)
+    private IEnumerator HintRoutine(List<Tile> path, System.Action onFinished)
     {
+        bool complete = true;
         for (int i = 0; i < path.Count; i++)
         {
             if (i > 0 && hintStepSeconds > 0f) yield return new WaitForSeconds(hintStepSeconds);
@@ -456,11 +461,12 @@ public class ChainController : MonoBehaviour
             // nothing this short should be able to, but a chain that skipped one
             // would be a chain the player could never have made.
             var tile = path[i];
-            if (tile == null || !tile.IsSettled) break;
-            if (chain.Count > 0 && !IsConnectable(chain[chain.Count - 1], tile)) break;
+            if (tile == null || !tile.IsSettled) { complete = false; break; }
+            if (chain.Count > 0 && !IsConnectable(chain[chain.Count - 1], tile)) { complete = false; break; }
             AddTile(tile);
         }
         hintRoutine = null;
+        if (complete) onFinished?.Invoke();
     }
 
     /// <summary>Stops a hint going in and stops treating the selection as one.</summary>

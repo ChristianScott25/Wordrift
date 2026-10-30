@@ -304,10 +304,22 @@ public class Tile : MonoBehaviour
     public void BecomeWild(TileSpec wild)
     {
         if (wild == null || !wild.IsWild) return;
-        Stamp(wild);
+        PlayAs(wild);
+    }
+
+    /// <summary>
+    /// Plays as another spec for as long as this tile is on the board — what
+    /// BecomeWild does, for any letter (🚧 Vowel Shower, Correction Fluid,
+    /// 2026-10-29). Origin is left alone, exactly as for a wild: the bag, the
+    /// shop and the next round never see the change.
+    /// </summary>
+    public void PlayAs(TileSpec spec)
+    {
+        if (spec == null) return;
+        Stamp(spec);
         RefreshLetterLabel();
-        ApplyModifierVisuals();   // hides the badges and puts "*" in the corner
-        name = $"Tile * ({Cell.x},{Cell.y})";
+        ApplyModifierVisuals();   // the new spec's badges (none) and its corner score
+        name = $"Tile {spec.Face.ToUpperInvariant()} ({Cell.x},{Cell.y})";
     }
 
     /// <summary>
@@ -419,6 +431,12 @@ public class Tile : MonoBehaviour
         Modifiers.Add(modifier);
         ApplyModifierVisuals();
     }
+
+    /// <summary>
+    /// Is this tile playing as something other than the bag tile it was dealt
+    /// as — an Ink Blot wild, or a 🚧 Vowel Shower / Correction Fluid letter?
+    /// </summary>
+    public bool IsRewritten => Spec != null && Origin != null && Spec != Origin;
 
     /// <summary>
     /// Places and sizes both labels from the tile sprite's own bounds.

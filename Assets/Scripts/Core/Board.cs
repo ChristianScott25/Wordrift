@@ -677,14 +677,85 @@ public class Board : MonoBehaviour
     /// </summary>
     public bool MakeWild(Tile tile)
     {
-        if (tile == null || !tile.IsSettled || tile.Spec == null || tile.Spec.IsWild) return false;
+        if (tile == null || tile.Spec == null || tile.Spec.IsWild) return false;
+        return Rewrite(tile, TileSpec.WildSpelling);
+    }
+
+    /// <summary>
+    /// Makes the tile PLAY AS another catalog row until it leaves the board —
+    /// MakeWild's general form (🚧 Vowel Shower, Correction Fluid, and a resumed
+    /// round putting either back). Same rules as the wild: a FRESH spec off the
+    /// catalog per tile, in no bag, worth what the catalog says, no badges; the
+    /// tile's Origin is untouched.
+    ///
+    /// False when there's no such tile settled on the board, no catalog row for
+    /// `letters`, or the tile already plays as exactly that.
+    ///
+    /// <paramref name="restoring"/> skips that last check, for a resumed round
+    /// putting a rewrite back: a tile Correction Fluid turned back into its OWN
+    /// letter still plays as a fresh, badge-less spec, and refusing there would
+    /// resume it with its badges back.
+    /// </summary>
+    public bool Rewrite(Tile tile, string letters, bool restoring = false)
+    {
+        if (tile == null || !tile.IsSettled || tile.Spec == null || string.IsNullOrEmpty(letters)) return false;
         if (!tiles.TryGetValue(tile.Cell, out var onBoard) || onBoard != tile) return false;
-        if (letterSet == null) return false;
+        if (letterSet == null || letterSet.EntryFor(letters) == null) return false;
+        if (!restoring && tile.Spec.letters == letters.ToLowerInvariant()) return false;
 
-        var wild = letterSet.CreateSpec(TileSpec.WildSpelling);
-        if (!wild.IsWild) return false;
+        var spec = letterSet.CreateSpec(letters);
+        if (spec.IsWild) tile.BecomeWild(spec);
+        else tile.PlayAs(spec);
+        return true;
+    }
 
-        tile.BecomeWild(wild);
+    /// <summary>
+    /// Every tile within `radius` cells of `cell` (a square: radius 1 is the 3x3
+    /// around it, 0 is just that cell) — 🚧 Eraser and Coffee Ring. Walked through
+    /// columnCells like TilesInLine, so the order never comes from a HashSet.
+    /// </summary>
+    public List<Tile> TilesAround(Vector2Int cell, int radius)
+    {
+        var area = new List<Tile>();
+        radius = Mathf.Max(0, radius);
+        foreach (int column in Columns)
+        {
+            if (Mathf.Abs(column - cell.x) > radius) continue;
+            if (!columnCells.TryGetValue(column, out var list)) continue;
+            foreach (var c in list)
+            {
+                if (Mathf.Abs(c.y - cell.y) > radius) continue;
+                if (tiles.TryGetValue(c, out var tile) && tile != null) area.Add(tile);
+            }
+        }
+        return area;
+    }
+
+    /// <summary>
+    /// Swaps two tiles' cells and slides them past each other — 🚧 Transpose.
+    /// Shuffle's motion for exactly two tiles: the occupancy pattern doesn't
+    /// change, so gravity has nothing to do afterwards. False unless both are
+    /// settled on the board and the board is at rest.
+    /// </summary>
+    public bool SwapTiles(Tile a, Tile b)
+    {
+        if (a == null || b == null || a == b || Busy || Resolving) return false;
+        if (!a.IsSettled || !b.IsSettled) return false;
+        if (!tiles.TryGetValue(a.Cell, out var atA) || atA != a) return false;
+        if (!tiles.TryGetValue(b.Cell, out var atB) || atB != b) return false;
+
+        var cellA = a.Cell;
+        var cellB = b.Cell;
+
+        // The key and tile.Cell are ONE fact — written together, as in Shuffle.
+        tiles[cellA] = b; b.Cell = cellA;
+        tiles[cellB] = a; a.Cell = cellB;
+        a.name = $"Tile {a.Face.ToUpperInvariant()} ({cellB.x},{cellB.y})";
+        b.name = $"Tile {b.Face.ToUpperInvariant()} ({cellA.x},{cellA.y})";
+
+        a.MoveTo(CellToWorld(cellB));
+        b.MoveTo(CellToWorld(cellA));
+        StartCoroutine(HoldInputUntilSettled(new List<Tile> { a, b }));
         return true;
     }
 

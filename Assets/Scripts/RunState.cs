@@ -98,6 +98,31 @@ public class RunState
     public List<TileSpec> TileBag { get; } = new();
 
     /// <summary>
+    /// 🚧 The tiles the run actually HAS — TileBag minus anything Shredded
+    /// (TileSpec.Retired). What a round deals from, what BAG counts, what the
+    /// shop may upgrade. A fresh list each call; for a count, ActiveTileCount.
+    /// </summary>
+    public List<TileSpec> ActiveTiles()
+    {
+        var active = new List<TileSpec>(TileBag.Count);
+        foreach (var tile in TileBag)
+            if (tile != null && !tile.Retired) active.Add(tile);
+        return active;
+    }
+
+    /// <summary>How many tiles the run has, Shredded ones left out. No allocation — the HUD reads it every frame.</summary>
+    public int ActiveTileCount
+    {
+        get
+        {
+            int count = 0;
+            foreach (var tile in TileBag)
+                if (tile != null && !tile.Retired) count++;
+            return count;
+        }
+    }
+
+    /// <summary>
     /// The bookmarks this run owns, in slot order — which is the order they get
     /// to touch a word's score, and which the player sets by dragging the cards
     /// below the board. Capped at ModeConfig.maxBookmarks; see BookmarksFull.
@@ -300,7 +325,53 @@ public class RunState
     public bool SpendConsumable(int index)
     {
         if (index < 0 || index >= Consumables.Count) return false;
+        var used = Consumables[index];
         Consumables.RemoveAt(index);
+        if (used != null && used.RememberedAsLastUsed) LastUsedConsumable = used;
+        RaiseChanged();
+        return true;
+    }
+
+    /// <summary>
+    /// The last item this run used, for Reprint — set by SpendConsumable, which
+    /// is only ever called for an item that actually did something. Never Reprint
+    /// itself (Consumable.RememberedAsLastUsed). Saved by name.
+    /// </summary>
+    public Consumable LastUsedConsumable { get; private set; }
+
+    /// <summary>
+    /// Hands over an item mid-round past the cap's check — Reprint's copy, added
+    /// right after Reprint's own slot was spent, so there is always room. Raises
+    /// Changed itself (see the warning on AddConsumable).
+    /// </summary>
+    public bool GiveConsumable(Consumable consumable)
+    {
+        if (consumable == null || ConsumablesFull) return false;
+        Consumables.Add(consumable);
+        RaiseChanged();
+        return true;
+    }
+
+    /// <summary>
+    /// 🚧 A bookmark taken away for nothing — Plagiarism's price. Unlike
+    /// SellBookmark it pays nothing; the item pays its own money through
+    /// CreditFromItem. Raises Changed so the row redraws.
+    /// </summary>
+    public bool LoseBookmark(BookmarkSpec spec)
+    {
+        if (spec == null || !Bookmarks.Remove(spec)) return false;
+        RaiseChanged();
+        return true;
+    }
+
+    /// <summary>
+    /// 🚧 Retires a tile from the bag for good — Shredder. It stays in TileBag
+    /// (see TileSpec.Retired) and is saved as retired. Raises Changed.
+    /// </summary>
+    public bool RetireTile(TileSpec tile)
+    {
+        if (tile == null || tile.Retired || !TileBag.Contains(tile)) return false;
+        tile.Retired = true;
         RaiseChanged();
         return true;
     }
@@ -498,10 +569,23 @@ public class RunState
     }
 
     /// <summary>
+    /// 🚧 Money an item pays out mid-round (Late Fee, Overdue Notice, Plagiarism).
+    /// Leaves LastPayout alone, like a sale. Raises Changed so the HUD and the
+    /// save both hear about it.
+    /// </summary>
+    public void CreditFromItem(int amount)
+    {
+        if (amount <= 0) return;
+        Credit(amount);
+        RaiseChanged();
+    }
+
+    /// <summary>
     /// Puts money in. Private, so every way money arrives is a named method on
-    /// this class: a round's payout (AddMoney) and 🚧 a Bookshop sale
-    /// (SellBookmark / SellConsumable) — which deliberately leaves LastPayout
-    /// alone, so the shop's "+$21 EARNED" keeps meaning what the ROUND paid.
+    /// this class: a round's payout (AddMoney), 🚧 a Bookshop sale
+    /// (SellBookmark / SellConsumable) and 🚧 an item (CreditFromItem) — which
+    /// all leave LastPayout alone, so the shop's "+$21 EARNED" keeps meaning
+    /// what the ROUND paid.
     /// </summary>
     private void Credit(int amount)
     {
@@ -682,7 +766,7 @@ public class RunState
 
         foreach (var tile in TileBag)
         {
-            var entry = new TileSpecData { letters = tile.letters, baseScore = tile.baseScore };
+            var entry = new TileSpecData { letters = tile.letters, baseScore = tile.baseScore, retired = tile.Retired };
             if (tile.modifiers != null)
                 foreach (var modifier in tile.modifiers)
                     if (modifier != null) entry.modifiers.Add(modifier.name);
@@ -700,6 +784,7 @@ public class RunState
 
         foreach (var consumable in Consumables)
             if (consumable != null) data.consumables.Add(consumable.name);
+        data.lastConsumable = LastUsedConsumable == null ? "" : LastUsedConsumable.name;
 
         // Both halves, and both are load-bearing: the current one because it's
         // the round's rule, and the unseen pool because it's the no-repeat rule.
@@ -808,7 +893,7 @@ public class RunState
         // the save format.
         foreach (var entry in data.tileBag)
         {
-            var spec = new TileSpec { letters = entry.letters, baseScore = entry.baseScore };
+            var spec = new TileSpec { letters = entry.letters, baseScore = entry.baseScore, Retired = entry.retired };
             if (entry.modifiers != null)
                 foreach (var name in entry.modifiers)
                     spec.AddModifier(Resolve(template.tileModifiers, name));
@@ -835,6 +920,8 @@ public class RunState
             var consumable = Resolve(template.consumables, name);
             if (consumable != null) Consumables.Add(consumable);
         }
+        if (!string.IsNullOrEmpty(data.lastConsumable))
+            LastUsedConsumable = Resolve(template.consumables, data.lastConsumable);
 
         // Derived from the list above, so it has to be built AFTER it — a resumed
         // run with an empty RunPerks is a run that quietly lost every perk it

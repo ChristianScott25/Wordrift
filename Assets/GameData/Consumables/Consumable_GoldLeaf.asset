@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ad1b42ca1bc448d29da62b9a58fbf72, type: 3}
+  m_Name: Consumable_GoldLeaf
+  m_EditorClassIdentifier: Assembly-CSharp::GildTileConsumable
+  displayName: Gold Leaf
+  powerOverride: 
+  price: 9
+  modifier: {fileID: 11400000, guid: 4feeb697aa4bc4d6a8a5e0b449256678, type: 2}

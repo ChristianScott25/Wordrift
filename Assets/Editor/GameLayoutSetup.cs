@@ -164,6 +164,7 @@ public static class GameLayoutSetup
         ScorePopSetup.Build(canvas);
         var bagView = BagViewSetup.Build(canvas, session);
         var pauseView = PauseViewSetup.Build(canvas, session);
+        LetterPickerSetup.Build(canvas, session);   // 🚧 Correction Fluid's letter choice
         var systemButtons = BuildSystemButtons(canvas);
         BuildWordRow(canvas, board);
         WarmUp(board, Object.FindFirstObjectByType<CurrentWordWidget>(FindObjectsInactive.Include));

@@ -59,6 +59,7 @@ public class PauseViewWidget : MonoBehaviour
     {
         GameEvents.RoundStarted -= Close;
         GameEvents.RoundEnded -= OnRoundEnded;
+        ModalViews.Set(this, false);
     }
 
     private void OnRoundEnded(RoundSummary summary) => Close();
@@ -98,6 +99,7 @@ public class PauseViewWidget : MonoBehaviour
                            "Run Word Crush > Set Up Game Layout.", this);
 
         root.SetActive(true);
+        ModalViews.Set(this, true);
 
         // ⚠️ Same as the bag view: the layout bands are appended at runtime,
         // and sibling order is draw order, so without this the panel draws
@@ -109,6 +111,7 @@ public class PauseViewWidget : MonoBehaviour
     public void Close()
     {
         if (root != null) root.SetActive(false);
+        ModalViews.Set(this, false);
         Inspector.Hide();
     }
 

@@ -92,6 +92,27 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 661136247a248405a82069e9824dada7, type: 2}
   - {fileID: 11400000, guid: 9a014ff62f42b4c4a80a23cafc0f1a95, type: 2}
   - {fileID: 11400000, guid: c1243d847e93040c69e387aafbb8ecb2, type: 2}
+  - {fileID: 11400000, guid: a0995c05e623341de9c3869d648b0cad, type: 2}
+  - {fileID: 11400000, guid: 3c7d57a747f6a475f81a1290375dabfb, type: 2}
+  - {fileID: 11400000, guid: d8f036c9303c44538ba3d36251c77576, type: 2}
+  - {fileID: 11400000, guid: a13bcdcf8dae94bd9b1bd2742b13a9c0, type: 2}
+  - {fileID: 11400000, guid: 9b75e15bdb80b4e52b49437ec5ca9265, type: 2}
+  - {fileID: 11400000, guid: b8b325851576d438d8f1d071fe6d8ee7, type: 2}
+  - {fileID: 11400000, guid: 66d9e738e93ee431d8df32b74138a0fd, type: 2}
+  - {fileID: 11400000, guid: aa37c1b52d16b435f866334384a991e1, type: 2}
+  - {fileID: 11400000, guid: 73b0650da40fb4176bde5489fc3029aa, type: 2}
+  - {fileID: 11400000, guid: 95bb45cd409cc425aaa5f74599ffa13c, type: 2}
+  - {fileID: 11400000, guid: 67aa233e00a1c47569c224908ce2ec29, type: 2}
+  - {fileID: 11400000, guid: d5c24456dc5d140ed8670d3797b2216f, type: 2}
+  - {fileID: 11400000, guid: 5ebe0115a71154ce5bc3ed2b324292f0, type: 2}
+  - {fileID: 11400000, guid: 6f5afe83e620c4db895a6891505a1522, type: 2}
+  - {fileID: 11400000, guid: ac4c70ffdb94842a5aeb24eaa684b880, type: 2}
+  - {fileID: 11400000, guid: 0cd123a9cc92a455a93f61a4fdd882b5, type: 2}
+  - {fileID: 11400000, guid: 65cd888f120754c9fb189752c57aa127, type: 2}
+  - {fileID: 11400000, guid: bcfc5b3f2cdf3485e80e7b64e6392392, type: 2}
+  - {fileID: 11400000, guid: 0135e290f73b747ae8c825e043c55be3, type: 2}
+  - {fileID: 11400000, guid: 500ef231358884199b1082923cda627b, type: 2}
+  - {fileID: 11400000, guid: 4a654aed3a44c469ca30c53294132876, type: 2}
   maxConsumables: 2
   rerollBasePrice: 5
   rerollPriceGrowth: 1.5

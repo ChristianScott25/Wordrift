@@ -81,9 +81,10 @@ public class EndlessTiles : ITileSource
 ///
 /// The bag drains a COPY of the stock it was given, and Reset refills the copy
 /// from the stock. Two things follow. The full bag returns at the start of
-/// every round — playing tiles never shrinks the run. And the stock is a live
-/// view of the run's tiles (see RunState.TileBag), so a tile a shop adds mid-run
-/// is simply there on the next Reset, with no re-wiring.
+/// every round — playing tiles never shrinks the run. And the stock is the
+/// run's tiles as the round began (RogueDemoMode hands over RunState.ActiveTiles,
+/// a fresh list each round, leaving 🚧 Shredded tiles out), so a tile a shop adds
+/// between rounds is simply there next round, with no re-wiring.
 ///
 /// Running dry is the point, not a failure. The board's opening fill is paid
 /// for out of the bag like everything else, so a 25-cell board has already

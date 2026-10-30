@@ -73,6 +73,13 @@ public class RunSaveData
     public List<string> consumables = new();
 
     /// <summary>
+    /// The last item the run used, by asset name, for Reprint to copy. Empty when
+    /// none has been used — and on a file older than Reprint, which is the honest
+    /// answer, so no version bump.
+    /// </summary>
+    public string lastConsumable = "";
+
+    /// <summary>
     /// 🚧 How far each Bookshop section has been upgraded, indexed by
     /// ShopSection's value (which is why that enum is append-only). Empty for a
     /// run that never used the Bookshop — and for a file written before this
@@ -110,6 +117,9 @@ public class TileSpecData
 
     /// <summary>Modifier asset names, in the order the tile carries them.</summary>
     public List<string> modifiers = new();
+
+    /// <summary>🚧 Shredded out of the bag — see TileSpec.Retired. False on an older file.</summary>
+    public bool retired;
 }
 
 /// <summary>
@@ -157,6 +167,15 @@ public class RoundSnapshot
     /// existed reads it back empty, which honestly means "no wilds".
     /// </summary>
     public List<bool> boardWild = new();
+
+    /// <summary>
+    /// Parallel to the board lists: what each tile is PLAYING AS for the round
+    /// when an item rewrote it — "*" for an Ink Blot wild, "e" for a Vowel
+    /// Shower or Correction Fluid letter — or "" for a tile that is itself.
+    /// boardTile still names the bag tile it was dealt as. Supersedes boardWild;
+    /// an older file without this falls back to boardWild.
+    /// </summary>
+    public List<string> boardFace = new();
 
     // ---- Filled in by the mode, via GameMode.CaptureRound ----------------
 

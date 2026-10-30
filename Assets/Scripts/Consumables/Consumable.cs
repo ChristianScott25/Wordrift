@@ -68,6 +68,20 @@ public class ConsumableUse
     /// (RedrawConsumable's ripple).
     /// </summary>
     public Vector2Int Cell;
+
+    /// <summary>
+    /// The letter the player picked, for an item that AsksForLetter (Correction
+    /// Fluid). Null on the first pass — the session opens the picker instead of
+    /// calling Use — and filled on the second, when a letter was chosen.
+    /// </summary>
+    public string Letter;
+
+    /// <summary>
+    /// An item to hand the player AFTER this one is spent (Reprint). Set by Use;
+    /// the session adds it once the used item's slot is free, so it fits even
+    /// when every slot was full.
+    /// </summary>
+    public Consumable GiveAfterSpend;
 }
 
 /// <summary>
@@ -153,6 +167,20 @@ public abstract class Consumable : ScriptableObject, IInspectable
     /// Doubler) says false, and the word you've built stays selected.
     /// </summary>
     public virtual bool ChangesBoard => true;
+
+    /// <summary>
+    /// Does this item need the player to pick a LETTER before it can run
+    /// (Correction Fluid)? Then GameSession.UseConsumable opens the letter
+    /// picker and spends nothing; picking calls back in with ConsumableUse.Letter
+    /// filled. Closing the picker is a change of mind and costs nothing.
+    /// </summary>
+    public virtual bool AsksForLetter => false;
+
+    /// <summary>
+    /// Is this the item Reprint copies, once used? True for everything except
+    /// Reprint itself — a Reprint that copied a Reprint is an endless supply.
+    /// </summary>
+    public virtual bool RememberedAsLastUsed => true;
 
     /// <summary>What this item is, for the info box.</summary>
     public virtual void Describe(InspectInfo info)

@@ -131,7 +131,10 @@ public class RogueDemoMode : GameMode
         // deals the same tiles, and this round's deal doesn't depend on how
         // many tiles were drawn in the rounds before it.
         bagRng = run.StreamFor(RunState.BagStream);
-        bag = new TileBag(run.TileBag, bagRng);
+        // 🚧 ActiveTiles, not TileBag: a Shredded tile stays in the run's list
+        // (its index is its identity) but is never dealt again. The bag holds
+        // the SAME objects, so saving by index still works.
+        bag = new TileBag(run.ActiveTiles(), bagRng);
         board.TileSource = bag;
 
         // Its own stream, so that how often a consumable rolls can never shift
@@ -270,6 +273,35 @@ public class RogueDemoMode : GameMode
     }
 
     public override Rng ConsumableRng => consumableRng;
+
+    public override bool ChangeAllowances(int moves, int discards, bool zeroDiscards)
+    {
+        // A round whose rules give no discards (The Redactor) refuses an item
+        // that would hand some out — the boss beats the item, the same way it
+        // beats a checkout in BuildRules.
+        if (discards > 0 && rules.Discards <= 0) return false;
+        if (moves == 0 && discards == 0 && !zeroDiscards) return false;
+
+        movesLeft = Mathf.Max(0, movesLeft + moves);
+        discardsLeft = Mathf.Max(0, discardsLeft + discards);
+        if (zeroDiscards) discardsLeft = 0;
+        return true;
+    }
+
+    public override bool TryFinishEarly(float threshold)
+    {
+        // Only on a mode where reaching the target ENDS the round — otherwise
+        // "the round is cleared" would be a promise the item can't keep.
+        if (!config.endOnTargetReached) return false;
+        if (session == null || roundTarget == int.MaxValue || TargetReached) return false;
+        if (session.Score < (double)roundTarget * Mathf.Clamp01(threshold)) return false;
+
+        // Topping the SCORE up is the whole trick: the saved score then already
+        // says the round is won, and the ordinary target check ends it and pays
+        // out — no new round state, nothing new to save.
+        session.RaiseScoreTo(roundTarget);
+        return true;
+    }
 
     public override bool AllowsConsumables => rules.ConsumablesAllowed;
 
@@ -411,7 +443,7 @@ public class RogueDemoMode : GameMode
         // undecided letter — so reading Spelling here would hide its options from
         // the Censor entirely.
         foreach (var tile in run.TileBag)
-            if (tile != null)
+            if (tile != null && !tile.Retired)
                 foreach (char letter in tile.Face)
                     // LETTERS only, which is also what drops a choice tile's "/"
                     // separators. A wild spells "*", and a Censor that drew it
@@ -522,7 +554,13 @@ public class RogueDemoMode : GameMode
     /// </summary>
     public override void OnWordAccepted(WordResult result)
     {
-        movesLeft--;
+        // A word costs one move, give or take what's armed: Free Read takes one
+        // off (a free word), Banned Book adds two. Floored at 0 so a free word
+        // never GIVES a move back.
+        int cost = 1;
+        foreach (var item in armed)
+            if (item is NextWordMultiplierConsumable nextWord) cost += nextWord.extraMoveCost;
+        movesLeft = Mathf.Max(0, movesLeft - Mathf.Max(0, cost));
 
         if (armed.Count == 0) return;
         armed.Clear();
@@ -617,7 +655,7 @@ public class RogueDemoMode : GameMode
                 Target = roundTarget,
                 Round = run == null ? 0 : run.Round,
                 BagRemaining = bag == null ? 0 : bag.Remaining,
-                BagTotal = run == null ? 0 : run.TileBag.Count,
+                BagTotal = run == null ? 0 : run.ActiveTileCount,
                 ArmedText = armedText,
                 LibrarianName = librarianName,
                 LibrarianPower = librarianPower,

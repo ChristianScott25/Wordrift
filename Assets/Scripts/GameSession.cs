@@ -43,6 +43,10 @@ public class GameSession : MonoBehaviour
              "board's. Wired by Word Crush/Set Up Game Layout.")]
     [SerializeField] private GameLayout layout;
 
+    [Tooltip("🚧 The letter picker an item like Correction Fluid opens. Wired by " +
+             "Word Crush/Set Up Game Layout; without it those items refuse.")]
+    [SerializeField] private LetterPickerWidget letterPicker;
+
     public ModeConfig Config { get; private set; }
     public int Score { get; private set; }
     public bool IsPlaying { get; private set; }
@@ -65,6 +69,26 @@ public class GameSession : MonoBehaviour
     // cleared per round and written AFTER the word has been scored. A list, not
     // a set, so the order survives — a future "words played" view reads it too.
     private readonly List<string> wordsThisRound = new();
+
+    /// <summary>
+    /// Every word accepted this round, in play order, repeats included. Read
+    /// it, never add to it. (Overdue Notice counts it; a future "words played"
+    /// view will list it.)
+    /// </summary>
+    public IReadOnlyList<string> WordsThisRound => wordsThisRound;
+
+    /// <summary>
+    /// 🚧 Raises the round's score to `value` — Epilogue, via
+    /// GameMode.TryFinishEarly. Never lowers it. The ordinary round-over check
+    /// in Update does the rest, and the queued save writes the new score.
+    /// </summary>
+    public void RaiseScoreTo(int value)
+    {
+        if (!IsPlaying || value <= Score) return;
+        Score = ScoreLimits.Clamp((long)value);
+        GameEvents.RaiseScoreChanged(Score);
+        RequestSave();
+    }
 
     private void Awake()
     {
@@ -188,14 +212,19 @@ public class GameSession : MonoBehaviour
         }
         board.Restore(layout);
 
-        // Item-made wilds, put back on top of the tiles they were dealt as. Guarded
-        // by count: an older file has no boardWild at all.
-        int wilds = Mathf.Min(cells, saved.boardWild.Count);
-        for (int i = 0; i < wilds; i++)
+        // Item-made letters (an Ink Blot wild, a 🚧 Vowel Shower or Correction
+        // Fluid letter), put back on top of the tiles they were dealt as.
+        // boardFace says which; a file older than it only has boardWild, which
+        // is read instead. Guarded by count either way.
+        bool hasFaces = saved.boardFace != null && saved.boardFace.Count > 0;
+        int rewritten = Mathf.Min(cells, hasFaces ? saved.boardFace.Count : saved.boardWild.Count);
+        for (int i = 0; i < rewritten; i++)
         {
-            if (!saved.boardWild[i]) continue;
+            string face = hasFaces ? saved.boardFace[i]
+                        : saved.boardWild[i] ? TileSpec.WildSpelling : "";
+            if (string.IsNullOrEmpty(face)) continue;
             var cell = new Vector2Int(saved.boardCellX[i], saved.boardCellY[i]);
-            if (board.Tiles.TryGetValue(cell, out var tile)) board.MakeWild(tile);
+            if (board.Tiles.TryGetValue(cell, out var tile)) board.Rewrite(tile, face, restoring: true);
         }
 
         // Anything the round attaches to tiles — a librarian's marks — now
@@ -446,7 +475,10 @@ public class GameSession : MonoBehaviour
     /// <param name="screenPoint">Where the item was dropped. An item is played by
     /// dragging it onto the board, so a drop anywhere else is a change of mind
     /// and must cost nothing.</param>
-    public bool UseConsumable(int index, Vector2 screenPoint)
+    /// <param name="letter">🚧 The letter picked for an item that AsksForLetter.
+    /// Null on the first call, which opens the picker instead of using the item;
+    /// the picker calls back in with it filled.</param>
+    public bool UseConsumable(int index, Vector2 screenPoint, string letter = null)
     {
         if (!CanUseConsumable) return false;
 
@@ -486,9 +518,31 @@ public class GameSession : MonoBehaviour
         // Only for an item that touches the board (his call, 2026-10-26): the
         // Doubler just arms itself, and clearing the word you built to arm it
         // for was a word thrown away for nothing.
+        // 🚧 An item that needs a letter asks for one first, and spends NOTHING
+        // until it gets one: the picker calls back in here with the letter
+        // filled, and closing it is a free change of mind. Its backdrop blocks
+        // the board while it's up, so the tile under the drop can't move.
+        if (consumable.AsksForLetter && string.IsNullOrEmpty(letter))
+        {
+            if (letterPicker == null)
+            {
+                Debug.LogError($"{consumable.Title} needs the letter picker. Run Word Crush > Set Up Game Layout.", this);
+                return false;
+            }
+            var asked = consumable;
+            letterPicker.Open(picked =>
+            {
+                // The slot is re-checked: the same item has to still be there.
+                var now = RunState.Current;
+                if (now == null || index >= now.Consumables.Count || now.Consumables[index] != asked) return;
+                UseConsumable(index, screenPoint, picked);
+            });
+            return false;
+        }
+
         if (consumable.ChangesBoard) chainController.CancelChain();
 
-        bool used = consumable.Use(new ConsumableUse
+        var use = new ConsumableUse
         {
             Run = run,
             Session = this,
@@ -496,13 +550,18 @@ public class GameSession : MonoBehaviour
             Rng = mode.ConsumableRng,
             Tile = target,
             Cell = target != null ? target.Cell : CellAtScreen(screenPoint),
-        });
+            Letter = letter,
+        };
+        bool used = consumable.Use(use);
 
         if (!used) { RaiseSelection(); return false; }
 
         // Raises RunState.Changed, which queues the save — the board may be
         // sliding, and FlushSaveWhenSettled holds it until it isn't.
         run.SpendConsumable(index);
+
+        // 🚧 Reprint's copy goes in AFTER its own slot is free, so it always fits.
+        if (use.GiveAfterSpend != null) run.GiveConsumable(use.GiveAfterSpend);
 
         RaiseSelection();
         GameEvents.RaiseStatusChanged(mode.Status);
@@ -515,7 +574,18 @@ public class GameSession : MonoBehaviour
     /// — so the item is NOT spent — when no word starts there, and flashes the
     /// tile so the refusal is visible.
     /// </summary>
-    public bool HintBestWordFrom(Tile start)
+    public bool HintBestWordFrom(Tile start) => HintBestWordFrom(start, null);
+
+    /// <summary>
+    /// 🚧 Spoiler: the Cheat Sheet's word, then ARMS `armWith` for it and
+    /// presses PLAY for the player once the last tile is in. Cut the hint short
+    /// (a press) and nothing is played — the armed item then waits for the next
+    /// word like any other. False, so the item isn't spent, when no word starts
+    /// there or there's nowhere to arm it.
+    /// </summary>
+    public bool PlayBestWordFrom(Tile start, Consumable armWith) => HintBestWordFrom(start, armWith);
+
+    private bool HintBestWordFrom(Tile start, Consumable armWith)
     {
         if (start == null || !IsPlaying) return false;
 
@@ -526,8 +596,29 @@ public class GameSession : MonoBehaviour
             return false;
         }
 
-        chainController.PlayHint(best.Path);
+        if (armWith == null)
+        {
+            chainController.PlayHint(best.Path);
+            return true;
+        }
+
+        if (!mode.ArmForNextWord(armWith)) return false;
+        chainController.PlayHint(best.Path, () => StartCoroutine(PlayHintedWordWhenClear()));
         return true;
+    }
+
+    /// <summary>
+    /// Spoiler's PLAY press, held back while a full-screen panel (pause, bag
+    /// view, letter picker) is open — pressing it behind one would score a word
+    /// the player can't see. Only presses if the round is still live and the
+    /// word is still selected; a press on the board in the meantime cleared it,
+    /// and the armed multiplier then waits for the next word instead.
+    /// </summary>
+    private IEnumerator PlayHintedWordWhenClear()
+    {
+        yield return new WaitUntil(() => !IsPlaying || (!ModalViews.AnyOpen && IsAtRest));
+        if (!IsPlaying || chainController.Selection.Count == 0) yield break;
+        SubmitSelection();
     }
 
     /// <summary>
@@ -622,6 +713,18 @@ public class GameSession : MonoBehaviour
     /// </summary>
     public bool ArmForNextWord(Consumable consumable) =>
         mode != null && mode.ArmForNextWord(consumable);
+
+    /// <summary>🚧 An item changing the round's moves / discards. Pass-through — see GameMode.ChangeAllowances.</summary>
+    public bool ChangeAllowances(int moves, int discards, bool zeroDiscards)
+    {
+        if (mode == null || !mode.ChangeAllowances(moves, discards, zeroDiscards)) return false;
+        GameEvents.RaiseStatusChanged(mode.Status);
+        RaiseSelection();   // DISCARD's own enabled state depends on what's left
+        return true;
+    }
+
+    /// <summary>🚧 Epilogue. Pass-through — see GameMode.TryFinishEarly.</summary>
+    public bool TryFinishEarly(float threshold) => mode != null && mode.TryFinishEarly(threshold);
 
     private void OnChainSubmitted(IReadOnlyList<Tile> chain)
     {
@@ -850,7 +953,8 @@ public class GameSession : MonoBehaviour
             snapshot.boardCellX.Add(placed.Key.x);
             snapshot.boardCellY.Add(placed.Key.y);
             snapshot.boardTile.Add(i);
-            snapshot.boardWild.Add(tile.Spec != tile.Origin);
+            snapshot.boardWild.Add(tile.IsRewritten && tile.Spec.IsWild);
+            snapshot.boardFace.Add(tile.IsRewritten ? tile.Spec.letters : "");
         }
 
         // The mode adds whatever the RULES own — moves, discards, the bag.

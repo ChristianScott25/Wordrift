@@ -187,7 +187,7 @@ public class ShopRoller
             // that it stays a legitimate target — a 3W on Q/Z is 21 points, well
             // under the 3W'd QU the shop already sells. Same "nothing to sell"
             // answer as a bag with no room — the row just doesn't draw.
-            if (tile != null && !tile.IsWild && tile.CanAddModifier(limit) &&
+            if (tile != null && !tile.Retired && !tile.IsWild && tile.CanAddModifier(limit) &&
                 (zeroPointOk || tile.baseScore != 0) &&
                 (taken == null || !taken.Contains(tile)))
                 available.Add(tile);
@@ -407,7 +407,7 @@ public class ShopRoller
         // over something with a name; a tile goes into a bag of a hundred and
         // then waits for a round to deal it, so without this the purchase looks
         // like it did nothing.
-        string bag = $"BAG {run.TileBag.Count}";
+        string bag = $"BAG {run.ActiveTileCount}";
 
         // Items, for the same reason the bag count is here: you cannot see them
         // from the shop, and "ITEMS 2/2" is what explains the consumable row's

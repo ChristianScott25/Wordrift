@@ -34,12 +34,44 @@ public class NextWordMultiplierConsumable : Consumable, IScoreRule
              "it multiplies the whole word — Points x Mult — not one half of it.")]
     [Min(1f)] public float multiplier = 2f;
 
+    [Tooltip("Flat points added to the next word, after the bookmarks and BEFORE " +
+             "the multiplier above. 0 = none. (Highlighter, 2026-10-29.)")]
+    [Min(0)] public int bonusPoints = 0;
+
+    [Tooltip("Moves the next word costs ON TOP OF the usual one. -1 makes it free " +
+             "(Free Read), +2 makes it cost three (Banned Book). The total is " +
+             "floored at 0. Applied by RogueDemoMode.OnWordAccepted.")]
+    public int extraMoveCost = 0;
+
     /// <summary>It only arms itself, so the word you've built stays selected.</summary>
     public override bool ChangesBoard => false;
 
-    public override string PowerText =>
-        $"x{ScoringContext.Trim(multiplier)} on the next word you play, " +
-        "after everything else has been counted.";
+    public override string PowerText
+    {
+        get
+        {
+            // Built from whichever of the three levers this asset pulls, so one
+            // class can be the Doubler, the Highlighter, Free Read and Banned Book.
+            var parts = new System.Collections.Generic.List<string>(3);
+            if (bonusPoints > 0) parts.Add($"+{bonusPoints} Points");
+            if (!Mathf.Approximately(multiplier, 1f)) parts.Add($"x{ScoringContext.Trim(multiplier)} Mult");
+
+            string effect = parts.Count > 0
+                ? $"{string.Join(" and ", parts)} on the next word you play, after everything else has been counted."
+                : "";
+
+            string cost = extraMoveCost switch
+            {
+                0 => "",
+                < 0 => "The next word you play costs no move.",
+                _ => $"But it costs {1 + extraMoveCost} moves instead of 1.",
+            };
+
+            return string.IsNullOrEmpty(effect) ? cost
+                 : string.IsNullOrEmpty(cost) ? effect
+                 : $"{effect} {cost}";
+        }
+    }
 
     /// <summary>
     /// Arming is the whole effect: the round holds onto this until a word is
@@ -50,5 +82,10 @@ public class NextWordMultiplierConsumable : Consumable, IScoreRule
         use != null && use.Session != null && use.Session.ArmForNextWord(this);
 
     /// <summary>Runs after the bookmarks and the librarian. See the class comment.</summary>
-    public void Score(ScoringContext ctx) => ctx?.MultiplyMult(multiplier, Title);
+    public void Score(ScoringContext ctx)
+    {
+        if (ctx == null) return;
+        if (bonusPoints > 0) ctx.AddPoints(bonusPoints, Title);
+        ctx.MultiplyMult(multiplier, Title);
+    }
 }

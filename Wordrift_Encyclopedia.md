@@ -1286,7 +1286,9 @@ They're the opposite bargain from a checkout. A checkout is expensive, permanent
 the whole run; a consumable is cheap, single-use and changes one moment. 🎯 That's what they're
 for — the round where the board has gone stupid, or the word you can see is worth double.
 
-**There are seven.** Three you drop anywhere on the board, four you drop on one particular tile.
+**There are twenty-eight.** The first seven are below; 🚧 twenty-one more were added on
+2026-10-29 (see **The 2026-10-29 batch** further down). Some you drop anywhere on the board,
+some on one particular tile.
 
 | | Costs | Aim | What it does |
 |---|--:|---|---|
@@ -1428,12 +1430,72 @@ ready; play it, trim it, or ignore it.
   never filters out something you're already carrying.
 - **They survive between rounds and through the shop**, and they survive quitting and coming
   back — including a Doubler you'd already armed, which comes back armed.
-- **Nothing gives you one for free.** The shop is the only source.
+- **Nothing gives you one for free.** The shop is the only source — except Reprint, which hands
+  you a copy of the last item you used.
 
-🚧 **This is a first pass and it's meant to grow.** Seven items, five of them added mostly to have
-things to test. The prices are a first guess against a round 1 that pays about $19. Nothing
+🚧 **This is a first pass and it's meant to grow.** Twenty-eight items, most of them added mostly to
+have things to test (and some may come back out). The prices are a first guess against a round 1 that pays about $19. Nothing
 lights up the row or column a bomb is about to hit while you're dragging it — you aim by the
 tile under your finger.
+
+### 🚧 The 2026-10-29 batch
+
+Added all at once so the Bookshop has more to sell. **Every number and price is a first guess**,
+and the groups are only labels — there's no rarity yet, so a cursed item is as likely to show
+up as a weak one.
+
+| | Group | Costs | Aim | What it does |
+|---|---|--:|---|---|
+| **ERASER** | weak | $3 | a tile | Removes just that tile. Doesn't use your discards |
+| **SCRAP PAPER** | weak | $4 | anywhere | **+3 discards** this round |
+| **SPARE PEN** | weak | $5 | anywhere | **+1 move** this round |
+| **HIGHLIGHTER** | weak | $4 | anywhere | Next word **+20 Points** |
+| **LATE FEE** | weak | $4 | anywhere | **+$8** right now |
+| **GOLD LEAF** | medium | $9 | a tile | Puts a **2L** on that tile **for the rest of the run** |
+| **VOWEL SHOWER** | medium | $6 | anywhere | **3** random consonants on the board become random vowels, for this round |
+| **OVERDUE NOTICE** | medium | $4 | anywhere | **+$1 for every word** you've played this round |
+| **FREE READ** | medium | $6 | anywhere | Your next word **costs no move** |
+| **TRANSPOSE** | medium | $5 | a tile | Swaps that tile with the one **above** it (or below, if there's none above) |
+| **COFFEE RING** | medium | $6 | a tile | Clears the **3×3** around that tile. Doesn't use your discards |
+| **BESTSELLER** | strong | $12 | anywhere | Next word **×3 Mult** |
+| **REPRINT** | strong | $8 | anywhere | Gives you a **copy of the last item you used** this run |
+| **GHOSTWRITER** | strong | $10 | anywhere | Next word, your **leftmost bookmark fires twice** |
+| **EPILOGUE** | strong | $12 | anywhere | If you're at **75%+** of the target, your score is topped up to it and the round clears |
+| **SHREDDER** | strong | $8 | a tile | Removes that tile from your **bag for good** |
+| **CORRECTION FLUID** | strong | $10 | a tile | **Pick a letter**; that tile becomes it for this round |
+| **BANNED BOOK** | cursed | $6 | anywhere | Next word **×4 Mult**, but it costs **3 moves** instead of 1 |
+| **PLAGIARISM** | cursed | $2 | anywhere | **+$15**, but you **lose a random bookmark** |
+| **RUSH ORDER** | cursed | $4 | anywhere | **+2 moves**, but your **discards drop to 0** this round |
+| **SPOILER** | cursed | $6 | a tile | Picks the best word starting on that tile and **plays it for you**, at **×2 Mult** |
+
+How they behave — the parts that aren't obvious from the table:
+
+- **An item that can't do anything isn't spent**, same as always. So: Scrap Paper on a round with
+  no discards (The Redactor — the boss beats the item); Overdue Notice before your first word;
+  Plagiarism or Ghostwriter with no bookmarks; Epilogue under 75%, or once you've already hit
+  the target; Reprint before you've used anything; Transpose with no tile above or below, or onto an
+  identical plain tile; Gold
+  Leaf on a tile that's full, a wild, a 0-point tile, or one an item has changed this round;
+  Shredder once your bag is down to **40** tiles; Correction Fluid if you pick the letter the
+  tile already is (the tile flashes red).
+- **Highlighter, Free Read, Bestseller, Banned Book, Ghostwriter and Spoiler wait for your next
+  word**, like the Doubler — they're shown armed, they come back armed after quitting, and they
+  die with the round. Two armed at once both apply: Free Read with Banned Book costs 2 moves.
+- **Vowel Shower and Correction Fluid only change the tile for this round**, the same as Ink
+  Blot: the tile loses its badges while it's changed, and your bag never hears about it. Vowel
+  Shower only picks plain one-letter consonants, never a wild, a choice tile or a pair like CH.
+- **Gold Leaf and Shredder change your bag for good.** Gold Leaf's 2L is on the tile in your bag,
+  so it's there next round. A shredded tile is never dealt again and stops counting toward
+  **BAG**; the shop won't upgrade it either.
+- **Correction Fluid opens a letter picker.** Nothing is spent until you tap a letter; closing
+  the picker gives the item back.
+- **Spoiler plays the word for you** once its last tile is in. Touch the board while it's still
+  picking and it stops — nothing is played, and the ×2 waits for your next word instead. If you
+  open the pause or bag view meanwhile, it waits and plays the word when you close it.
+- **Reprint never copies itself.** Its copy goes into the slot Reprint just left, so it works
+  even when you're full.
+- **Money from an item doesn't count as earnings** — the shop's **+$X EARNED** is still what the
+  round paid.
 
 ❓ **Whether a consumable should be discardable** — you're full, the shop has the one you want,
 and right now there's nothing you can do about it except spend one.
@@ -1502,7 +1564,8 @@ one. It comes out before release.
 | Bookmark prices | 10 / 12 / 13 / 13 / 14 / 16 | each asset in `GameData/Bookmarks/` |
 | Bookmarks you may hold | 5 (0 = no limit) | `Mode_RogueDemo.asset` |
 | Checkout prices | 20 / 20 / 25 / 30 / 35 / 40 | each asset in `GameData/Checkouts/` |
-| Consumable prices | 🚧 Shuffle 6 · Doubler 8 · Second Edition 7 · Strikethrough 6 · Bookworm 6 · Ink Blot 10 · Cheat Sheet 5 | each asset in `GameData/Consumables/` |
+| Consumable prices | 🚧 Shuffle 6 · Doubler 8 · Second Edition 7 · Strikethrough 6 · Bookworm 6 · Ink Blot 10 · Cheat Sheet 5 · and the 2026-10-29 batch as in §10's table | each asset in `GameData/Consumables/` |
+| 🚧 Item effects (2026-10-29) | Scrap Paper +3 discards · Spare Pen +1 move · Highlighter +20 Points · Late Fee $8 · Overdue Notice $1 a word · Bestseller ×3 · Banned Book ×4, +2 moves · Rush Order +2 moves, 0 discards · Plagiarism $15 · Spoiler ×2 · Epilogue 75% · Shredder floor 40 tiles · Vowel Shower 3 tiles · Coffee Ring radius 1 | each asset in `GameData/Consumables/` |
 | Consumables you may hold | 2 (0 = no limit) | `Mode_RogueDemo.asset` |
 | Doubler multiplier | ×2 Mult, after everything else | `Consumable_Doubler.asset` |
 | Multi-letter tiles | ER IN IE ED TH SH CH QU | `LetterSet_Scrabble.asset` |
@@ -1558,8 +1621,8 @@ description you read before you buy (§8) · **paying to reroll the shelf**, at 
 climbs within a visit and resets between them (§8) · **checkouts** — six permanent run-wide
 perks, including interest on savings and a cheaper reroll (§9) · runs that save and resume themselves (§6) ·
 **librarians** — rule-warping rounds every third round, eight of them, paying double (§6) ·
-🚧 **consumables** — six one-shot items (Shuffle, Doubler, Second Edition, Strikethrough,
-Bookworm, Ink Blot), bought in the shop and dragged onto the board — or onto one tile — to play
+🚧 **consumables** — twenty-eight one-shot items (the original seven, plus twenty-one added
+2026-10-29 in weak, medium, strong and cursed flavours), bought in the shop and dragged onto the board — or onto one tile — to play
 (§10) ·
 🚧 **the Bookshop** — an experimental shop you upgrade as you go, playable from its own menu
 button beside the ordinary one (§8) ·
